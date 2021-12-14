@@ -1,0 +1,88 @@
+<p>Library is using only JMS 1.1 API and it's Requestor and bytes messages.</p>
+<p>As simple as it can be, ready to use!</p>
+<h2>How to use</h2>
+<p>Put the maven dependency into your POM file:</p>
+<p> </p>
+<pre class="brush: xml">&lt;dependency&gt;
+   &lt;groupId&gt;cz.net21.ttulka&lt;/groupId&gt;
+&nbsp;&nbsp; &lt;artifactId&gt;rmi-meets-jms&lt;/artifactId&gt;
+&nbsp;&nbsp; &lt;version&gt;1.0.1&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>Alternatively you can <a href="storage/rmi-meets-jms-1.0.1.jar">download the library in the JAR file</a> and put it directly into your project classpath.</p>
+<h3>Remote service</h3>
+<p>The remote service is just a simple interface implemented by a class:</p>
+<pre class="brush: java">public interface Service {
+
+&nbsp;&nbsp;&nbsp; Integer myMethod1(Integer i);
+&nbsp;&nbsp;&nbsp; void myMethod2(String str);
+}
+
+public class ServiceImpl implements Service {
+
+&nbsp;&nbsp;&nbsp; public Integer myMethod1(Integer i) {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; return i * 2;
+&nbsp;&nbsp;&nbsp; }
+
+&nbsp;&nbsp;&nbsp; public void myMethod2(String str) {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; System.out.println("myMethod2 says: " + str);
+&nbsp;&nbsp;&nbsp; }
+}</pre>
+<p>Methods of the service can be overloaded. <br /></p>
+<h3>Java code</h3>
+<p>To use the library directly from a java code you need to create a JMS factory and a destination queue:</p>
+<p> </p>
+<pre class="brush: java">final QueueConnectionFactory connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
+final Queue queue = new ActiveMQQueue("MyQueue1");</pre>
+<p>Then, on the <strong>server side</strong>, the remote service provider must be created with the service implementation as a parameter:</p>
+<pre class="brush: java">final Service serviceImpl = new ServiceImpl();
+
+final RemoteServiceProvider provider = new RemoteServiceProvider(connectionFactory, queue, serviceImpl);</pre>
+<p>On the <strong>client side</strong> the remote service consumer must be created and then the remote service can be obtained:</p>
+<pre class="brush: java">final RemoteServiceConsumer consumer = new RemoteServiceConsumer(connectionFactory, queue, Service.class);
+
+final Service service = (Service)consumer.getService();
+</pre>
+<p> </p>
+<p> </p>
+<p>and the service can be called:</p>
+<pre class="brush: java">Integer res1 = service.myMethod1(3);
+System.out.println(res1);               // will print "6"
+
+service.myMethod2("Hello, server!");    // will print "Hello, server!" on the server's console output</pre>
+<h3>Spring approach</h3>
+<p>The same can be achieved with the Spring framework very easily (as everything is easy with the Spring):</p>
+<pre class="brush: xml">&lt;!-- Server side --&gt;
+&lt;bean id="server" class="cz.net21.ttulka.rmimeetsjms.RemoteServiceProvider"&gt;
+	&lt;constructor-arg ref="jmsFactory" /&gt;
+	&lt;constructor-arg ref="queue" /&gt;
+	&lt;constructor-arg ref="serviceImpl" /&gt;
+&lt;/bean&gt;
+
+&lt;!-- Client side --&gt;
+&lt;bean id="client" class="cz.net21.ttulka.rmimeetsjms.RemoteServiceConsumer"&gt;
+	&lt;constructor-arg ref="jmsFactory" /&gt;
+	&lt;constructor-arg ref="queue" /&gt;
+	&lt;constructor-arg value="mypack.Service" /&gt;
+&lt;/bean&gt;
+&lt;bean id="serviceProxy" factory-bean="client" factory-method="getService" /&gt;
+
+&lt;!-- Service implementation --&gt;
+&lt;bean id="serviceImpl" class="mypack.ServiceImpl" /&gt;
+
+&lt;!-- JMS connection factory --&gt;
+&lt;bean id="jmsFactory" class="org.apache.activemq.ActiveMQConnectionFactory"&gt;
+	&lt;property name="brokerURL" value="tcp://localhost:61616" /&gt;
+&lt;/bean&gt;
+
+&lt;!-- JMS destination --&gt;
+&lt;bean id="queue" class="org.apache.activemq.command.ActiveMQQueue"&gt;
+	&lt;constructor-arg index="0" value="MyQueue1" /&gt;
+&lt;/bean&gt;</pre>
+<p>All you need to do is to initialize the Spring context:</p>
+<pre class="brush: java">final ApplicationContext context = new ClassPathXmlApplicationContext("spring-context.xml");</pre>
+<p>and get the service proxy on the client side:</p>
+<pre class="brush: java">final Service service = (Service)context.getBean("serviceProxy");</pre>
+<h2>Limitation <br /></h2>
+<p>There is only one limitation regarding the parameters of the remote service: all the <strong>parameters must be serializable</strong> (must implement <code>java.io.Serializable</code>).</p>
+<p><br /></p>
+<p>Have fun!</p>

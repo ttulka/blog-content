@@ -1,0 +1,176 @@
+<h2>Microservices Anatomy</h2>
+<p>Let's simply define a microservice as an <strong>autonom service built from one or more resources</strong>. The resource mean functionality (functions*), storage (database), communication (message topic), etc. All the service needs must be included in the stack or given as a parameter (environment variable), API is exposed and besides are all the resource private for the microservice. One microservice &hArr; one stack &hArr; one deployment pipeline.</p>
+
+<p>According the Single Responsibility Principle a component should do one and only one thing. Applying this rule to the functions level we get a function for an action. Let's consider a simple CRUD microservice; all the CRUD operation are represented by simple functions:</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-code-samples/master/nodejs-crud-microservice/doc/FunctionSeparation-Product-Service-Overview.png" width="50%" /></p>
+
+<p>How does this look like from the dev-ops point of view? We can create a new project artifact for every function. Such code is <strong>easy to reason about, easy to test and deploy</strong>. The last one could be written with a question mark, of course it's easy to deploy a function, but don't forget there must be pipeline actions for build, deploy and test execution which is really only doing, but it's a strenuous and boring job and brings additional complexity.</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/FunctionSeparation-pipeline.png" width="100%" /></p>
+
+<p>Similar for the codebase. Take a look at this simple AWS Lambda function in Node.js:</p>
+
+<pre>
+.gitignore
+gruntfile.js
+jasmine.json
+package.json
+package-lock.json
+README.md
+</pre>
+
+<p>As you can see there several files only to set up the module. This must be multiplied for every function.</p>
+
+<p>So, a function for an action sounds well in theory but in practise it could be an overkill.</p>
+
+<h2>Modularization 'till the last step</h2>
+<p><strong>Decoupling</strong> is propably the most important concept in the design of software systems. So we never surrender this principle. Anyway we can distinguish between logical and physical coupling. <strong>Two modules can be perfectly decoupled even while physically existing in a same artifact</strong> - when they have no shared code and dependencies only to APIs (following principles of hexagonal architecture).</p>
+
+<p>Let's consider the following implementation of the CRUD microservice:</p>
+
+<pre>
+src/
+   index.js
+   list-products.js
+   get-product.js
+   create-product.js
+   update-product.js
+   remove-product.js
+</pre>
+
+<p><code>index.js</code></p>
+<pre class="brush: javascript">
+const list = require('./list-products').handler
+const get = require('./get-product').handler
+const create = require('./create-product').handler
+const update = require('./update-product').handler
+const remove = require('./remove-product').handler
+
+exports.handler = async function(event) {
+    if (!event || !event.resource || !event.httpMethod) {
+        return buildResponse(400, {error: 'Wrong request format.'})
+    }
+
+    if (event.resource === '/') {
+
+        switch (event.httpMethod) {
+            case 'GET':
+                return await list(event)
+            case 'POST':
+                return await create(event)
+            default:
+                return buildResponse(405, {error: 'Wrong request method.'})
+        }
+    }
+    else if (event.resource === '/{id}') {
+
+        switch (event.httpMethod) {
+            case 'GET':
+                return await get(event)
+            case 'PUT':
+                return await update(event)
+            case 'DELETE':
+                return await remove(event)
+            default:
+                return buildResponse(405, {error: 'Wrong request method.'})
+        }
+    } else {
+        return buildResponse(404, {error: 'Resource does not exist.'})
+    }
+}
+
+function buildResponse(statusCode, data = null) {
+    return {
+        isBase64Encoded: false,
+        statusCode: statusCode,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }
+}
+</pre>
+
+<p>As you can see, the main handler is only a router to other functions, which look like following:</p>
+
+<p><code>get-product.js</code></p>
+<pre class="brush: javascript">
+const AWS = require('aws-sdk')
+
+const PRODUCT_TABLE = process.env.PRODUCT_TABLE
+
+const dynamoDb = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
+
+exports.handler = async function(event) {
+    if (!event || !event.httpMethod) {
+        return buildResponse(400, {error: 'Wrong request format.'})
+    }
+    if (event.httpMethod !== 'GET') {
+        return buildResponse(405, {error: 'Wrong request method - only GET supported.'})
+    }
+    if (!event.pathParameters || !event.pathParameters.id) {
+        return buildResponse(400, {error: 'Wrong request - parameter product ID must be set.'})
+    }
+
+    try {
+        const response = await dispatch(event.pathParameters.id)
+        if (response) {
+            return buildResponse(200, response)
+        } else {
+            return buildResponse(404, {error: 'Product was not found.'})
+        }
+
+    } catch (ex) {
+        console.error('ERROR', JSON.stringify(ex))
+    }
+}
+
+async function dispatch(id) {
+    const product = getProduct(id)
+    return product
+}
+
+async function getProduct(id) {
+    const params = {
+        TableName: PRODUCT_TABLE,
+        Key: { productId: id }
+    }
+    const res = await dynamoDb.get(params).promise()
+
+    return (res.Item)
+        ? { id: res.Item.productId,
+            name: res.Item.name,
+            description: res.Item.description,
+            price: res.Item.price }
+        : null
+}
+
+function buildResponse(statusCode, data = null) {
+    return {
+        isBase64Encoded: false,
+        statusCode: statusCode,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }
+}
+</pre>
+
+<p>The Single Responsibility Principle is applied here. The function has its own handler which takes care of the incoming HTTP request. All the HTTP-related checks and transformations must be done here. The handler is the only one place for such a dirty code. After the request is checked, dispatching is executed. This is something like a main method, an entry point to the business logic. In this case just getting the product details.</p>
+
+<p>And other functions in the same spirit...</p>
+
+<p>The actions are decoupled from each other and are ready to be separated into individual functions in the next last step. But staying here we still have a very clear code easy to test and reason about and we don't need to adapt the pipeline onto this level of granularity.</p>
+
+<h2>Test it!</h2>
+<p>It's very easy to test a service built in this way. We write a Unit Test Suite for every action (exported function), an Integration Test Suite for the service API (index.js) and End-to-End Test Suite for the Gateway API facade.</p>
+
+<h2>Source Code</h2>
+<p>The whole stack could be found on <a href="https://github.com/ttulka/blog-code-samples/tree/master/nodejs-crud-microservice">GitHub</a>.</p>
+
+<p>Happy coding!</p>
+
+<hr/>
+<p>* <em>Functions are sometimes called "nanoservices" as they are smaller than microservices. Actually, I don't even like the term "microservice" because it confuses people regarding its size ("How small should a microservice be?"), so I don't like to develop this terminology on in the same manner.</em>

@@ -1,0 +1,46 @@
+<p>Unfortunately, I see breaking this rule pretty often. I guess this is because the basic premise is not as obvious as it should be: <strong>configuration is an API</strong>.</p>
+
+<p>As an example, consider a Java application using an LDAP-based authentication implemented with Spring framework. Typically, one has to provide settings of the connection to the external LDAP server in the runtime environment:</p>
+
+<pre>
+spring.ldap.urls=ldap://myserver:1234
+spring.ldap.username=admin
+spring.ldap.password=secret
+</pre>
+
+<p>Because the LDAP server is not part of the application, the configuration is expected to be set by the user. This is where apparent internals become externals.<p>
+
+<p>If the user uses the same configuration properties the implementation details leak into the API. Technically, this will work fine, but the trouble comes later. Consider, for example, that the application gets rid of Spring completely and starts using a new fancy technology instead:</p>
+
+<pre>
+quarkus.security.ldap.dir-context.url=ldap://myserver:1234
+quarkus.security.ldap.dir-context.principal=admin
+quarkus.security.ldap.dir-context.password=secret
+</pre>
+
+<p>Now what? We could just use the new properties from now on, but this will break the old versions already installed. Breaking the contract is not very nice to the users, <strong>APIs should stay forever</strong>. Introducing a breaking change always requires good communication with customers, brings additional work and has a negative impact on user experience.</p>
+
+<p>We can implement a migration mechanism setting the new properties based on the old ones. But this will increase the complexity of the system and make the code maintenance more expensive. It’s always better to make things right from the beginning:</p>
+
+<pre>
+myapp.ldap.url=ldap://myserver:1234
+myapp.ldap.username=admin
+myapp.ldap.password=secret
+</pre>
+
+<p>Here, <strong>no implementation concerns are exposed to the configuration API</strong>, the user doesn’t know (and doesn’t care) what kind of technology or framework is used - those all are just implementation details and must never leak into the API.</p>
+
+<p>The application prefix <code>myapp</code> will further ensure no future collisions with other internal configurations.</p>
+
+<p>The internals can be then configured based on the application properties (e.g. with Spring):</p>
+
+<pre>
+spring.ldap.urls=${myapp.ldap.url}
+spring.ldap.username=${myapp.ldap.username}
+spring.ldap.password=${myapp.ldap.password}
+</pre>
+
+<p>This approach leads to a solid configuration API, with clarity of application-specific property names, cheap maintenance, no potential breaking changes and great user experience.</p>
+
+<p>Happy configuring!</p>
+

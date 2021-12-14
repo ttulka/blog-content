@@ -1,0 +1,77 @@
+<p>In <strong>legacy sources</strong> I have found a really tricky code causing an occasional error.</p>
+<p>Well, you can say all around synchronization is tricky, but good understanding is a clue to eliminate the magic - this article might help a bit.</p>
+<p>Let's consider a very basic logic of the code: </p>
+<p><em>Thread-agents are dealing with a shared data of the singleton system.</em></p>
+<p>Alright, easy, the <strong>code working with the shared data must be synchronized</strong>.
+ Yes, but don't forget that the threads (the agents) are working with
+data of another class (the system) - we can not use synchronized methods
+ as they are using the instance of an agent as a mutex instead of the
+class the data belongs to. Well, let's use the shared system's object as
+ a lock and... we are ready... wait a minute: This is exactly the
+solution implemented in the legacy code!</p>
+<p>Where's the problem - this must work! Sure, but not in any case... <br /></p>
+<p>In a very simplified way the original code looks like this:</p>
+<pre class="brush: java">public class SystemApp {
+
+&nbsp;&nbsp;&nbsp; static Integer count = 0;
+
+&nbsp;&nbsp;&nbsp; static class AgentThread extends Thread {
+
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; public void run() {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; try {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; Thread.sleep(ThreadLocalRandom.current().nextInt(100));
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; } catch (InterruptedException e) { }&nbsp;&nbsp;&nbsp;
+
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // do something
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // ...
+
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; synchronized (count) {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; count ++;
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; }
+
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // do something else
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // ...
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; }
+&nbsp;&nbsp;&nbsp; }
+
+&nbsp;&nbsp;&nbsp; public static void main(String[] argv) {&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // run agents
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; for (int i = 0; i &lt; 1000; i ++) {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; new AgentThread().start();
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; }
+
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // sleep for a while to let agents finish their work
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; try {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; Thread.sleep(5000);
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; } catch (InterruptedException e) { }&nbsp;&nbsp;&nbsp;
+
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // print the result
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; System.out.println(count);
+&nbsp;&nbsp;&nbsp; }
+}</pre>
+<p>What is the expected result printed on the screen? 1000? Right!</p>
+<p>But guess what we get by running it five times:</p>
+<p>955<br />979<br />973<br />959<br />963</p>
+<p>Of course, the pain is in here:</p>
+<pre class="brush: java">synchronized (count) {
+&nbsp;&nbsp;&nbsp; count ++;
+}</pre>
+<p>We are using as a lock an object referenced by the variable <em>count</em>. But this reference is changed inside the critical section. This means there is no guarantee that two or more parallel threads get the same lock object. And so sometimes happens this scenario: </p>
+<ol>
+<li>The thread A and the thread B are trying to enter the critical section.</li>
+<li>The thread A gets the access and the lock referenced by the variable <em>count </em>(currently for instance with a value of integer=2) gets locked up.</li>
+<li>The thread B is waiting for the release of the lock (integer=2).</li>
+<li>The thread A changes the reference of the variable <em>count </em>to the new value (integer=3) and releases the lock (integer=2).</li>
+<li>The thread B waiting for the lock (integer=2) gets that lock, enters the critical section and locks up the lock object (integer=2).</li>
+<li>The parallel thread C tries to enter the critical section with the lock object referenced by the variable <em>count </em>(integer=3 - changed by the thread&nbsp;A).</li>
+<li>The tread C gets the access to the critical section because its lock is now the object integer=3 while the thread B is being in the critical section as well (with the lock object integer=2).</li>
+</ol>
+<p>As you can see, by the seventh point we have <strong>two threads in the critical section</strong>.
+</p>
+<p>The lesson is: <u>never ever use a variable object as a lock!</u><br /></p>
+<p> <br /></p>
+<p> </p>
+<p>Synchronization is tricky and it is always good to think twice. </p>
+<p>By the way, using the API from the <em>java.util.concurrent</em> package is a good idea, too.
+</p>
+<p> <br /></p>

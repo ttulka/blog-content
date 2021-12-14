@@ -1,0 +1,142 @@
+<p>In the <a href="/learning-webassembly-7-introducing-wasi">previous part</a> of this <a href="/learning-webassembly-series">series</a>, we introduced WASI, a family of APIs to access system resources. In this part, we will move away from low-level programming in Wat and consider compilation into Wasm from more high-level programming languages like C, Kotlin, or AssemblyScript.</p>
+
+<p>I deliberately did not choose Rust as, together with C/C++, it is a historically obvious choose and one can find plenty of articles about Rust and WebAssembly on the Internet.</p>
+
+<p>I choose C with respect to Emscripten, the first tool for producing WebAssembly, Kotlin for my Java background, and finally AssemblyScript as an obvious choice to develop modern Wasm programs.</p>
+
+<h2>C and Emscripten</h2>
+
+<p><a href="https://emscripten.org" target="_blank">Emscripten</a> is a complete Open Source compiler toolchain to WebAssembly. It emulates a particular OS system interface, POSIX, on the web. This means that you can use functions from the C standard library (<em>libc</em>).</p>
+
+<p>Emscripten achieves this by providing its own implementation of libc. The implementation has two parts: the Wasm module and JavaScript glue. The JavaScript part is called in the browser or other JavaScript runtime like Node.js, which then talks to the operating system.</p>
+
+<p>Unfortunately, the JavaScript glue interface was not designed to be a standard, which is a problem <a href="/learning-webassembly-7-introducing-wasi">WASI</a> is trying to solve.</p>
+
+<p>Under the hood, Emscripten complies not only C/C++ code, but any LLVM-based language, like Scala, Crystal, Haskell, Julia, Swift, or Ruby.</p>
+
+<p>All right, let’s write a <i>Hello world</i> in C:</p>
+
+<pre>
+#include &lt;stdio.h&gt;
+
+int main() {
+  printf("Hello, world!\n");
+  return 0;
+}
+</pre>
+
+<p>To compile this C code into Wasm, you can either install Emscripten or simply use the official <a href="https://hub.docker.com/r/emscripten/emsdk" target="_blank">Docker image</a>:</p>
+
+<pre>
+$ docker run --rm -v $(pwd):/src
+  \ emscripten/emsdk
+  \ emcc hello.c -o hello.js
+</pre>
+
+<p>This will generate two files: hello.wasm and hello.js. You can run it in <a href="/learning-webassembly-6-running-wasm-in-nodejs">Node.js</a>:</p>
+
+<pre>
+$ node hello.js
+Hello, world!
+</pre>
+
+<p>Emscripten can also create an HTML page to run the Wasm module in:</p>
+
+<pre>
+$ docker run --rm -v $(pwd):/src
+  \ emscripten/emsdk
+  \ emcc hello.c -o hello.<b>html</b>
+</pre>
+
+<p>Now, you can open hello.html in a browser.</p>
+
+<p class="warning">To make the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API" target="_blank">Fetch API</a> work you must serve the web page via HTTP(S).</p>
+
+<p>Emscripten is the oldest compiler tools for Wasm. Nowadays, there many other options you can choose from. However, if you are interested in compiling into Wasm from an LLVM language, Emscripten is a natural choice.</p>
+
+<h2>Kotlin</h2>
+
+<p><a href="https://kotlinlang.org" target="_blank">Kotlin</a> is a modern practical language running on JVM. Kotlin can be also compiled into native code, JavaScript, and, obviously, Wasm.</p>
+
+<p>As already mentioned, Kotlin is based on LLVM and LLVM supports WebAssembly, ergo we can generate Wasm files from Kotlin source code.</p>
+
+<pre>
+fun main(args: Array&lt;String&gt;) {
+    println("Hello, world!")
+}
+</pre>
+
+<p>You have to download (or build) the <a href="https://github.com/JetBrains/kotlin-native" target="_blank">Kotlin/Native compiler</a> and set Wasm as the compilation target:</p>
+
+<pre>
+$ konanc -target wasm32 hello.kt -o hello
+</pre>
+
+<p>This generates two files: hello.wasm and hello.wasm.js. The last step is to create an HTML page:</p>
+
+<pre>
+&lt;html&gt;
+  &lt;body&gt;
+    &lt;script wasm=&quot;./hello.wasm&quot;
+            src=&quot;./hello.wasm.js&quot;&gt;
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+<p>Serve the page via HTTP and you should see the result in the dev console:</p>
+
+<pre>
+Hello, world!
+</pre>
+
+<p>In the time of writing, the Wasm support in Kotlin may not be as mature as in other tools. However, if you are a developer coming from a JVM environment, you should definitely keep an eye on Kotlin.</p>
+
+<h2>AssemblyScript</h2>
+
+<p><a href="https://www.assemblyscript.org/" target="_blank">AssemblyScript</a> is a free and open source TypeScript-like language made for Wasm. It targets WebAssembly's feature set specifically, giving developers low-level control over their code.</p>
+
+<p>In AssemblyScript, you can access Wasm features directly via low-level built-ins, or you can use a JavaScript-like standard library, making it suitable for non-browser use cases.</p>
+
+<p>We will discuss these features in detail in the following article. For now, let’s create a <i>Hello world</i> program in AssemblyScript:</p>
+
+<pre>
+// assembly/index.ts
+
+declare function log(s: string): void;
+
+export function main(): void {
+  log("Hello, world!");
+}
+</pre>
+
+<p>Load and execute it from JavaScript code:</p>
+
+<pre>
+// index.js
+
+const fs = require("fs");
+const loader = require("@assemblyscript/loader");
+
+const wasm = loader.instantiateSync(
+  fs.readFileSync(__dirname + "/build/optimized.wasm"), {
+    "index": {
+      log: function(pts) {
+        console.log(wasm.exports.__getString(pts));
+      }
+    }
+  }
+);
+
+wasm.exports.main();  // prints "Hello, world!"
+</pre>
+
+<p>AssemblyScript an obvious and natural choice for developers that come from the JavaScript environment and want to have low-level control over Wasm features.</p>
+
+<h2>Further Steps</h2>
+
+<p>This time, we have seen three different approaches on how to compile into WebAssembly.</p>
+
+<p>In the <a href="/learning-webassembly-9-assemblyscript-basics">next part</a> of this <a href="/learning-webassembly-series">series</a> we will focus on AssemblyScript exclusively.</p>
+
+<p>Stay tuned!</p>

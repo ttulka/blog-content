@@ -1,0 +1,65 @@
+<p>There is a service in our system cleaning up unused resources. Those resources are grouped upon an ID. So the request looks like "remove all the resources for the ID 123".</p>
+<p>In the service code I have found the following line:</p>
+
+<pre class="brush: javascript">
+entryKeys.forEach(async key => await removeResource(key))
+</pre>
+
+<p>Why this doesn't work? Let's analyse the code a bit. The <code>forEach</code> is just a stream variant of the <code>for</code> loop and it's definitely synchronous. So, there shouldn't be the problem even when it's a bit ineffective. Inside the <code>forEach</code> there is a call of the <code>removeResource</code> function with <code>await</code>. The <code>await</code> tells us that the function returns a promise. The <code>await</code> can be used only within an <code>async</code> function which is fulfilled because the inline (lambda) function is really marked with the <code>async</code> keyword (we can rewrite the same function as <code>async function(key){ await removeReource(key) }</code>). The point is a function declared with <code>async</code> returns always a promise. It means, the <code>forEach</code> fires several <b>asynchronous</b> calls but <b>doesn't wait for them</b> (<code>await removeResource(key)</code> is another asynchronous call inside that asynchronous call).</p>
+
+<p>Now, when we understand why the code doesn't work, we can fix it:</p>
+
+<pre class="brush: javascript">
+for (const key of entryKeys) { await removeResource(key) }
+</pre>
+
+<p>This works fine, the only problem is, it's synchronous and slow. The loop is waiting for an execution to finish before starting a new one even when it is possible to run them all in parallel.</p>
+<p>Can we fix it? Sure!</p>
+
+<pre class="brush: javascript">
+await Promise.all(entryKeys.map(key => removeResource(key)))
+</pre>
+
+<p>We have changed <code>forEach</code> to <code>map</code>, so we map an array of IDs into an array of promises. Then we pack the promises into a one big promise via <code>Promise.all()</code>. Now we wait for the big promise (and that's exactly what we missed before) to be completed. All the call are executed in parallel. Well done.</p>
+
+<p>You can play with the different variants via the following snippet:</p>
+
+<pre class="brush: javascript">
+(async function(){
+    console.log("START")
+
+    // doesn't work
+    //["A","B","C"].forEach(async key => await doSomethingAsync(key))
+
+    await Promise.all(["D","E","F"].map(key => doSomethingAsync(key)))
+
+    // synchronous
+    //for (const key of ["G","H","I"]) { await doSomethingAsync(key) }
+
+    console.log("END")
+})()
+
+function doSomethingAsync(key) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(() => {
+            console.log("RESOLVED " + key)
+            resolve(key)
+        }, 1000)
+    })
+}
+</pre>
+
+<h2>What about Reduce?</h2>
+
+<p>How could we reduce the value from the promises? Well, of course the reduce needs the already resolved values:</p>
+
+<pre class="brush: javascript">
+// "JKL"
+var result = await ["J","K","L"]
+      .map(key => doSomethingAsync(key))
+      .reduce(async (sum,v) => await sum + await v)
+</pre>
+
+<p>Because the whole reduce function is <code>async</code> we have to use <code>await</code> as well to retrieve the value of <code>sum</code>.</p>
+
+<p>Happy promising!</p>

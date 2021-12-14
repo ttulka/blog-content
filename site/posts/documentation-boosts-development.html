@@ -1,0 +1,79 @@
+<p>I know that you're thinking: writing documentation is boring. One gets goosebumps just thinking about it. In no time, developers come up with excuses: our code is self-documented, documentation is in the code, the code itself is documentation, and similar.</p>
+
+<p>Well, there is nothing wrong with having clean and self-documented code. The problem is, not everyone has access to and can read code (think of your project manager or people from the QA department).</p>
+
+<p>In fact, there are several kinds of documentation. The focus differs in various types of audience and levels of detail.</p>
+
+<p>I won’t give you an exhaustive manual for writing technical documentation here. First, I’ll start with a few important bullet points good documentation should meet. Then, I’ll tell you how documentation is useful for developers and how it can improve the quality of software.</p>
+
+<p>I mean it, documentation is neither useless nor a necessary evil. <strong>Documentation is a fully-fledged development activity that improves software quality</strong>. When done regularly, it can be easy and even fun to write.</p>
+
+<p>The best time to write documentation is while you're writing code. You are your very first audience.</p>
+
+<h2>Kinds of Documentation</h2>
+
+<p>Code is the lowest-level documentation. Things like good names, focused single-purpose functions, well-structured modules, and domain-oriented abstractions are the main characteristics of clean self-documented code.</p>
+
+<p>Comments as explicit documentation in code (such as JavaDoc) are extensions to self-documented code. They explain the purpose and usage of code, and <em>why</em> things have been done in this way. This kind of documentation doesn’t require direct access to the code, but it still focuses primarily only on people who can read code (developers).</p>
+
+<p>APIs are usually documented in a machine-friendly format (such as JSON, or XML). There are useful standards (such as <a href="https://www.openapis.org/" target="_blank">OpenAPI</a>) and tools that can generate human-friendly documents directly from code. The target audience is technical people (developers and architects).</p>
+
+<p>Tests are another kind of very useful documentation. Tests are the first client code to the APIs. Tests can be read by QA or even non-technicians such as product managers (remember <a href="https://en.wikipedia.org/wiki/Behavior-driven_development" target="_blank">BDD</a>).</p>
+
+<p>A good practice is to put a README into every module with a separate API. A short description of the purpose, basic usage, and references to further readings must be included at least. Version-control systems like GitHub or BitBucket search for an occurrence of a README file to show it as a show-window. READMEs are a great way to help developers get in quickly.</p>
+
+<p>Architectural documents are the most abstract form of technical documentation. They provide the big picture, describe important concepts and significant decisions made. Sadly, those documents often don’t reflect the current state or are missing completely which is unfortunate in many aspects. If that is your case, it's time to change it.</p>
+
+<h2>Importance of Documentation</h2>
+
+<p>In general, absent or sloppy documentation makes onboarding difficult as there is no obvious place to start. Exploring huge codebases randomly without any clue is tedious and inefficient. Indeed, onboarding is a quality check of your software solution including documentation.</p>
+
+<p>Similar to further development: Undocumented decisions and practices are forgotten, the wheel is invented again and again, and development becomes expensive very quickly.</p>
+
+<p>Knowledge stored only in the heads of engineers tends to rot and disappear over time. <i>Why did we do things this way? What is this thing doing? How does it do it?</i> The documentation should give you answers. <strong>Documentation helps you understand and remember</strong>.</p>
+
+<p>It’s not new that articulating a problem helps to understand it. This is what the popular technique <em>Rubber duck debugging</em> is based on. Similar, when thinking about a solution. Have you ever been sure you understood something well but found gaps when trying to explain it to another person (or a duck)? Our brains can implicitly fill in blank spots in understanding but those will come up when being articulated. Some of them might turn out to be important although they seemed subtle and insignificant before.</p>
+
+<p><strong>You can’t write documentation if you don’t fully understand the solution</strong>. This is a powerful realization, indeed. Many times, I have found a flaw in the implementation simply by documenting it.</p>
+
+<p>Not only bugs can come out. If documentation turns out to be too complicated the solution is likely troublesome as well. Documentation can show up that API is not user-friendly, configuration too cumbersome, setup too tangled. <strong>Documentation provides valuable feedback</strong> that drives development towards better quality.</p>
+
+<p>Documentation is a great input for a discussion and a resource for collaboration. Having some documentation, for example in the form of diagrams, would be extremely useful before the first line of code is written. A design flaw found early saves days or even weeks of programming later. Well documented decisions help speed up the actual implementation.</p>
+
+<p>Last but not least, documentation is the key to efficient reviewing. Documentation as part of the pull-request helps the reviewer get an insight into the solution That can shorten the review time significantly. Moreover, documentation is probably the first thing an external consultant will ask you for.</p>
+
+<p><strong>A feature is not done when yet not documented!</strong></p>
+
+<h2>How to Write Documentation</h2>
+
+<p>There are several templates and styles for writing technical documentation (such as <a href="https://arc42.org" target="_blank">arc42</a> and <a href="https://c4model.com" target="_blank">C4</a>). Choose what fits you best. Important is to have your audience in focus. Write to help, be minimalistic and clear, show use-cases and examples.</p>
+
+<p>Doesn’t matter how good the documentation is when no one can find it. Create a centralized access point, but keep documentation close to the code. For example, a directory doc in the root of every repository works well for me.</p>
+
+<p>We can go even further and treat all documentation as code. This enables handy possibilities such as generating documents in various formats, tracking changes in a version-control system, etc. <a href="https://asciidoc.org" target="_blank">AsciiDoc</a> and <a href="https://plantuml.com" target="_blank">PlantUML</a> are amazing tools for writing documentation source code.</p>
+
+<p>Manually written documentation should find a sweet spot of how deep into details it should go. Too abstract and broad documentation is not very useful, while too detailed documentation is painful to maintain and often left outdated.</p>
+
+<p><strong>Outdated documentation is worse than no documentation</strong> as it is a source of confusion and no actual help. Thus, keep your documentation free from any volatile elements and implementation details. Generate as much as possible.</p>
+
+<h2>Summary</h2>
+
+<p>The role of documentation in software development is often undervalued. However, there is great value documentation can provide when done properly.</p>
+
+<ul>
+  <li>Incorporate documentation in the development process.</li>
+  <li>Code is just a part of software documentation.</li>
+  <li>Documentation helps by understanding and remembering.</li>
+  <li>Documentation makes onboarding easier.</li>
+  <li>Documentation provides valuable feedback.</li>
+  <li>Documentation helps discover design flaws and implementation bugs.</li>
+  <li>Documentation serves as a collaboration resource.</li>
+  <li>Documentation is the key to efficient reviewing.</li>
+  <li>Bad documentation is worse than no documentation.</li>
+</ul>
+
+<p>Engineers should see documentation as a friend, not a foe. Writing documentation conscientiously is a great way to improve development towards better quality.</p>
+
+<p>Don't leave writing documentation at the last minute. Start now. A bit every day continuously.</p>
+
+<p>Happy documenting!</p>

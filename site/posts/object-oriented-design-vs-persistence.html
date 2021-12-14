@@ -1,0 +1,75 @@
+<h2>Traditional Approach</h2>
+
+<p>Traditionally (and very wrongly) an object is seen as data with a bunch of procedures dealing upon it. A typical school-book code looks like follows:</p>
+<pre class="brush: java">
+class Person {
+
+  private String personalId;
+  private String firstName;
+  private String lastName;
+
+  String getPersonalId() { return personalId; }
+  String getFirstName() { return firstName; }
+  String getLastName() { return lastName; }
+}
+</pre>
+
+<p>How to persist the Person object? One approach is to create a repository:</p>
+<pre class="brush: java">
+class PersonRepository {
+
+  void save(Person person) {
+    // persist the object
+  }
+}
+</pre>
+
+<p>Second approach is to let the object persist itself:</p>
+
+<pre class="brush: java">
+class Person {
+  // ...
+
+  void save() {
+    // persist the object
+  }
+}
+</pre>
+
+<p>Which one is better? None, or more precisely, depends.</p>
+
+<h2>Domain-Driven Design</h2>
+
+<p><a href="https://en.wikipedia.org/wiki/Domain-driven_design" target="_blank">Domain-Driven Design (DDD)</a> calls for designing objects driven by their business (domain) meaning rather than by technical aspects. According DDD, <strong>persistence is just an implementation detail</strong>. How this helps us with our dilemma? Actually a lot: the question, where to put the persistence, is driven by the domain as well as all other concerns.</p>
+
+<p>Just listen to the business, what does it say? Is it talking about
+ <em>a register</em> for people registration?</p>
+<pre class="brush: java">
+class PersonRegister {
+
+  void register(Person person) {
+    // ...
+  }
+}
+</pre>
+
+<p>Or rather about person <em>reporting</em>, <em>checking in</em>, <em>applying</em> or <em>enrolling</em>?</p>
+<pre class="brush: java">
+class Person {
+  // ...
+
+  void enroll() {
+    // ...
+  }
+}
+</pre>
+
+<p>Don’t think like a technician: "this object must be persisted", understand the domain and model around it. <strong>The domain must be found again in the model</strong>.</p>
+
+<p>Because the theory can never know your domain, it’s impossible to create a framework helping to cut the code vertically. All the tool can only help with the horizontal cutting and technical regards, which encourages the implementers to concentrate too much on techniques (like persistence) and forget about the domain. The biggest problem with <a href="https://www.oreilly.com/library/view/domain-driven-design-tackling/0321125215/" target="_blank">the blue book</a> I have is that it focuses a lot on tactical design and building blocks like Entities, Services and Repositories. At the end of the day that is the only thing some readers get from the text ignoring the real value: the importance of <strong>communication with domain experts and understanding the business</strong> being built.</p>
+
+<h2>Conclusion</h2>
+
+<p>Pure technical concerns like persistence don’t belong to object-oriented design. These are mere implementation details hidden behind APIs. APIs tell the story of the domain. <strong>Model the API around the domain, don’t let implementation leak to the API</strong>.</p>
+
+<p>Happy designing!</p>

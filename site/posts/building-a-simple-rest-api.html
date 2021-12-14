@@ -1,0 +1,160 @@
+<p>I think that topic deserves its own article. And here we go... we take a look at the previous API and try to do things better.</p>
+<h2>API Requirements</h2>
+<p>What is the business case of our API? It's a simple <strong>public</strong> API for a blog (actually this blog). The public here means, it allow the unauthorized uses to read the content. Not more, not less.</p>
+<ul>
+<li>information about the blog (name, description, menu items, ...)</li>
+<li>collection of articles (posts)</li>
+<li>filtered collection of articles&nbsp;(by the category and author)</li>
+<li>pagination of the articles (first, last, next and previous page)</li>
+<li>detail of an article (the whole text content)</li>
+</ul>
+<p>The administration API is built out of this scope and I will maybe talk about that in another article later. For the administration API we can expect:</p>
+<ul>
+<li>user management</li>
+<li>blog management</li>
+<li>articles management&nbsp;</li>
+</ul>
+<h2>Problems with the Old API</h2>
+<p>When we don't talk about the missing AuthN/AuthZ, we find a lack of <strong>hyper-navigation in the API</strong>. Without knowing how the endpoints look like (even it follows the REST recommendations) there is no way <strong>how to navigate the client automatically</strong>.</p>
+<p>Calling the API self results to the response:</p>
+<pre>GET /api/ HTTP/1.1
+HTTP/1.1 403 Forbidden</pre>
+<p>This is not so bad, because we built a microservice API only for the articles management. In this case, we need a billboard endpoint. The billboard shows information about the blog and navigation to other endpoint.</p>
+<p>Another problem is with the navigation, resp. no navigation, within the API. When we call the <code>/api/articles</code> endpoint, the response look like:</p>
+<pre class="brush: json">[
+  {
+    "id" : 4,
+    "title" : "New article",
+    "summary" : "Lorem ipsum",
+    "body" : null,
+    "createdAt" : "2018-05-03",
+    "categoryId" : 1,
+    "author" : {
+      "id" : 1,
+      "name" : "Tomas Tulka",
+      "email" : "tomas.tulka@gmail.com"
+    }
+  },
+  ... another articles come here
+]</pre>
+<p>First problem is with the structure itself. What does the attribute <code>body</code> there? It's always null because we expose the whole business object into the API even when some attributes are never set by the underlying service.</p>
+<p>Second, the response contains all the data, but we have no idea how to get the detail of an article, next page of the collection or how to filter the articles by the category ID.</p>
+<h2>New API&nbsp;</h2>
+<h3>The Billboad</h3>
+<p>To&nbsp;fulfill our needs we can design the response of the billboard endpoint <code>/api</code> as following:</p>
+<pre class="brush: json">{
+  "version" : "1.0",
+  "href" : "/api",
+
+  "title" : "My Blog",
+  "description" : "A small blog about programming.",
+
+  "categories" : [ {
+      "id" : 1,
+      "name" : "Programming"
+    }, {
+      "id" : 2,
+      "name" : "Another stuff"
+    } ],
+
+  "authors" : [ {
+      "name" : "Tomas Tulka",
+      "email" : "tomas.tulka@gmail.com",
+      "id" : 1
+    } ],
+
+  "links" : [ {
+      "rel" : "articles",
+      "href" : "/api/articles"
+    } ] }</pre>
+<p> </p>
+<p>The JSON document structure is pretty straightforward: the top-level entities are the blog content elements (<em>categories</em>&nbsp;and <em>authors</em>).</p>
+<p>The navigation is represented by the entity&nbsp;<code>links</code>, the&nbsp;<code>rel</code> attribute tells the logical name of the item and <code>href</code> attribute points to the resource URL.</p>
+<h3>The Articles Collection</h3>
+<p>Now, what we take a look at the <code>/api/articles</code> endpoint:&nbsp;</p>
+<pre class="brush: json">{
+  "version" : "1.0",
+  "href" : "/api/articles",
+
+  "articles" : [ {
+      "href" : "/api/articles/4",
+      "data" : {
+        "id" : 4,
+        "title" : "New article",
+        "summary" : "Lorem ipsum",
+        "createdAt" : "2018-05-03",
+        "category" : {
+          "id" : 1,
+          "name" : "Programming"
+        },
+        "author" : {
+          "id" : 1,
+          "name" : "Tomas Tulka",
+          "email" : "tomas.tulka@gmail.com"
+        }
+      }
+    },
+    ... another articles
+  ],
+
+  "queries" : [ {
+      "rel" : "page",
+      "name" : "page"
+    }, {
+      "rel" : "category",
+      "name" : "categoryId",
+    }, {
+      "rel" : "author",
+      "name" : "authorId",
+    } ],
+
+  "links" : [ {
+      "rel" : "next",
+      "href" : "/api/articles?page=3"
+    }, {
+      "rel" : "previous",
+      "href" : "/api/articles?page=1"
+    }, {
+      "rel" : "first",
+      "href" : "/api/articles"
+    }, {
+      "rel" : "last",
+      "href" : "/api/articles?page=10"
+    } ] }</pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>The endpoint have a set of query parameters listed in the <code>queries</code>. Practically it means you can filter the articles by calling the same endpoint with query parameters like <code>/api/articles?categoryId=1&amp;author=1</code>. The values for every query type are known already from the billboard response.</p>
+<p>The entity&nbsp;<code>links</code> brings the navigation (pagination).</p>
+<h3>The Article Detail&nbsp;</h3>
+<p>Last but not least is the <code>/api/articles/{id}</code> article detail endpoint:</p>
+<pre class="brush: json">{
+  "version" : "1.0",
+  "href" : "/api/articles/4",
+
+  "data" : {
+    "id" : 4,
+    "title" : "New article",
+    "summary" : "Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+    "body" : "Lorem ipsum",
+    "createdAt" : "2018-05-03",
+    "category" : {
+      "id" : 1,
+      "name" : "Programming"
+    },
+    "author" : {
+      "id" : 1,
+      "name" : "Tomas Tulka",
+      "email" : "tomas.tulka@gmail.com"
+    }
+  } }</pre>
+<h2>Further Reading</h2>
+<p> </p>
+<ul>
+<li>The probably best source is the great book&nbsp;<a href="http://shop.oreilly.com/product/0636920028468.do" target="_blank" title="RESTful Web APIs book">RESTful Web APIs</a> by Leonard Richardson.</li>
+<li>If you are to build a more sophisticated search API you should consider using&nbsp;<a href="https://graphql.org/" target="_blank" title="GraphQL">GraphQL</a>.&nbsp;</li>
+</ul>
+<h2>Source Code</h2>
+<p>You can find the current implementation (PHP) on <a href="https://github.com/net21cz/blog-backend" title="Source code">GitHub</a>.</p>
+<p>Enjoy!&nbsp;&nbsp;</p>
+<p> </p>

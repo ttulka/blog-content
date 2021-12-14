@@ -1,0 +1,16 @@
+<p><em>Queues</em> and <em>topics</em> are standard communication channels in messaging systems.
+How to use then in <strong>AWS</strong>, for example to implement the&nbsp;<a href="http://www.enterpriseintegrationpatterns.com/patterns/messaging/CompetingConsumers.html" target="_blank" title="Competing Consumers">Competing Consumers</a> pattern?</p>
+
+<p>Let's consider a following scenario:</p>
+<p>A REST endpoint (Amazon API Gateway‎) initiates a time expensive processing served by a serverless function (AWS Lambda). Not only because of the max timeout 30 seconds on the gateway it is not a good idea to process the request synchronously (see <a href="https://www.reactivemanifesto.org" title="The Reactive Manifesto">The Reactive Manifesto</a>).&nbsp;</p>
+<p>Let's build a queue of working tasks into the middle between the gateway and the worker function:</p>
+<pre>Request --&gt; Queue --&gt; Worker&nbsp;</pre>
+<p>Immediately after a request comes it is put into the queue and taken by a worker function to the processing.</p>
+<p>To implement this in AWS the tasks queue is not a queue (SQS) at all, but a topic (SNS). Let's&nbsp;explain why.</p>
+<p>In a standard non-serverless implementation will be workers listening on the queue and distributing the tasks among each other. It means the queue is a <em>pull</em> mechanism.</p>
+<p>Serverless service creates as many worker instances as needed. So there is no need to keep tasks in a queue while they are processed immediately as put into the queue. Initialization of the worker function must be event-driven (a lambda function must never&nbsp;idle!) - implementing a <em>push</em> mechanism.</p>
+<p>There is no change to register a lambda function to a queue, for such a usage there is another concept - topics:</p>
+<pre>Request --&gt; Topic --&gt; Worker</pre>
+<p>As the request comes a task is put into the topic and processed by the lambda function, elastically created on demand.</p>
+<p>So, that's the meaning of queues and topics in AWS.</p>
+<p>Happy clouding!</p>

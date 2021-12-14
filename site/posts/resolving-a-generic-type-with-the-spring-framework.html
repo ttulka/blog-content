@@ -1,0 +1,28 @@
+<p>Following code shows you how to parse a JSON data into the specific structure defined by a generic class.</p>
+
+<pre class="brush: java">
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.core.GenericTypeResolver;
+// ...
+
+@Component
+public class MyBean&lt;T extends MySuperBean&gt; {
+
+  private final Class&lt;T&gt; genericType;
+
+  private final ObjectMapper mapper = new ObjectMapper();
+
+  public MyBean() {
+    this.genericType = (Class&lt;T&gt;) GenericTypeResolver
+        .resolveTypeArgument(getClass(), MyBean.class);
+  }
+
+  public T parseData(String json) {
+    return mapper.readValue(json, this.genericType);
+  }
+}
+</pre>
+
+<p>Spring tool <code>GenericTypeResolver</code> will set the <code>genericType</code> class value which is later used as the parameter for the JSON parsing.</span></p>
+<p>Happy resolving!</p>
+

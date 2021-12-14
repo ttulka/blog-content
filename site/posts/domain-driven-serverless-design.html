@@ -1,0 +1,32 @@
+<p>Well, I know code is not everything, but as a developer, I'm just having more fun coding than scripting infrastructure in YAML or similar. For people like me is the serverless model a dream come true. But how to do serverless without turning the dream into a nightmare?</p>
+
+<p>It's <a href="https://martinfowler.com/bliki/MonolithFirst.html" target="_blank">well known</a> that the microservices-first approach leads often to a failure. The point here is to know the domain well before splitting the system up into autonomous services. Once split up refactoring across boundaries becomes difficult (or even impossible) due to the lack of collective code ownership. Werner Vogels' famous statement says &quot;<a href="https://www.allthingsdistributed.com/2016/03/10-lessons-from-10-years-of-aws.html" target="_blank">APIs are forever</a>&quot;, once published the interface cannot be changed. Without knowing the domain well one usually ends up with a <a href="https://en.wikipedia.org/wiki/Create,_read,_update_and_delete" target="_blank">CRUD</a>-like <a href="https://www.michaelnygard.com/blog/2017/12/the-entity-service-antipattern/" target="_blank">entity services</a>, which wakes him up&nbsp;every night&nbsp;in a lather of sweat.</p>
+<p>Let's illustrate this with an example.&nbsp;A CRUD-like entity service looks like this:</p>
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/domain-driven-serverless-1.png" alt="Entity Service" /> </p>
+<p>We have here one (micro)service built around the Car entity and five functions (some people call them <em>nanoservices</em>) implementing its CRUD operations. The potential database or a storage is an internal part of the service and it's not accessible or visible to the outer world.</p>
+<p>Consider a car rental company with a web page displaying a list of cars available to rent. With only entity services the page controller must retrieve a list of all cars from the Cart service, then a list of all rentals from the Rental service and finally match cars not included in any rentals:</p>
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/domain-driven-serverless-2.png" alt="Multiple requests" /> </p>
+<p>Even in this simple scenario there are several problems:</p>
+<p> </p>
+<ul>
+<li>Knowledge of Car and Rental entities on the client side leads to tight-coupling of the services.</li>
+<li>Availability of the feature relies on all involved services.</li>
+<li>Multiple synchronous requests result to a lot of overhead and increase costs rapidly.</li>
+<li>Transferring more data really needed means throughput waste.</li>
+<li>Complex communication makes the system difficult to reason about.</li>
+</ul>
+
+<p>One can easily image a more complex scenario where a function calls a function which call a function... This ends up not only in mess but in a very expensive mess, as synchronous calls in functions are charged for both the blocked caller and the blocking callee.</p>
+<p>Synchronization always means coupling. Serverless systems are great for an asynchronous communication, which is however not always possible. Fortunately, there are several options how to tame this beast. Using tools like AWS Step Functions or Azure Logic Apps can optimize the composition of function calls, but it's still not applicable everywhere. The solution is to design the services in a way they don't need to make any synchronous calls whatsoever - make them <a href="https://en.wikipedia.org/wiki/Domain-driven_design" target="_blank">domain-driven</a>!</p>
+<p>How would the scenario be implemented in the domain-driven style? Well, what is the feature here? The controller method already told us: <em>cars to rent</em>.</p>
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/domain-driven-serverless-3.png" alt="Cars to rent" /> </p>
+<p>Now, the controller makes only one single request to get a list of cars available to rent, exactly what asked for. Further there will be function like <code>rent-a-car</code>, <code>return-a-car</code> or <code>extend-a-rental</code>. All of those are autonomous, which means, they have all they need to work the feature out. Again, the service contains its own data, gathered for example by an event listening function like <code>a-new-car-stored</code>&nbsp;and similar.</p>
+<p>Important to notice is the names of new functions - all are domain-driven. Technical concepts like <em>create</em> or <em>delete</em> disappeared from the model completely and that's the whole point.</p>
+<p>To summarize it:</p>
+<ol>
+<li>Know your domain well,</li>
+<li>build services around the domain,</li>
+<li>sleep well in the night.&nbsp;</li>
+</ol>
+<p>Before we reach the first point, we should forget not only about serverless but microservices as well. First, a <a href="https://speakerdeck.com/axelfontaine/majestic-modular-monoliths" target="_blank">monolith</a> is the right way to go. Growing up enough to know the domain boundaries well, we can start with big services. Splitting them up into serverless functions is the last step.</p>
+

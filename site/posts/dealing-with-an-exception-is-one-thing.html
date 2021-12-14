@@ -1,0 +1,53 @@
+<p>In his famous book Clean Code, Robert C. Martin writes:</p>
+<blockquote class="quote">Functions should do one thing. Error handling is one thing.</blockquote>
+<p>This is a very simple principle, but I see it in action only rarely. What's actually wrong with that?:</p>
+<pre class="brush: java">class TextFile {
+  private final Path path;
+
+  TextFile(Path path) { this.path = path; }
+
+  boolean save(String content) {
+    try {
+      byte[] bytes = content.getBytes("UTF-8");
+      Files.write(this.path, bytes);
+
+      return true;
+
+    } catch (IOException e) {
+      // log the exception
+    }
+    return false;
+  }
+}
+</pre>
+<p>The thing here is we are trying to inform the client about the fact the save operation was successful or not. But this is not what the method is supposed to do, <strong>the method should save the content, period</strong>.</p>
+<p>Exposing a boolean return value the method says to its client that the error is some kind of correct behavior. But the client doesn't expect such a behavior, the client simply expect the content to be saved. If not, it is an incorrect behaviour and an exception should occur.</p>
+<p>The <code>save</code> method is different from, for example, a <code>boolean&nbsp;readable()</code> method. We expect this method to answer the question if the file is readable or not. And <code>false</code> is a valid answer in this case.</p>
+
+<p>What's the right approach? If you prefer unchecked exceptions (I do), consider the following:</p>
+<pre class="brush: java">class TextFile {
+  private final Path path;
+
+  TextFile(Path path) { this.path = path; }
+
+  void save(String content) {
+    try {
+      byte[] bytes = content.getBytes("UTF-8");
+      Files.write(this.path, bytes);
+
+    } catch (IOException e) {
+      throw new FileNotSavedException("Cannot save a file: " + path, e);
+    }
+  }
+}
+
+class FileNotSavedException extends RuntimeException {
+
+  FileNotSavedException(String message, Throwable cause) {
+     super(message, cause);
+  }
+}
+</pre>
+<p>Now, the <code>save</code> method is doing exactly what we expect from it: saves a context in a file. When this isn't for whatever reason possible, an exception is thrown and it's up to <strong>the client to deal with the situation</strong>.</p>
+
+<p>Have an exceptional day!</p>

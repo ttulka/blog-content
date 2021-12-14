@@ -1,0 +1,46 @@
+<article class="blog-post">
+    <h1 class="blog-post__title">{{title}}</h1>
+    <p class="blog-post__meta">{{createdAt}} by {{author}}</p>
+    <p>{{summary}}</p>
+    <hr>
+    {{body}}
+</article>
+
+<aside class="blog-tags">
+    {{tags}}
+    {{{tag
+    <a href="/tag/{{tag}}" class="tag">{{tag}}</a>
+    }}}
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="#">opening a pull request</a>.</p>
+
+    {{comments}}
+    {{{comment
+    <div class="comment card mb-3">
+        <div class="card-header">
+            <span class="author">{{comment.author}}</span>
+            <span class="createdAt">{{comment.createdAt}}</span>
+        </div>
+        <div class="body card-body">
+            {{comment.body}}
+        </div>
+        <div class="answers">
+            {{answers}}
+        </div>
+    </div>
+    }}}
+    {{{answer
+    <div class="answer card-body bg-light">
+        <div>
+            <span class="author">{{answer.author}}</span>
+            <span class="createdAt">{{answer.createdAt}}</span>
+        </div>
+        <div class="body">
+            {{answer.body}}
+        </div>
+    </div>
+    }}}
+</aside>

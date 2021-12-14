@@ -1,0 +1,51 @@
+<p>Software architecture is about tradeoffs. Even when the theory is good the implementation details can break it.</p>
+
+<p>Package by component, as proposed by Simon Brown in his <a href="https://www.oreilly.com/library/view/clean-architecture-a/9780134494272/" target="_blank">Missing chapter</a>, is an architectural approach to <strong>organizing code based on bundling together everything related to a component</strong>. If done properly, it enforces architectural rules, such as not-bypassing the business logic in the infrastructure layer, by using only standard Java compiler mechanisms.</p>
+
+<h2>Enforced Separation of Concepts</h2>
+
+<p>In my experience, the absence of a strict mechanism like this will lead to skipping the rules eventually, especially when working under time pressure. Such a stress-driven architecture results in the unfamous <em>Big ball of mud</em>.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/Package-by-component.png" alt="Package by component" /><br /><i class="caption">Package by component</i></p>
+
+<p><em>Package by component</em> hides code private for the component under the <em>package</em> accessor and exposes API code with the <code>public</code> accessor. This makes details inaccessible from other components that don’t share the same package. In the example above, there is no way <code>OrderController</code> could access <code>OrderRepository</code>, which is exactly what we want.</p>
+
+<p>Unfortunately, there is still no reliable mechanism to prevent <code>OrderRepositoryJdbc</code> infrastructure adapter from accessing   <code>OrderServiceImpl</code> domain object directly. The obvious ease of using the implementation directly is very tempting. It seems that <strong>in the Package by component approach is enforcement of concepts separation not sufficient</strong>.</p>
+
+<h2>Modules to the Rescue</h2>
+
+<p>Fortunately, Java packages are not the only mechanism to separate concepts on the level of code. Build tools such as Maven and Gradle comes with their own mechanisms for creating code modules (projects). The direction of the artifact dependencies defines the separation of the <em>outside</em> from the <em>inside</em> explicitly.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/Package-by-component_modules.png" alt="Package by component with modules"/><br /><i class="caption">Package by component with modules</i></p>
+
+<p>As you can see in the picture, there are <strong>no changes in the packages</strong> structure. We’re still following the Package by component approach, but this time the <strong>domain and infrastructure parts are both separated into individual modules</strong>. Now, the domain artifacts has no dependencies on any infrastructure artifacts which makes accessing <code>OrderRepositoryJdbc</code> from <code>OderServiceImpl</code> cause a compilation error.</p>
+
+<p>We don’t have to stick with two modules only. A finer modules structure like <code>web</code>, <code>db</code>, and similar would be plausible.</p>
+
+<h2>Working Example</h2>
+
+<p>As a non-trivila example, we create a simple web application with a product catalog, a shopping cart and an ordering process.</p>
+
+<p>Spring framework is used to implement the web part and Spring Boot to glue all components together.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/Package-by-component-with-clean-modules.png" alt="Package by component with clean modules"/><br /><i class="caption">Package by component with clean modules</i></p>
+
+<p>Modules create the familiar <em>onion</em> structure:</p>
+
+<ul>
+  <li>On the top there is the Spring Boot bootstrap layer - it represents a <strong>deployment scenario</strong>. Alternatively, there could be a WAR module for a web-container such as WildFly, an EAR module, and similar.</li>
+  <li>Spring framework (not Spring Boot), web UI, and a database implementation create the second infrastructure layer - <strong>technical details</strong>.</li>
+  <li>The domain layer lies always in the most inner circle - it containes <strong>business objects and policies</strong>.</li>
+</ul>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/Clean-modules_MyShop.png" alt="Clean onion structure"/><br /><i class="caption">Clean onion structure</i></p>
+
+<p>One more benefit emerges. With modules we can get rid of unnecessary dependencies in a declarative way. For example, if we want to add another implementation of the <code>OrderRepository</code> interface, such as <code>OrderRepositoryJpa</code>, we can split the <code>db</code> module into two separate modules <code>db-jdbc</code> and <code>db-jpa</code>. Then, the <strong>implementation can be easily changed just by adding or removing dependencies</strong>. <a href="/spring-boot-custom-components">Spring Boot starters</a> use this approach very successfully.</p>
+
+<p class="warning"><span class="title">Warning:</span> Albeit clean modules are nice, they required additional maintenance. In extreme cases, this could lead to an explosion of modules and rapid increase of development costs. Therefore, use with caution!</p>
+
+<p>The source code could be found on <a href="https://github.com/ttulka/blog-code-samples/tree/master/myshop" target="_blank" title="MyShop source code on GitHub">GitHub</a>.</p>
+
+<p class="note"><span class="title">Implementation note:</span> The purpose of the example code is to show the Package by component with modules approach. Nevertheless, it is not a perfect Domain-driven design code. Following the DDD principles seriously, we should see packages such as <code>com.ttulka.myshop.cart</code>, classes such as <code>ShoppingCart</code>, <code>OrderItem</code>, and, of course, tests!</p>
+
+<p>Happy packaging!</p>

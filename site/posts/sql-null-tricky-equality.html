@@ -1,0 +1,122 @@
+<p>Especially when creating a SQL quary from the code, to make the life easier we are using constructions like this:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE 1=1</pre>
+<p>Then we can easily add a new condition just joined with AND (or OR):</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE 1=1 AND ...</pre>
+<p>and it will be working perfectly fine.</p>
+<p>Working with constans can't bring any problem, but it's getting tricky when we're working with variables (columns) like this:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE num=num</pre>
+<p>The problem is the special <em>value</em> NULL. <br /></p>
+<p>Why do we actually need <code>num = num</code> instead of <code>1 = 1</code>? Well it could be handy when we have a condition inside the query:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE val =&nbsp; IF(num &gt; 2, 3, val)</pre>
+<p>By this query we say: give me all the data in the <code>test</code> table where the value of the <code>val</code> column equals 3, in case that value of the <code>num</code> column is greater then 2, otherwise we don't care of the value of the <code>val</code> at all.</p>
+<p><em>Comment: the control flow function <code>IF</code> is RDBMS-related (<code>IF</code> is available in MySQL).</em></p>
+<p>In case when the val column contains NULL values, we can get unexpected behaviour (unexpected for us, but logic as we will see next).</p>
+<h2>Working with the NULL values</h2>
+<p>Let's consider a simple table:</p>
+<pre class="brush: sql">CREATE TABLE test (num INT, str VARCHAR(100), str2 VARCHAR(100));</pre>
+<p>with different values containg NULL values:</p>
+<pre class="brush: sql">INSERT INTO test VALUES (1, 'abc', 'abc'), (2, NULL, NULL), (NULL, '3', NULL), (NULL, NULL, NULL);</pre>
+<p>The table looks like following:</p>
+<p>
+<table cellspacing="1" cellpadding="1" border="1" style="width: 300px;">
+<tbody>
+<tr>
+<td valign="top"><strong>num<br /></strong></td>
+<td valign="top"><strong>str<br /></strong></td>
+<td valign="top"><strong>str2<br /></strong></td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;1</td>
+<td style="width: 33%;">&nbsp;abc</td>
+<td style="width: 33%;">&nbsp;abc</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;2</td>
+<td style="width: 33%;">  NULL</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;NULL</td>
+<td style="width: 33%;">&nbsp;3</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;NULL <br /></td>
+<td style="width: 33%;">  NULL</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+</tbody>
+</table><br />
+</p>
+<p>Executing this query:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE num = num;</pre>
+<p>will return</p>
+<p>
+<table cellspacing="1" cellpadding="1" border="1" style="width: 300px;">
+<tbody>
+<tr>
+<td valign="top"><strong>num<br /></strong></td>
+<td valign="top"><strong>str<br /></strong></td>
+<td valign="top"><strong>str2<br /></strong></td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;1</td>
+<td style="width: 33%;">abc <br /></td>
+<td style="width: 33%;">&nbsp;abc</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;2</td>
+<td style="width: 33%;">&nbsp;NULL</td>
+<td style="width: 33%;">&nbsp;NULL</td>
+</tr>
+</tbody>
+</table>
+</p>
+<p>But it's very suspicious, because we have added four not two rows.</p>
+<p>NULL values can't be compared by the <code>=</code> equality operator. The same behaviour we can see in this example:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE str = str2;</pre>
+<table cellspacing="1" cellpadding="1" border="1" style="width: 300px;">
+<tbody>
+<tr>
+<td valign="top"><strong>num<br /></strong></td>
+<td valign="top"><strong>str<br /></strong></td>
+<td valign="top"><strong>str2<br /></strong></td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;1</td>
+<td style="width: 33%;">abc <br /></td>
+<td style="width: 33%;">&nbsp;abc</td>
+</tr>
+</tbody>
+</table>
+<p>Instead of <code>=</code> operator we need to use <code>IS</code> operator:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE num IS num;</pre>
+<p>will return the whole table.</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE str IS str2;</pre>
+<table cellspacing="1" cellpadding="1" border="1" style="width: 300px;">
+<tbody>
+<tr>
+<td valign="top"><strong>num<br /></strong></td>
+<td valign="top"><strong>str<br /></strong></td>
+<td valign="top"><strong>str2<br /></strong></td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;1</td>
+<td style="width: 33%;">&nbsp;abc</td>
+<td style="width: 33%;">&nbsp;abc</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;2</td>
+<td style="width: 33%;">  NULL</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;NULL <br /></td>
+<td style="width: 33%;">  NULL</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p>
+<p>NULL is an unknown value. As <code>NULL != NULL</code>, we can't do <code>num = NULL</code> nor <code>num != NULL</code> to get the expected results.</p>
+<p><strong>Always use <code>IS</code> (<code>IS NOT</code>) operators while working with NULL values.</strong><br /></p>

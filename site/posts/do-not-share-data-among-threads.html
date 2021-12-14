@@ -1,0 +1,122 @@
+<p>Distribution of a task among several threads means horizontal scaling - the more computing resources (processors) the less time to work the task out. Sharing data among threads brings the need to <strong>synchronize which kills the scaling capability</strong> of the computing.</p>
+
+<p>Is there a way out?</p>
+
+<p>Consider a very simple ETL system where the Extractor produces a finite sequence of numbers, the Transformer converts numbers into strings, and the Loader finally saves the string into a database. Because the database access is expensive, the Loader works in batches: first, collect data up to a limit batch size, then write the whole batch into the database. To use resources efficiently the Loader runs in multiple threads.</p>
+<p><img alt="Simple multi-thread ETL" src="https://raw.githubusercontent.com/ttulka/blog-assets/master/ETL-with-shared-resources.png" /></p>
+<p>And here comes trouble: shared data is introduced (batch collection) and methods must be synchronized. The result is almost the same or event worse than using a single thread without synchronization.</p>
+<p>
+<table border="1" cellpadding="3" cellspacing="0">
+<thead>
+<tr>
+<th>Single thread, unsafe</th>
+<th>1 thread, sync</th>
+<th>2 threads, sync</th>
+<th>4 threads, sync</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>51.446 ms</td>
+<td>50.768 ms</td>
+<td>51.083 ms</td>
+<td>51.674 ms</td>
+</tr>
+</tbody>
+</table>
+</p>
+<p>Some optimization to minimize the size of the critical section are practicable, but not always. How to avoid synchronization as much as possible?</p>
+<h2>Thread Own Data</h2>
+<p>One approach is to let each thread to own its data. Such data doesn't have to be synchronized. The drawback is a design-shift of the Loader from a simple implementation to a threading-aware one:</p>
+<pre class="brush: java">class BatchLoaderThreadOwnData {
+
+    private final int batchSize;
+    private final JdbcTemplate jdbcTemplate;
+
+    private boolean finished = false;
+
+    // the object holds a map of data for each thread
+    // the only one concurrent access, therefore synchronized
+    private final Map&lt;Long, ThreadOwnData&gt; threadOwnDataMap = new ConcurrentHashMap&lt;&gt;();
+
+    public void load(String result) {
+        threadOwnData().resultsBatch.add(result);
+
+        if (finished || threadOwnData().counter++ &gt;= batchSize) {
+            batchLoad(threadOwnData());
+        }
+    }
+
+    public void finish() {
+        finished = true;
+        threadOwnDataMap.values().forEach(this::batchLoad);
+    }
+
+    private ThreadOwnData threadOwnData() {
+        return threadOwnDataMap.computeIfAbsent(
+                  Thread.currentThread().getId(),
+                  id -&gt; new ThreadOwnData(batchSize));
+    }
+
+    // ...
+}
+</pre>
+<p>The results are actually much better:</p>
+<p>
+<table border="1" cellpadding="3" cellspacing="0">
+<thead>
+<tr>
+<th>Single thread, unsafe</th>
+<th>1 thread, own data</th>
+<th>2 threads, own data</th>
+<th>4 threads, own data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>51.446 ms</td>
+<td>52.129 ms</td>
+<td>29.668 ms</td>
+<td>20.050 ms</td>
+</tr>
+</tbody>
+</table>
+</p>
+<h2>Instance per Thread</h2>
+<p>We can go a step further and let a tread own the whole object. This allows us to reuse the first thread-unsafe version just as with a single thread. The drawback is a complicated execution logic and the need to create new instances, which is not always possible:</p>
+<pre class="brush: java">// the only synchronization here
+Map&lt;Long, BatchLoaderUnsafe&gt; batchLoaders = new ConcurrentHashMap&lt;&gt;();
+// ...
+// run in an async executor:
+BatchLoaderUnsafe loader = batchLoaders.computeIfAbsent(
+    Thread.currentThread().getId(),
+    id -&gt; new BatchLoaderUnsafe(BATCH_SIZE, jdbcTemplate));
+// call it on an unsynchronized thread-owned loader
+loader.load(i);
+</pre>
+<p>The results are, as expected, comparable to the previous solution:</p>
+<p>
+<table border="1" cellpadding="3" cellspacing="0">
+<thead>
+<tr>
+<th>Single thread, unsafe</th>
+<th>1 thread, thread own</th>
+<th>2 threads, thread own</th>
+<th>4 threads, thread own</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>51.446 ms</td>
+<td>51.919 ms</td>
+<td>30.051 ms</td>
+<td>19.814 ms</td>
+</tr>
+</tbody>
+</table>
+</p>
+<h2>Conclusion</h2>
+<p>In the modern world of microservices and distributed computing is scalability one of the most important attributes. Techniques like immutability are not always applicable, but synchronization must still be reduced to minimum. When not done so, the performance could be even worse when running in a single thread as threading overheads must be paid.</p>
+<p>When it is not possible to create a new worker instance for a thread, the worker could be designed to create a new instance of data per thread. When every thread owns its data, there is no need for further synchronization.</p>
+<p>The whole code could be found in <a href="https://github.com/ttulka/blog-code-samples/tree/master/shared-resources-among-threads">my GitHub</a>.</p>
+<p>Happy threading!</p>

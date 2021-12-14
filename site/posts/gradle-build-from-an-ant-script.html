@@ -1,0 +1,84 @@
+<p>I will continuously update this article how my work will be moving forward and put interesting issues and my solutions for them.</p>
+<p>If you have a better solution, please comment and discuss!</p>
+
+<h2>Does a file exist?</h2>
+<p>In the Ant script I have found such a construct to check if a file exists:</p>
+<p> </p>
+<pre class="brush: xml">&lt;pathconvert property="MyFile.isPresent" setonempty="false"&gt;
+    &lt;path&gt;
+&nbsp;&nbsp;&nbsp;     &lt;fileset dir="src" includes="MyFile-*.dat" /&gt;
+&nbsp;&nbsp;&nbsp; &lt;/path&gt;
+&lt;/pathconvert&gt;
+</pre>
+<p>Obviously it checks the folder <em>src</em> for files with names of the filter <em>MyFile-*.dat</em>.</p>
+<p>We can do the same with Gradle's <code>FileCollection</code>:</p>
+<p> </p>
+<pre class="brush: groovy">MyFile.isPresent = !fileTree("src").include('MyFile-*.dat').isEmpty();</pre>
+<p>
+This will create a file filter on the folder and check if the match is empty, then set to a variable.</p>
+<h2>Substring </h2>
+<p>In the Ant script the macro was defined as a javascript:</p>
+<pre class="brush: xml">&lt;scriptdef name="substring" language="javascript"&gt;</pre>
+<p>With Gradle you can easily implement it in java:</p>
+<pre class="brush: groovy">def substring(String text, String regexp, int result) {
+&nbsp;&nbsp;&nbsp; java.util.regex.Pattern p = java.util.regex.Pattern.compile(regexp);
+&nbsp;&nbsp;&nbsp; java.util.regex.Matcher m = p.matcher(text);
+&nbsp;&nbsp;&nbsp; if (m.find( )) {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; return m.group(result + 1);
+&nbsp;&nbsp;&nbsp; }
+&nbsp;&nbsp;&nbsp; return null;
+}</pre>
+<p>and use it:</p>
+<pre class="brush: groovy">def version = substring(files.getAsPath(), "executor-(.*)\\.msi", 0)</pre>
+<p> </p>
+<h2> Custom builds</h2>
+<p>Because the result from the new Gradle build must be the same as from the old Ant build <strong>without changes of the project structure</strong>, we need to customize standard <code>java </code>plugin builds a bit.</p>
+<h3>Source sets</h3>
+<p>Java plugin provides a pretty high-level configuration element called <code>sourceSets</code>. You can change the sources location by setting the <code>sourceSets</code> up:</p>
+<pre class="brush: groovy">sourceSets {
+&nbsp;&nbsp;&nbsp; main {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; java {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; srcDirs = ["mysource/mypkg"]
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; exclude "test/**"
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; }
+&nbsp;&nbsp;&nbsp; }
+}</pre>
+<h3>Destination of the result classes</h3>
+<p>Compilation of the java classes in the <a target="_blank" href="http://www.gradle.org/docs/current/userguide/java_plugin.html"><em>java plugin</em></a> is done by the target called <code>compileJava</code>. If you want to change the destination of the compilation, can do it easily by rewriting the variable <code>destinationDir</code>:</p>
+<pre class="brush: groovy">compileJava {
+&nbsp;&nbsp;&nbsp; destinationDir = file("myBuildDir")&nbsp;&nbsp;&nbsp; // change the default dir for classes
+}
+</pre>
+<h3>Additional clean</h3>
+<p> If you want to put some additional actions into the standard clean task, do it easily:</p>
+<pre class="brush: groovy">clean &lt;&lt; {
+&nbsp;&nbsp;&nbsp; // ... do some clean up
+}
+</pre>
+<p> </p>
+<h3>Compile task</h3>
+<p> In the old Ant script I have a compile task I need to keep. To make it work correctly together with the standard <code>java</code> plugin, make it dependent on the <code>classes</code> task, which is equivalent in the context:</p>
+<pre class="brush: groovy">task compile(dependsOn: classes) {&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // depends on the standard java task "classes"
+}
+</pre>
+<h3>Another build</h3>
+<p> If you want to have a build of different sources in the same Gradle file (of course in a different task), you can do it like this:</p>
+<pre class="brush: groovy">sourceSets {
+&nbsp; main {
+&nbsp;&nbsp;&nbsp; ...
+&nbsp; }
+&nbsp; compileApp2 {
+&nbsp;&nbsp;&nbsp; java {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; srcDirs = ["anothersource/mypkg2"]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; include "app/**"
+&nbsp;&nbsp;&nbsp; }
+&nbsp; }
+}
+...
+task compileApp2(type: JavaCompile, dependsOn: prepareApp2) {
+&nbsp;&nbsp;&nbsp; source = sourceSets.compileApp2.allSource.srcDirs
+&nbsp;&nbsp;&nbsp; destinationDir = file('app2BuildDir')&nbsp;&nbsp;&nbsp;
+&nbsp; &nbsp; classpath = configurations.compile&nbsp;
+}
+</pre>
+<br>

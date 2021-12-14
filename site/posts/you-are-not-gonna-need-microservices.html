@@ -1,0 +1,75 @@
+<p><em>You Aren’t Gonna Need It</em> (YAGNI) is one of the most important principles in software development.</p>
+
+<blockquote class="quote">Perfection is achieved not when there is nothing more to add, but when there is nothing more to take away. ~ Antoine de Saint-Exupery</blockquote>
+
+<p>You can see YAGNI as a special case of the <em>Keep It Simple Stupid</em> (KISS) principle. YAGNI applies to a higher level as it tells us to cut off any unnecessary part while KISS advises making the rest as simple as possible.</p>
+
+<blockquote class="quote">Everything should be made as simple as possible, but no simpler. ~ Albert Einstein</blockquote>
+
+<p>Violation of YAGNI is sometimes called <em>overengineering</em>. A feature for every possible case, functions/methods with a lot of input parameters, multiple if-else branches, rich and detailed interfaces, all those could be a smell of overengineering. It’s the opposite of the famous UNIX-mantra: <em>Do one thing well</em>.</p>
+
+<p>To avoid this trap, always ask yourself a question: <i>“Is it really needed right now?”</i> If the answer is <i>“Well, maybe”</i> then probably not.</p>
+
+<p>Often, significant architectural decisions must be made to implement a feature. This is a problem because the earlier a decision is made the less information we have and the more likely a wrong decision is to be made. Therefore, it is a good practice to <strong>defer difficult decisions</strong> until the last possible moment. Ignoring YAGNI leads to a violation of this practice.</p>
+
+<p>The main point of YAGNI is to <strong>pay the costs first when the feature is actually needed</strong>, and not right now, just in case. YAGNI violations make development always expensive because the complexity behind each feature must be paid, even though the feature is not necessary (yet). In other words, accidental complexity rises. And complexity is expensive. Complexity is no fun.</p>
+
+<p>The same reasoning can be applied to microservices. But, don’t take me wrong: there are plenty of highly useful benefits that the microservices style can bring you and a lot of <a href="https://12factor.net" target="_blank">great principles</a> you can apply even to your monolith. However, the actual question remains the same: <strong>Do you really need them right now?</strong> Do you really need to scale every service up to a thousand instances? Do you need a Kubernetes cluster, Kafka stream-processing platform, and Istio service mesh? Once again: maybe, but probably not right now.</p>
+
+<h2>Fallacies of microservices</h2>
+
+<p>Let's take a look at some typical fallacies I've observed so far among teams adopting microservices:</p>
+
+<h3>Microservices help you find boundaries</h3>
+
+<p>This is probably the most dangerous misunderstanding of microservices and a very expensive mistake you can make. Remember: <strong>Microservices are about technology, boundaries are about business</strong>. No technology can help you define your boundaries, only proper understanding of your business does.</p>
+
+<p>Microservices are just one option for how to physically separate components once boundaries are correctly defined. At the same time, they make the boundaries hard to change if they are found to be wrong, which often happens, especially in the early phases of product development.</p>
+
+<p>Try to define your service boundaries without any concerns of technology, build a team around them, implement a few product iterations. As you gain some confidence, you can turn them into microservices, if it will solve an actual problem.</p>
+
+<h3>Microservices make your system modular</h3>
+
+<p>Microservices don't make your system modular out of the box. <a href="https://blog.ttulka.com/good-and-bad-monolith" target="_blank">Modularity</a> means <em>logical separation</em> of business concepts. Microservices make this separation visible and difficult to cross over. While this is good, it does not come without drawbacks such as resistance to refactoring the structure of the modules.</p>
+
+<p>Anyway, there are much cheaper options such as using <a href="https://github.com/ttulka/ddd-example-ecommerce" target="_blank">packages/namespaces</a>, <a href="https://github.com/ttulka/ddd-example-ecommerce/tree/modulith" target="_blank">modules/artifacts</a>, etc. Those solutions provide a good level of physical separation along with ease to change.</p>
+
+<h3>Microservices make your system performant</h3>
+
+<p>The possibility to scale every single service independently is one of the most emphasized advantages of microservices. While this is true, it comes with costs. Running every service as a separate process can't be done without supporting infrastructure. Things like service mesh, service discovery, or load balancer come to mind first.</p>
+
+<p>Cloud providers offer a working solution for you, but one has to bear in mind that remote calls are always more expensive than inter-process communication. Do you really need to scale all your services? Maybe one or two most loaded would be enough. Vertical scaling or scaling the whole system are options that usually just work and that are much cheaper than microservices.</p>
+
+<p>Another aspect is good modularity. When service boundaries are incorrectly defined and multiple remote calls must be done to process a request, the overall performance is likely to decrease when turning such a system into microservices.</p>
+
+<h3>Microservices are cheaper to operate</h3>
+
+<p>A typical example of this fallacy is Serverless computing. While there definitely are use-cases where the serverless approach can be beneficial and cheap to develop and operate, the amount of such use-cases is pretty limited. What's more, it's easy to get an impression that going serverless means just writing code and taking no care of how it's being operated. This is usually not true. For example, monitoring is still an important and hard problem no one else will solve for you.</p>
+
+<p>Serverless is an extreme case. An application running in the cloud in the same way as previously in your own server warehouse is likely to be much more expensive. This is very true, especially for so-called Lift&Shift solutions.</p>
+
+<p>One idea behind microservices is to move a piece of complexity from development into operations, where it is easier (and cheaper) to tackle. Yes, by doing microservices right, you might save some money on development but your operation costs will probably increase rapidly. This is not necessarily a bad thing as you do save some bucks at the end of the day, it's just something to be aware of.</p>
+
+<h3>Microservices are easier to develop</h3>
+
+<p>Because a lot of complexity is moved to operations, great Ops skills are required inside the teams when taking the microservices-oriented approach. As the need for communication between Devs and Ops becomes crucible, there's no room for traditional separation by technical responsibilities. All members of the team must work together on a whole business feature, preferably colocated in the same room.</p>
+
+<p>Microservices are a practical approach to Agile development and require a real DevOps mindset, where the whole team is responsible for the product from the first sketches to running the production environment.</p>
+
+<p>If "DevOps" in your organization is done by that guy sitting in the last office on the second floor, then you shouldn't even think about microservices.</p>
+
+<h3>Microservices are small</h3>
+
+<p>Very popular topic and a big misconception. "Micro" does mean small or even smaller, right? Small is good, small is easy. Easy to understand, easy to develop, easy to operate… Well, no. <strong>"Micro" is not about size, it is about responsibility.</strong> Anecdotes such as <em>two pizza teams</em> or <em>code that fits on my screen</em> might work in some organizations, however, they are no general rules.</p>
+
+<p>A service should be minimal in its responsibility and API. A service should implement just a single business capability. Nothing more, nothing less. The contract must be simple and clear. No unnecessary pollution, no implementation details.</p>
+
+<p>The implementation can be big, even huge at the beginning. The bounded context (from Domain-driven development) defines the biggest possible service. That is the boundary to start with. Other services will emerge by themselves as the domain becomes clearer.</p>
+
+<h2>Summary</h2>
+
+<p>Always ask yourself: <i>"Do I really need this right now? Is this the simplest thing that can possibly work?"</i></p>
+
+<p>Don't go microservices just because they look cool and everybody is talking about them - they are no silver bullet. Doing so would be a violation of the YAGNI principle on the architecture level. That is, don't do it.</p>
+
+<p>All in all, you aren't gonna need it!</p>

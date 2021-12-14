@@ -1,0 +1,28 @@
+<p>Release 1.1.0 introduces a new process wrapper to send a <strong>heartbeat to reset the timeout</strong> explicitly or automatically with every read byte.</p>
+<pre class="brush: xml">&lt;dependency&gt;
+    &lt;groupId&gt;cz.net21.ttulka.exec&lt;/groupId&gt;
+    &lt;artifactId&gt;process-watch-dog&lt;/artifactId&gt;
+    &lt;version&gt;1.1.0&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>Putting a process into watching returns a process wrapper:</p>
+<pre class="brush: java">Process process = ...
+
+ProcessWatchDog watchDog = new ProcessWatchDog();
+
+WatchedProcess watchedProcess = watchDog.watch(process, 1000);</pre>
+<p>Because the class <code>WatchedProcess</code> extends stadard Java class Process, we can do simply:</p>
+<pre class="brush: java">process = watchDog.watch(process, 1000);</pre>
+<p>Now, a heartbeat will be sent every time we read from the process input stream:</p>
+<pre class="brush: java">InputStream is = process.getInputStream();
+int b;
+while ((b = is.read()) != -1) {
+    // heartbeat is sent implicitly with every successful call of `read()`
+}</pre>
+<p>To send a heartbeat explicitly, we can do it via the WatchedProcess object:</p>
+<pre class="brush: java">wp.heartBeat();</pre>
+<p>Or simply tell the Watch Dog to do it:</p>
+<pre class="brush: java">watchDog.heartBeat(process);   // we don't need the `WatchedProcess` object here</pre>
+<p>Previous post about the Watch Dog: <a href="/process-watch-dog-released">Process Watch Dog Released!</a></p>
+<p>All about:&nbsp;<a href="https://github.com/ttulka/process-watch-dog"><strong>https://github.com/ttulka/process-watch-dog</strong></a></p>
+<p>Happy heartbeating!</p>
+<p> </p>

@@ -1,0 +1,38 @@
+<p> This very very simple library will let you to create simple graphs like this one:</p>
+<p><img alt="Simple Graphs - preview" src="/storage/simple-graphs-preview.png" /><br /></p>
+<p>Let's consider a simple JavaFX 2 application:</p>
+<pre class="brush: java">public class HelloWorld extends Application {
+
+&nbsp;&nbsp;&nbsp; private void init(Stage primaryStage) {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; // TODO
+&nbsp;&nbsp;&nbsp; }
+
+&nbsp;&nbsp;&nbsp; @Override
+&nbsp;&nbsp;&nbsp; public void start(Stage primaryStage) throws Exception {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; init(primaryStage);
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; primaryStage.show();
+&nbsp;&nbsp;&nbsp; }
+
+&nbsp;&nbsp;&nbsp; public static void main(String[] args) {
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; launch(args);
+&nbsp;&nbsp;&nbsp; }
+} </pre>
+<p>We will fill the init method to set up the scene showing the graph nodes from the picture above.</p>
+<p>First, we need the parent node:</p>
+<p> </p>
+<pre class="brush: java">final BoxNode parent = new BoxNode("Parent", 250, 0);</pre>
+<p> </p>
+<p>Then the children nodes:</p>
+<pre class="brush: java">final BoxNode myNode1 = new BoxNode("MyNode 1", 0, 200);
+final BoxNode myNode2 = new BoxNode("MyNode 2", 300, 400);</pre>
+<p>Second, we connect the nodes with each other (the parent to children, the first child to the second one and also with itself):</p>
+<pre class="brush: java">parent.addArrowTo(myNode1, "arrow 1");
+parent.addArrowTo(myNode2, "arrow 2");
+myNode1.addArrowTo(myNode2, "arrow 3");
+myNode1.addArrowTo(myNode1, "arrow round");<p></p></pre>
+<p>Finally, we all the nodes to a group (<code>javafx.scene.Group</code>) and the group to the scene:</p>
+<pre class="brush: java">final Group root = new Group();
+primaryStage.setScene(new Scene(root));
+root.getChildren().addAll(parent, myNode1, myNode2);</pre>
+<p>That's all!</p>
+<p>The library is available as a <a href="/storage/simple-graphs-1.0.0.jar">JAR</a> or <a href="https://github.com/ttulka/javafx2-simple-graphs">source archive</a>.</p>

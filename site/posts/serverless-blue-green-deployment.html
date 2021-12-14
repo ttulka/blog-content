@@ -1,0 +1,24 @@
+<h2>Blue-Green Deployment</h2>
+<p>The concept is pretty easy: We have <strong>two identical production environments</strong> (<i>blue</i> and <i>green</i>), the green is &quot;live&quot; as default. When we release a new version, we deploy first into the blue environment. There we can perform some tests and then switch routing. The blue enviroment becomes &quot;live&quot;. If something goes wrong we should be able to <strong>switch back in less than a second</strong>.</p>
+
+<h2>Problems with Serverless</h2>
+<p>So, why don't we use the same strategy for serverless deployment? We have several challenges to solve:</p>
+<ul>
+  <li><strong>No database integration</strong> - a service should contain its own data storages as a part of the stack.</li>
+  <li><strong>Independent deployment lifecycles</strong> - there is no synchronization between deployments.</li>
+  <li><strong>Location transparency</strong> - the topology of serverless systems is dynamic.</li>
+</ul>
+<p>Is there any solution for those problems? Maybe yes, but the cost of complexity would be too high. On the other hand, this doesn't mean we have to abandon the blue-green deployment completely. We can still benefit from the idea, just on another level.</p>
+
+<h2>Blue-Green for Test-Isolation</h2>
+<p>Let's image the following scenario: We have a test stage where all the integration tests are executed in. This stage is shared by all the service deployment pipelines.</p>
+<p>What happens when a test of the service A runs at the same time as another test of the service B, which uses the service A as an external resource? When the new version of the service A doesn't work, it has a negative impact on the test results. And that's the point where the blue-green deployment comes to rescue!</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/Serverless-BlueGreen-Deployment.png" width="100%" alt="Serverless Blue-Green Deployment" /></p>
+
+<p>As you can see in the picture above, when a new version of the service A (Av2) is about to be tested, it is deployed parallel to the previous version stack (Av1). The <i>blue</i> version is integrated in the system as well as the <i>green</i> version. If another test comes along, it sees only the already tested stack Av1.</p>
+
+<h2>Source Code</h2>
+<p>You can find a simple implementation of the serverless blue-green development for test-isolation in my <a href="https://github.com/ttulka/blog-code-samples/tree/master/serverless-blue-green-deployment">Github account</a>. The example uses AWS CodePipeline.</p>
+
+<p>Be blue-green, be happy!</p>

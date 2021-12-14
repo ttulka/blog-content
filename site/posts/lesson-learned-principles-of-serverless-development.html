@@ -1,0 +1,77 @@
+<p>First, I should explain what I mean by saying <em>serverless</em> as long as this became already a buzzword and could have different meanings.</p>
+<p>Let think about a serveless system simply as about <strong>a system with only managed, elastic (auto-scaling) resources</strong>. This means, hardware (CPU, memory, storage) and platform (OS, runtime) provisioning is always included as a part of the cloud-provider service.</p>
+<h2>Development</h2>
+<ol>
+<li>Everything is as serverless as possible, only managed, auto-scaling services are used.</li>
+<li>The development of a service is finished, once an infrastructure template exists and runs without error.</li>
+<li>Every client communication with the cloud services is possible only via an HTTPS facade API.</li>
+<li>Design of an API is use-case- and business-driven as well as the architecture-components.</li>
+<li>Implementation has no impact on an API and it's completely hidden behind it.</li>
+<li>In the implementation, the business-logic is decoupled from the cloud-provider.</li>
+<li>References to resources are handed over to services via environment variables.</li>
+<li>For each service there are unit + integration tests.</li>
+<li>Each service is accessible only via API and events.</li>
+<li>Multitenancy (when used) is a solid, mandatory part of every service.</li>
+</ol>
+<h3>Everything is as serverless as possible</h3>
+<p>On can spin-up thousands of functions in a second and doesn't have to take care of load-balancing or any other resource management - this all is done by the provider of the serverless service (by the definition). The natural consequence is that if only one part of the system is non-serverless, the whole system becomes failure-prone.</p>
+<p>Consider a serverless function connected to a non-serverless database. After spinning-up an amount of function greater than the access limit of the database, next calls of the function will freeze and eventually fail with a timeout.</p>
+<p>Isolation of a failure and fall-back strategy for dealing with a non-serverless resource in a severless system is crucial for success.</p>
+<h3>The development is finished, once an infrastructure template exists</h3>
+<p><em>Infrastructure as Code</em> is an important part of a serverless deployment. The template of the service infrastructure as an input for the deployment process encourages the so-called <em>DevOps</em> culture.</p>
+<h3>Client communicates with the services only via its HTTPS API</h3>
+<p>The client code should never use any provider-related SDKs. The communication must be agnostic and independent.</p>
+
+<p>This frees your clients from the vendor lock-in, which is definitely a good idea, because the client code is usually not in the hand of the services developers - freeing clients makes services more independent (for example, a service doesn't break any client by changing a cloud provider).</p>
+</h3>
+<h3>Design is use-case- and business-driven</h3>
+<p>Following principles of <em>Domain-Driven Design (DDD)</em> will provide a great insight of how to separate code into services.</p>
+<p>If helps to keep the API stable as domain seems to be more relevant for clients (customers) than technical aspects.</p>
+<h3>Implementation has no impact on an API</h3>
+<p>Connected to the previous one, not only an API must be domain-driven, but any implementation details must not leak into it.</p>
+<p>I guess this is not surprising as it counts to the very basic principles of software design in general.</p>
+<h3>Business-logic is decoupled from the cloud-provider</h3>
+<p>Serverless is a kind of deployment which means it should be implemented in the very outer layer of code calling domain logic as its dependency (never the other way around).</p>
+<h3>Resources are referenced via environment variables</h3>
+<p>The point III of <a href="https://12factor.net/" target="_blank">The Twelve Factors</a> in practice.</p>
+<p>The references should be resolved automatically in service templates in deployment time.</p>
+<h3>Each service has unit and integration tests</h3>
+<p>Test-driven Development (TDD) is a great method to build a software of high quality.</p>
+<p>Don't accept any service without tests as finished.</p>
+<p>For the whole product there should be a set of end-to-end test for testing whole scenarios from a client point of view on APIs.</p>
+<h3>Each service is accessible only via API and events.</h3>
+<p>All the service's internal resources (e.g. file storage, database etc.) are hidden and from outside denied for access.</p>
+<p>It has been already said that implementation must not have any impact on the API, this point says the same from the other side: no other service running in the same environment must access a service's internals (even if this is technically possible).</p>
+<h3>Multitenancy is a solid, mandatory part of a service.</h3>
+<p>When sharing services among customers (the opposite would be to build a &quot;silo&quot; stack for each customer), the multitenancy must be a part of every service - considered from design and the very beginning of development.</p>
+<h2>Deployment</h2>
+<ol>
+<li>Names of the deployment stacks follow the pattern &quot;&lt;service-name&gt;-&lt;stage&gt;&quot;.</li>
+<li>Automatic tests are executed in the development-stage DEV, acceptance and manual tests in the test-stage QA.</li>
+<li>Developers (stage Dev) and testers (stage QA) have no access to the production (stage Prod).</li>
+<li>The deployment of product artifacts is realized and implemented as a build pipeline (Continuous Delivery).</li>
+</ol>
+<h3>Names of the deployment stacks follow the pattern &quot;&lt;service-name&gt;-&lt;region&gt;-&lt;stage&gt;&quot;</h3>
+<p>It's important to bring order to the system resources and make the management of them human-friendly. In this case, similar as in code, the naming is very helpful.</p>
+<p>Each resource must be deployable in every region within the account, which is enabled by using the region name a a suffix.</p>
+<p>The name of the stage (<code>dev</code>, <code>test</code>, <code>prod</code>, etc.) as a suffix allows the developer to deploy multiple stages inside a single account (for test purposes or costs optimizing).</p>
+<h3>Developers and testers have no access to the production</h3>
+<p>This is possible thru multiple deployment stages strategy where different stages are deployed as a continuous process for different purposes till the last - production - stage.</p>
+<h3>Deployment implemented as a build pipeline</h3>
+<p>Building, testing, deploying from templates into stages is realized via a single (per product) pipeline.</p>
+<h2>Security</h2>
+<ol>
+<li><em>Principle of least privilege</em> is used for every resource.</li>
+<li>Encrypt everything.</li>
+</ol>
+<h3>Principle of least privilege is used for every resource</h3>
+<p>Don't give a service rights to do more than it actually should do. This could save you from an unpleasant surprise.</p>
+<p>Similar for multi-tenancy systems: the isolation of customer data must be enforced directly by underlying constrains, not only by the logic in code.</p>
+<h3>Encrypt everything</h3>
+<p>All the communication and all the data must be encrypted.</p>
+<p>It's a part of the contract where the keys are to be found.</p>
+<h2>Conclusion</h2>
+<p>Generally, the serverless development is not much different from a standard software development. The biggest difference is in the possibility (duty as well) for a developer to be an active part of the deployment process.</p>
+<p>Above I tried to summarize a few basic principles useful to follow in such a development.</p>
+<p>But the biggest lesson I have learned: (software) principles should never lead to dogma; they should provide a hint on unclear crossroads.</p>
+<p>Have a serverless day!</p>

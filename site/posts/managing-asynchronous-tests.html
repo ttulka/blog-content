@@ -1,0 +1,48 @@
+<p>Testing asynchrony could be pretty tricky, not always is clear how long must a test wait for a result to be delivered - if it's too little the test fails event when the tested functionality works, if it's too long the test is just wasting time (so expensive especially in the commit stage).</p>
+
+<p>So, how to deal with this problem?</p>
+
+<p>Consider a simple test in JUnit:</p>
+<pre class="brush: java">@Test
+public void shouldDeliverResult() {
+&nbsp; &nbsp; calculateResult();
+&nbsp; &nbsp; confirmResultWasDelivered(); &nbsp; &nbsp; &nbsp; &nbsp;
+}
+
+private void confirmResultWasDelivered() {
+&nbsp; &nbsp; if (!resultWasDelivered()) {
+&nbsp; &nbsp; &nbsp; &nbsp; fail("No result was delivered!");
+&nbsp; &nbsp; }
+}</pre>
+<p>In this unit test we test a state of an object after calling the method <code>calculateResult()</code> with the method <code>resultWasDelivered()</code>. If the method <code>calculateResult()</code> is designed in the asynchronous manner, the test will fail almost in 100 % cases. </p>
+<p>A naive solution is to <strong>add a timeout</strong>:</p>
+<pre class="brush: java">private void confirmResultWasDelivered() {
+&nbsp; &nbsp; sleep(TIMEOUT);
+&nbsp; &nbsp;
+&nbsp; &nbsp; if (!resultWasDelivered()) {
+&nbsp; &nbsp; &nbsp; &nbsp; fail("No result was delivered!");
+&nbsp; &nbsp; }
+}
+private void sleep(long milliseconds) {
+&nbsp; &nbsp; try {
+&nbsp; &nbsp; &nbsp; &nbsp; Thread.sleep(milliseconds);
+&nbsp; &nbsp; } catch (InterruptedException ignore) {
+&nbsp; &nbsp; }
+}</pre>
+<p>But again, what is the <em>right </em>value of the timeout here?</p>
+<p>We want to be sure that our test passes always when a correct result is delivered, so we set the timeout to a maximal waiting period. On the other hand in some cases the result could be delivered quickly in a small amout of time: </p>
+<pre class="brush: java">private void confirmResultWasDelivered() {
+&nbsp; &nbsp; long testStarted = System.currentTimeMillis();
+&nbsp; &nbsp; do {
+&nbsp; &nbsp; &nbsp; &nbsp; if (resultWasDelivered()) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; return;
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; sleep(SMALL_AMOUT_OF_TIME);
+&nbsp; &nbsp;
+&nbsp; &nbsp; } while (TIMEOUT &gt; System.currentTimeMillis() - testStarted);
+&nbsp; &nbsp;
+&nbsp; &nbsp; fail("No result was delivered!");
+}</pre>
+<p>The last approach is still based on the pull princip and active waiting, but it's much more efficient as the previous one.&nbsp;</p>
+<p>We try to check if a result was delivered, if not we try it again after a small amout of time till the timeout exceeds.</p>
+<p> </p>

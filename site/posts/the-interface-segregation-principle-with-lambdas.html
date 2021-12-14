@@ -1,0 +1,144 @@
+<p>The <a href="https://en.wikipedia.org/wiki/Interface_segregation_principle" target="_blank">Interface Segregation Principle</a> (ISP) is the “I” in the <a href="/solid-principles-in-java-by-example" target="_blank">SOLID</a> acronym and states that clients should not be forced to depend on methods they don’t use.</p>
+
+<p>It attempts to decouple clients from unnecessary details.</p>
+
+<h2>The Problem</h2>
+
+<p>Consider a typical violation of the ISP (in Java):</p>
+
+<pre class="brush: java">
+class UserService {
+
+  User register(String username) { … }
+
+  User find(String username) { … }
+
+  void lock(User user) { … }
+}
+
+class UserRegistrationClient {
+
+  private UserService userService;
+
+  /* constructor */
+
+  void registerUser() {
+    String username = …
+
+    User user = userService
+      .register(username);
+    …
+  }
+}
+</pre>
+
+<p>The <code>UserRegistrationClient</code> class doesn’t need anything else than the <code>register</code> method from the <code>UserService</code>, but it does depend on the whole API.</p>
+
+<p>A solution according the ISP would be to create an explicit contract only for the needs of the particular client:</p>
+
+<pre class="brush: java">
+interface RegisterUser {
+
+  User register(String username);
+}
+
+class UserService implements RegisterUser {
+
+  /* as above */
+}
+
+class UserRegistrationClient {
+
+  private RegisterUser registerUser;
+
+  /* constructor */
+
+  void registerUser() {
+    String username = …
+
+    User user = registerUser
+      .register(username);
+    …
+  }
+}
+</pre>
+
+<p>This already looks much better. The benefits are pretty obvious: the client code is decoupled from unnecessary details and an explicit contract between the service provider and client is established. This is a great way for the client to express her needs and to ensure it is implemented by the provider.</p>
+
+<p>However, there are drawbacks, too. <strong>Any new interface brings certain complexity</strong> and following the approach strictly ends up <strong>writing more code</strong>, in extreme cases it could lead to an explosion of interfaces. Another problem appears when we don’t have the provider’s code in the hand.</p>
+
+<h2>The Solution</h2>
+
+<p>A solution would be to use lambdas (anonymous functions):</p>
+
+<pre class="brush: java">
+class UserService {
+
+  /* as above */
+}
+
+class UserRegistrationClient {
+
+  private Function&lt;String,User&gt; registerUser;
+
+  /* constructor */
+
+  void registerUser() {
+    String username = …
+
+    User user = registerUser
+      .apply(username);
+    …
+  }
+}
+</pre>
+
+<p>The functionality is injected into the client using the provider:</p>
+
+<pre class="brush: java">
+new UserRegistrationClient(
+    userService::register
+);
+</pre>
+
+<p>Again, this solution doesn’t come without drawbacks: we have lost the explicit and named contract and the code is less type-safety. On the other hand, we have much <strong>less code to maintain </strong>and gained a great <strong>flexibility</strong> as any function can be injected to implement the client’s needs, not just derivations of <code class="jg kz la lb kv b">RegisterUser</code>. And of course, <strong>third-parties are no problem</strong> anymore.</p>
+
+<p>The technique can be used even in languages without interfaces, such as JavaScript:</p>
+
+<pre class="brush: javascript">
+class UserRegistrationClient {
+
+  constructor(registerUser) {
+    this._registerUser = registerUser;
+  }
+
+  registerUser() {
+    let username = …
+    this._registerUser(username);
+    …
+  }
+}
+</pre>
+
+<p>Rather than:</p>
+
+<pre class="brush: javascript">
+class UserRegistrationClient {
+
+  constructor(userService) {
+    this._userService = userService;
+  }
+
+  registerUser() {
+    let username = …
+    this._userService.register(username);
+    …
+  }
+}
+</pre>
+
+<h2>Conclusion</h2>
+
+<p>Using lambdas to decouple the client code according to the ISP works pretty well depending on the specific context, but it doesn’t come without drawbacks.</p>
+
+<p>Moreover, the technique is not very common in languages where lambdas were introduced later than interfaces, such as Java or C#.</p>

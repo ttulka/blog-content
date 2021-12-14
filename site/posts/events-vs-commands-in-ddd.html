@@ -1,0 +1,36 @@
+<h2>Differences between Events and Commands</h2>
+<p>Events represent a past, something that already happened and can’t be undone. Commands, on the other hand, represent a wish, an action in the future which can be rejected. An event has typically multiple consumers, but a command is addressed to only one.</p>
+<p>Martin Fowler emphasizes in his <a href="https://youtu.be/STKCRSUsyP0" target="_blank">talk</a> the <strong>semantic difference between events and commands</strong> as a hint to understand the overall behavior by using the most natural terms for a particular business. In his point of view the question “events or commands” is a <em>naming</em> problem.</p>
+<p>While this is true, it’s not the only one difference. I believe the key is responsibility and level of abstraction.</p>
+
+<h2>Domain Meaning</h2>
+<p>Consider a problem with two possible solutions, first using an event, second using a command:</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/events-vs-commands-1.png" alt="Events vs. Commands in DDD" /></p>
+
+<p>With events Billing service subscribes to Sales service as a consumer, with commands Sales service <em>actively uses</em> Billing service. Events enable an independent choreography of services while commands create an orchestration where one or a few services control all others. This contradicts the <a href="http://udidahan.com/2010/11/15/the-known-unknowns-of-soa/" target="_blank">definition of a service</a> as a technical authority for a specific business capability. Sales and Billing are two separate business capabilities, which means Sales service should not include any payment considerations. On the other hand, it is fully Billing’s responsibility to deal with a newly placed order.</p>
+
+<h2>Commands as Infrastructure Messages</h2>
+<p>Commands are imperatives to a concrete action, typically the result of a user act. There’s usually no room for the called service to make any business decisions or reasoning about the action. Consider a common usage of a command:</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/events-vs-commands-2.png" alt="Events vs. Commands in DDD" /></p>
+
+<p>MailServer makes no business decisions, it just sends an e-mail. On the other hand, sending an e-mail, SMS, or displaying a message on the screen <em>is</em> a business decision made by Sales service. MailServer is probably a separate component maintained by a different team or an external vendor. We can apply the same for the payment:</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/events-vs-commands-3.png" alt="Events vs. Commands in DDD" /></p>
+
+<p>As already mentioned, we don’t want to make business decisions about payments in Sales service. We can stick with an event and wrap the payments into a separate service:</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/events-vs-commands-4.png" alt="Events vs. Commands in DDD" /></p>
+
+<p>Now, we have two separate business services (Sales, Billing) and one technical service (PayPal), which is <strong>encapsulated</strong> in Billing service from the domain point of view. We can see PayPal service as part of Billing implementation and CollectPayment as an <strong>infrastructure message</strong> living outside of the domain.</p>
+<p>We can reason about the MailServer similarly:</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/events-vs-commands-5.png" alt="Events vs. Commands in DDD" /></p>
+
+<p>Domain service Customer Notification reacts on OrderPlaced event and sends SendEmail command to MailServer (an infrastructure service) to carry out its business decision of sending an e-mail to the customer.</p>
+
+<h2>Conclusion</h2>
+<p>Events and commands are not just two sides of the same coin. <strong>(Domain) events are part of the business domain and its ubiquitous language, while commands are a pure technical concern</strong>.</p>
+<ul>
+  <li>Ask business to define the service boundaries.</li>
+  <li>Use events for communication among domain services.</li>
+  <li>Use commands only for communication with technical services.</li>
+</ul>
+
+<p>Happy eventing!</p>

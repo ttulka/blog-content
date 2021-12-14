@@ -1,0 +1,129 @@
+<p>A <em>Repository</em> is a term from Domain-Driven Design (DDD), but I am actually not happy about that. Things like <em>Entity</em>, <em>Aggregate</em> and <em>Repository</em> are pure technical concepts and should never appear in the domain, which speaks language of a particular business only. Although DDD puts a Repository to the domain model (saying all Repository methods must have domain meanings), I find that too confusing to follow and very often misunderstood.</p>
+
+<p>In fact, <strong>persistence is just an implementation detail</strong> of business behavior (e.g. find a customer, register a new customer). There must be no persistence-related methods like <code>save()</code> or <code>load()</code> in the domain API.</p>
+
+<p>Therefore, I prefer to <strong>refactor Repository functionalities into concrete use-cases</strong>. This approach ends up with much simpler cohesive objects.</p>
+
+<h2>Do We Need Repositories at All?</h2>
+
+<p>Well, yes and no. We usually need a way to load and persist domain objects, but we don’t have to have a construct called “Repository” in our codebase.</p>
+
+<p>Consider the following use-case (in Java):</p>
+<pre class="brush: java">
+interface FindCustomer {
+
+  Customer byEmail(Email email);
+}
+</pre>
+
+<p>We can simply implement it with JDBC:</p>
+<pre class="brush: java">
+class FindCustomerJdbc implements FindCustomer {
+
+  private JdbcTemplate jdbcTemplate;
+
+  @Override
+  public Customer byEmail(Email email) {
+    return jdbcTemplate.queryForList(
+        "SELECT firstName, lastName, email FROM customers " +
+        "WHERE email = ?", email.value())
+        .stream()
+        .findAny()
+        .map(this::toCustomer)
+        .orElseGet(this::customerNotFound);
+  }
+
+  // private methods...
+}
+</pre>
+
+<p>Because loading the entity from the database with an SQL query <em>is the actual implementation</em> of the use-case (as the class name says), there is no need to put any other layer in between. In this case <code>FindCustomerJdbc</code> <em>is</em> a Repository for the particular use-case.</p>
+
+<p>Yet typically we put another layer in between using an object called Repository:</p>
+<pre class="brush: java">
+class FindCustomerJdbc implements FindCustomer {
+
+  private CustomerRepository customerRepository;
+
+  @Override
+  public Customer byEmail(Email email) {
+    return customerRepository.findByEmail(email.value())
+        .map(this::toCustomer)
+        .orElseGet(this::customerNotFound);
+  }
+
+  // private methods...
+}
+</pre>
+
+<p>We just moved the persistence-related code into a single place. What are the benefits here? One can say that 1) all persistence concerns can be changed together and 2) the code is more reusable.</p>
+
+<p>The first point could be valid when the storage type is volatile. But, how often happens that an application switches from one storage type to another?</p>
+
+<p>Changing the storage type (e.g. from XML files to a database) or even just the database type (e.g. relational to non-relational) needs usually a nontrivial shift in mindset and an additional persistence abstraction layer itself can hardly fulfil this goal. Such an attempt would likely lead to a too-general clumsy and inefficient solution, expensive to maintain (remember YAGNI), especially because it happens very rarely - I never faced such a situation personally!</p>
+
+<p>JDBC or JPA are themselves already solid abstractions making it possible to switch easily between database vendors.</p>
+
+<p>The latter point can be valid if we in fact face a lot of code duplications. For example, mapping from a persistent entry to the domain object, finding entities by ID etc.. In such cases, the abstraction will emerge clearly by itself. We can abstract the common functionality out to a separate object etc.. Otherwise, the Repository becomes quickly a bunch of persistence-related methods across different use-cases. That means the code is cut by technical instead of domain aspects. Independent use-cases become tightly coupled and difficult to maintain. <strong>Only good abstractions are reusable, but use-cases tend to be pretty concrete</strong>.</p>
+
+<p>Back to the code above. As we can see, the actual use-case implementation becomes a mere proxy to the Repository. One can think of skipping the proxy code altogether and implement the use-case just by the repository:</p>
+<pre class="brush: java">
+class CustomerRepositoryJdbc implements FindCustomer {
+
+  private JdbcTemplate jdbcTemplate;
+
+  @Override
+  public Customer byEmail(Email email) {
+    return jdbcTemplate.queryForList(
+        "SELECT firstName, lastName, email FROM customers " +
+        "WHERE email = ?", email.value())
+        .stream()
+        .findAny()
+        .map(this::toCustomer)
+        .orElseGet(this::customerNotFound);
+  }
+
+  // private methods...
+}
+</pre>
+
+<p>The problem is obvious: the object grows with every use-case added. Soon it ends up as a huge object responsible for everything involving persistence of the Customer. Such code is not clean, clumsy and hard to maintain, concrete methods tend to be heavily reused. Rather, the <strong>code should be structured by the domain</strong> not technical concerns!</p>
+
+<h2>Two Layer Repositories</h2>
+
+<p>There are situations where some kind of Repository makes sense, for example when using a framework like Spring.</p>
+<pre class="brush: java">
+interface CustomerRepository
+    extends CrudRepository&lt;CustomerEntry, UUID&gt; {
+
+  CustomerEntry findByEmail(String email);
+
+  // other methods...
+
+  @Entity
+  class CustomerEntry {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    public UUID id;
+    public String firstName;
+    public String lastName;
+    public String email;
+  }
+}
+</pre>
+
+<p>Here the Spring CRUD Repository takes care of JPA implementation and hides its details from the actual use-case implementation. There are still too many responsibilities and potential high coupling among use-cases, but the repository serves at least a good purpose - hiding the complexity of the ORM framework out from the use-case code.</p>
+
+<p>The Spring Repository here is an infrastructure layer between the use-case implementation and a persistence store. It’s not anymore the Repository from DDD theory which appears in the domain. The Spring Repository is an explicit technical construct which is fine when used as such.</p>
+
+<p>For more details about the two layer repositories read this <a href="https://www.vzurauskas.com/2019/04/07/two-layer-repositories-in-spring" target="_blank">great article</a>.</p>
+
+<h2>Summary</h2>
+
+<p>Repositories are highly misunderstood. The <strong>Repository pattern tends to be implemented as a pure technical construct</strong> and becomes easily a bunch of persistence methods with no common domain purpose. Rather they <strong>should be refactored to particular domain</strong> use-cases.</p>
+
+<p>However, <strong>Repositories can be used to hide complexity of particular persistence solutions</strong> like ORM. In that case, the Repository moves from the domain layer to the infrastructure layer. The cohesion and clarity of such Repositories should still be taken into account and the code should be partitioned by domain behavior. Good abstraction is king.</p>
+
+<p>You can find the source code on <a href="https://github.com/ttulka/blog-code-samples/tree/master/repositories" target="_blank">my GitHub</a>.</p>
+
+<p>Happy coding!</p>

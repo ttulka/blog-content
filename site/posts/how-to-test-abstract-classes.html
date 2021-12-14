@@ -1,0 +1,143 @@
+<p>Consider an abstract class with a concrete method (Java):</p>
+<pre class="brush: java">
+abstract class Person {
+
+  protected final String firstName;
+  protected final String lastName;
+
+  public Person(String firstName, String lastName) {
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+
+  public String fullName() {
+    return String.format("%s %s", firstName, lastName);
+  }
+
+  public abstract String greeting();
+}
+</pre>
+
+<p>What are the possibilities to test such a class?</p>
+
+<h2>Anonymous Classes</h2>
+
+<p>We can create an ad-hoc instance of the abstract class and stub the abstract method which are not under test:</p>
+<pre class="brush: java">
+@Test
+void full_name_is_provided() {
+  Person person = new Person("John", "Smith") {
+    @Override
+    public String greeting() {
+      return null;
+    }
+  };
+  assertEquals("John Smith", person.fullName());
+}
+</pre>
+
+<p>But such a code is pretty cumbersome and hard to read. Just image a class with multiple abstract methods, the test code becomes longer and longer and breaks one of the main properties of a good test - readability.</p>
+<p>Another problem is the <strong>coupling between the test and implementation</strong>. Even that the method is marked as <code>final</code>, the code should focus only on the contract and not on such implementation details as details can change in the future and a good test should be resistant to refactoring.</p>
+
+<p>Creating an anonymous class doesn't seem to be the best option. Can we do better?</p>
+
+<h2>Mocking</h2>
+
+<p>This is probably the first advice you get if you search on the Internet. With mocking everything is easy (Mockito):</p>
+<pre class="brush: java">
+@Test
+void full_name_is_provided() {
+  Person person = mock(Person.class, withSettings()
+      .useConstructor("John", "Smith")
+      .defaultAnswer(CALLS_REAL_METHODS));
+
+  assertEquals("John Smith", person.fullName());
+}
+</pre>
+
+<p>Mocking an abstract class is practically just like creating an anonymous class but using convenient tools. It has the same drawbacks and, again, it's probably not the best option we have.</p>
+
+
+<h2>Concrete Class</h2>
+
+<p>An abstract class makes actually no sense without being extended with a concrete class. <strong>A concrete class is where the requirements must be met.</strong></p>
+<pre class="brush: java">
+class Sailor extends Person {
+
+  public Sailor(String firstName, String lastName) {
+    super(firstName, lastName);
+  }
+
+  @Override
+  public String greeting() {
+    return "Ahoy!";
+  }
+}
+</pre>
+
+<p>This is the right place for testing:</p>
+<pre class="brush: java">
+class SailorTest {
+
+  @Test
+  void full_name_is_provided() {
+    Sailor sailor = new Sailor("James", "Cook");
+
+    assertEquals("James Cook", sailor.fullName());
+  }
+
+  @Test
+  void greeting_is_provided() {
+    Sailor sailor = new Sailor("James", "Cook");
+
+    assertEquals("Ahoy!", sailor.greeting());
+  }
+}
+</pre>
+
+<p>Of course, there will be probably some duplicates in the test code when we have more concrete classes extending the abstract class. But the price is still smaller that losing the value of the test, when the acceptance depends on the inherited (potentially unknown) implementation. All in all, the inherited implementation can and often does (even it should be avoided as much as possible) change in the concrete classes and must be tested anyway.</p>
+
+<h2>Truly Object-Oriented</h2>
+
+<p>We can face a situation, for instance when working on a util library, where the provided default implementation is much more complicated than in our simple <code>fullName()</code> method. Such a case tells us that we are probably doing too much in the class. The solution is to introduce a new class and extract the functionality into it:</p>
+<pre class="brush: java">
+class Name {
+
+  private final String first;
+  private final String last;
+
+  public Name(String first, String last) {
+    this.first = first;
+    this.last = last;
+  }
+
+  public String full() {
+    return String.format("%s %s", firstName, lastName);
+  }
+}
+
+abstract class Person {
+
+  protected final Name name;
+
+  public Person(String firstName, String lastName) {
+    this.name = new Name(firstName, lastName);
+  }
+
+  public final String fullName() {
+    return name.full();
+  }
+
+  public abstract String greeting();
+}
+</pre>
+
+<p>We moved the functionality into a specialized concrete class, easy to test. Now we can ensure the default implementation of the abstract class works as expected.</p>
+
+<h2>Conclusion</h2>
+
+<p>Implementation inheritance is in general not the best practice as it tightly couples children classes with the parent class. Composition should always be preferred over inheritance. However, there are cases where inheritance makes sense. In such cases, testing must be very careful.</p>
+
+<p><strong>Business is always concrete.</strong> Relying blindly on testing of an abstract class could break concrete requirements. <strong>Test always a concrete class</strong> as the concrete class must satisfy the business requirements.</p>
+
+<p>Happy testing!</p>

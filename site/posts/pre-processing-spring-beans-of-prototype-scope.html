@@ -1,0 +1,79 @@
+<p>Pre-processing of those <strong>prototypes</strong> only one and in the beginning &nbsp;could be tricky.</p>
+<p>Let's consider an annotation which tell you someting about the setting of the beans. For example which alternative names is your GUI box connected to. You want to create a proper bean based on its alternative name of course without featching all the beans every time and looking for the right one (of course you can do it by lazy caching, but that's still not the best solution). Or what if you want to get a list of all the alternative names of course <u>withou the need to create the beans</u> first?</p>
+<p>This short article will tell you how to do it.</p>
+<p>Consider the following annotations:</p>
+<pre class="brush: java">@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Component
+@Scope(value = SCOPE_PROTOTYPE)
+public @interface Box {
+}</pre>
+<pre class="brush: java">@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Component
+@Scope(value = SCOPE_PROTOTYPE)
+public @interface AlternativeNames {
+&nbsp; &nbsp; AlternativeName[] value();
+}</pre>
+<pre class="brush: java">@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Repeatable(AlternativeNames.class)
+@Documented
+public @interface AlternativeName {
+&nbsp; &nbsp; String value();
+}</pre>
+<p>Then you have defined the base annotation <code>@Box </code>which tell the Spring framework that this class is a bean, <code>@AlternativeNames</code> which allows you to put the <code>@AlternativeName</code> annotation more times (<em>Repeating Annotations</em>).</p>
+<p>Based on the definitions you can create a class like this:</p>
+<pre class="brush: java">@Box
+@AlternativeName("my-box")
+@AlternativeName("box-of-mine")
+public class MyBox {
+&nbsp; &nbsp; // ... some code goes here
+}</pre>
+<p>Now it's time for the pre-processor:</p>
+<pre class="brush: java">@Component
+public class BoxContextListener implements ApplicationListener&lt;ContextRefreshedEvent&gt; {
+
+&nbsp; &nbsp; private final ConfigurableListableBeanFactory factory;
+
+&nbsp; &nbsp; @Autowired
+&nbsp; &nbsp; public BoxContextListener(ConfigurableListableBeanFactory factory) {
+&nbsp; &nbsp; &nbsp; &nbsp; this.factory = factory;
+&nbsp; &nbsp; }
+
+&nbsp; &nbsp; @Override
+&nbsp; &nbsp; public void onApplicationEvent(ContextRefreshedEvent event) {
+&nbsp; &nbsp; &nbsp; &nbsp; String[] beanDefinitionNames = event.getApplicationContext().getBeanDefinitionNames();
+&nbsp; &nbsp; &nbsp; &nbsp; for (String beanDefinitionName : beanDefinitionNames) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; try {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; BeanDefinition beanDefinition = factory.getBeanDefinition(beanDefinitionName);
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; String originalClassName = beanDefinition.getBeanClassName();
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if (originalClassName != null &amp;&amp; !originalClassName.isEmpty()) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; try {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; final Class&lt;?&gt; originalClass = Class.forName(originalClassName);
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if (originalClass.isAnnotationPresent(Box.class)) {
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if (originalClass.isAnnotationPresent(AlternativeNames.class)
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; || originalClass.isAnnotationPresent(AlternativeName.class)) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; AlternativeName[] mappings = originalClass.getAnnotationsByType(AlternativeName.class);
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; for (AlternativeName alternativeMapping : mappings) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; String alternativeName = alternativeMapping.value();
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // do someting with the alternative name ...
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; } catch (ClassNotFoundException e) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // ...
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; } catch (BeansException e) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // ...
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; }
+}</pre>
+<p>That's the way how to get values from the annotation of the Spring prototype beans in the pre-processing.</p>
+<p>I hope it helped!</p>

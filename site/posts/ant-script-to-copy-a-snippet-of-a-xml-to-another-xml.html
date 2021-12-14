@@ -1,0 +1,45 @@
+<p>Sometimes we need to cut or copy a piece of a XML document and save it to another.</p>
+<p>We will use <a href="http://www.oopsconsultancy.com/software/xmltask/" target="_blank">XmlTask</a> library by OOPS Consultancy to achive this goal.&nbsp;</p>
+<p>First of all, we have to define an Ant task:</p>
+<p>&lt;taskdef name=&quot;xmltask&quot; classname=&quot;com.oopsconsultancy.xmltask.ant.XmlTask&quot; /&gt;</p>
+<p>Don't forget to put the downloaded library into the Ant libs folder or onto the classpath:</p>
+<p><code>ant ... -lib xmltask.jar</code></p>
+<p>Let's consider two XML configuration files:</p>
+<p><code><strong>conf.xml</strong></code></p>
+<pre class="brush: xml">&lt;configuration&gt;
+&nbsp; &lt;applications&gt;
+&nbsp; &nbsp; &lt;app id="MyCoolApp" /&gt;
+&nbsp; &nbsp; &lt;app id="AnotherApp" /&gt;
+&nbsp; &lt;/applications&gt;
+&lt;/configuration&gt;&nbsp;</pre>
+<p><code><strong>settings.xml</strong></code></p>
+<pre class="brush: xml">&lt;settings&gt;
+...
+&nbsp; &lt;apps&gt;
+&nbsp; &nbsp; &lt;app id="thisAppWasAlreadyHere" /&gt;
+&nbsp; &lt;/apps&gt;
+&lt;/settings&gt;</pre>
+<p>And we want to merge those documents in the way we get this content of the <code>settings.xml</code>:</p>
+<pre class="brush: xml">&lt;settings&gt;
+&nbsp; ...
+&nbsp; &lt;apps&gt;
+&nbsp; &nbsp; &lt;app id="thisAppWasAlreadyHere" /&gt;
+&nbsp; &nbsp; &lt;app id="MyCoolApp" /&gt;
+&nbsp; &nbsp; &lt;app id="AnotherApp" /&gt;
+&nbsp; &lt;/apps&gt;
+&lt;/settings&gt;</pre>
+<p>We can use the xmltask's command call to get a path-defined snippet into the buffer and append it with the command insert.</p>
+<p>Here is the whole code:&nbsp;</p>
+<pre class="brush: xml">&lt;xmltask source="conf.xml"&gt;
+&nbsp; &lt;call path="configuration/applications/app" buffer="apps_storedXml"&gt;
+&nbsp; &nbsp; &lt;param name="id" path="@id" /&gt;
+&nbsp; &nbsp; &lt;actions&gt;
+&nbsp; &nbsp; &nbsp; &nbsp; &lt;echo&gt;Merge the app id="@{id}"&lt;/echo&gt;
+&nbsp; &nbsp; &nbsp; &nbsp; &lt;xmltask source="settings.xml" dest="settings.xml"&gt;
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;insert path="settings/apps" buffer="apps_storedXml" /&gt;
+&nbsp; &nbsp; &nbsp; &nbsp; &lt;/xmltask&gt;
+&nbsp; &nbsp; &lt;/actions&gt;&nbsp;
+&nbsp; &lt;/call&gt;
+&lt;/xmltask&gt;</pre>
+<p>That's it!</p>
+<p> </p>

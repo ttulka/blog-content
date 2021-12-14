@@ -1,0 +1,53 @@
+<p>There is one important difference in these approaches.</p>
+
+<p>Let's consider a code:</p>
+<pre class="brush: java">private Object synch = new Object();
+
+public void synchronizedMethod1() {
+    synchronized (synch) {
+        synchronizedMethod2();
+    }
+}
+
+public void synchronizedMethod2() {
+    synchronized (synch) {
+        System.out.println("Access to the resource acquired.");
+    }
+}</pre>
+<p>What happened by calling the <code>synchronizedMethod1()</code>?</p>
+<p>Of course the access to the resource will be acquired because the synchronized block is in Java shared in within the thread. In other words, if the thread is already in the synchronized block will get all the others as well (protected by the same object).</p>
+
+<p>Applying a semaphore (with the counter set to one) on the same code:</p>
+<pre class="brush: java">private Semaphore semaphore = new Semaphore(1);
+
+public void synchronizedMethod1() throws InterruptedException {
+    semaphore.acquire();
+    synchronizedMethod2();
+    semaphore.release();
+}
+
+public void synchronizedMethod2() throws InterruptedException {
+    semaphore.acquire();
+    System.out.println("Access to the resource acquired.");
+    semaphore.release();
+} </pre>
+<p>And calling <code>synchronizedMethod1()</code> will freeze forever.</p>
+
+<p>In this case acquire the <code>synchronizedMethod1</code> the semaphore but <code>synchronizedMethod2</code>&nbsp;fails on trying to acquire it again.</p>
+
+<p>In general, this problem is caused by a weak design and can be solved by a simple refactoring:</p>
+<pre class="brush: java">public void synchronizedMethod1() throws InterruptedException {
+    semaphore.acquire();
+    resourceMethod();
+    semaphore.release();
+}
+
+public void synchronizedMethod2() throws InterruptedException {
+    semaphore.acquire();
+    resourceMethod();
+    semaphore.release();
+}
+
+private void resourceMethod() {
+    System.out.println("Access to the resource acquired.");
+}</pre>

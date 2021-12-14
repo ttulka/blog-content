@@ -1,0 +1,183 @@
+<p>A few days ago I was pair-programming with another developer in the <a href="/how-i-do-tdd">Test-Driven Development</a> manner. TDD and pair-programming is the best fit. I usually apply TDD after having understood the problem and designed the API, in the implementation phase. This approach helps me reduce the need for later refactoring and avoid testing of trivial code.</p>
+
+<p>Having the requirement reflected in the API, we wrote a test:</p>
+
+<pre class="brush: java">
+public interface Account {
+
+  boolean canLogin(String password);
+}
+
+@Test
+void user_can_login_with_a_valid_password() {
+  Account account = new UserAccount("test", "test@example.com", "pwd1");
+
+  assertThat(account.canLogin("pwd1")).isTrue();
+}
+</pre>
+
+<p>Then we implemented the feature and wrote the next test:</p>
+
+<pre class="brush: java">
+@Test
+void user_cannot_login_with_an_invalid_password() {
+  Account account = new UserAccount("test", "test@example.com", "pwd1");
+
+  assertThat(account.canLogin("xxx")).isFalse();
+}
+</pre>
+
+<p>After implementing this we continued:</p>
+
+<pre class="brush: java">
+public interface Account {
+
+  boolean canLogin(String password);
+
+  void changePassword(String newPassword);
+}
+
+@Test
+void password_is_changed() {
+  Account account = new UserAccount("test", "test@example.com", "pwd1");
+
+  account.changePassword("updated");
+
+  assertThat(account.canLogin("updated")).isTrue();
+}
+</pre>
+
+<p>At that moment my partner proposed to move the first line of the tests into a separate method, like this:</p>
+
+<pre class="brush: java">
+private Account account;
+
+@BeforeEach
+void setupAccount() {
+  this.account = new UserAccount("test", "test@example.com", "pwd1");
+}
+</pre>
+
+<p>It does follow the Don't Repeat Yourself principle and makes the test methods shorter, right? Look:</p>
+
+<pre class="brush: java">
+@Test
+void user_can_login_with_a_valid_password() {
+  assertThat(account.canLogin("pwd1")).isTrue();
+}
+</pre>
+
+<p>Sounds well first, however, there are several issues.</p>
+
+<h2>Don't Share Code among Tests</h2>
+
+<p>Sharing code among different requirements is a bad idea, because business is volatile and the <a href="http://verraes.net/2014/08/dry-is-about-knowledge/">rules might change independently</a>. Doing so comes with risks and drawbacks:</p>
+
+<h3>1. It's not obvious how the test is set up</h3>
+
+<p>Looking at the test only, its not clear what is the arrangement of the test, how is the unit initialized and set up. To understand this, we have to scroll up to the setup method.</p>
+
+<h3>2. Tests are coupled</h3>
+
+<p>It is impossible to have different setups for different tests, although this is often desired. Consider the following test:</p>
+
+<pre class="brush: java">
+@Test
+void user_with_no_email_cannot_login() {
+  Account account = new UserAccount("test", null, "pwd1");
+
+  assertThat(account.canLogin("pwd1")).isFalse();
+}
+</pre>
+
+<p>Such a dilemma often leads to a complex setup method trying to do more than one thing, which makes the test suite difficult to understand and maintain.</p>
+
+<h3>3. Tests are not well isolated</h3>
+
+<p>Tests must run in isolation from each other. Tests must never be meant to run in a particular order. Consider the following tests:</p>
+
+<pre class="brush: java">
+@Test
+void user_can_login_with_a_valid_password() {
+  assertThat(account.canLogin("pwd1")).isTrue();
+}
+
+@Test
+void password_is_changed() {
+  account.changePassword("updated");
+
+  assertThat(account.canLogin("updated")).isTrue();
+}
+</pre>
+
+<p>When the second test runs before the first one, it fails.</p>
+
+<p>Even not frequent in practice, it should always be possible to run the tests in parallel. Bearing this in mind helps you to write well isolated tests.</p>
+
+<h3>4. Unnecessary work</h3>
+
+<p>Consider another test in the test suite:</p>
+
+<pre class="brush: java">
+@Test
+void empty_password_raises_an_error() {
+  assertThrows(InvalidPasswordException.class, () -&gt;
+      new UserAccount("test", "test@example.com", ""));
+}
+</pre>
+
+<p>Even not needed at all, the setup method is executed and resources created, which is just a waste.</p>
+
+<h2>Don't Share Dependencies amoung Tests</h2>
+
+<p>The same is true for dependencies. Instead of doing this (with Spring):</p>
+
+<pre class="brush: java">
+@Autowired
+private AccountRegistry registry;
+
+@Value("${test.admin.username}")
+private String adminUsername;
+
+@Test
+void registered_user_account_is_in_the_registry() {
+  Account account = new UserAccount("test", "test@example.com", "pwd1", registry);
+  account.register();
+
+  assertThat(registry.byUsername("test").isPresent()).isTrue();
+}
+
+@Test
+void admin_account_has_admin_rights() {
+  Account account = new UserAccount(adminUsername, "test@example.com", "pwd1");
+
+  assertThat(account.hasAdminRights()).isTrue();
+}
+</pre>
+
+<p>...it's way better to this (with Spring and JUnit 5):</p>
+
+<pre class="brush: java">
+@Test
+void registered_user_account_is_in_the_registry(@Autowired AccountRegistry registry) {
+  Account account = new UserAccount("test", "test@example.com", "pwd1", registry);
+  account.register();
+
+  assertThat(registry.byUsername("test").isPresent()).isTrue();
+}
+
+@Test
+void admin_account_has_admin_rights(@Value("${test.admin.username}") String username) {
+  Account account = new UserAccount(username, "test@example.com", "pwd1");
+
+  assertThat(account.hasAdminRights()).isTrue();
+}
+</pre>
+
+<h2>Conclusion</h2>
+
+<p>Write your tests so that everything the test needs is included inside the test. Letting the test code go out of its boundaries makes the test dependent on its context, which brings unnecessary complexity into the test suite.</p>
+
+<p>Benefits of reducing code duplicity don't really count here, because having hard-to-maintain tests pays a much higher price than a few extra lines of code.</p>
+
+<p>Happy testing!</p>

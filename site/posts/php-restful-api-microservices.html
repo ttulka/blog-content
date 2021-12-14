@@ -1,0 +1,519 @@
+<p>It will definitely need some thinking and maybe to leave some convince behind. At the end of the day we should have an autonomous loosely coupled service with all the benefits (and drawbacks) of microservices.</p>
+<p>In this article we do a little walk-through of a development process of a small RESTful microservice in PHP and we take a look at some Domain-Driven Design (DDD) theory as well.</p>
+<p>Consider a simple <a href="https://en.wikipedia.org/wiki/Create,&#95;read,&#95;update&#95;and&#95;delete" target="_blank" title="CRUD">CRUD</a> service for a blog articles management. Via this <a href="https://martinfowler.com/articles/richardsonMaturityModel.html" target="_blank" title="REST">REST</a> API you can list, create, update and delete articles in the database (or whatever the persistence is).</p>
+<p>We will implement this service following the <a href="https://martinfowler.com/articles/microservices.html" target="_blank" title="Microservices">microservices design pattern</a> so we create a single REST endpoint (<code>/articles</code>) serving all the request.&nbsp;<br />Similarly we would create endpoint for the categories and authors management.</p>
+<p>First of all, let's prepare the infrastructure.</p>
+<h2>Database Schema and Test-Data</h2>
+<p>Traditionally, we use a <strong>MySQL database</strong> with a following schema:&nbsp;</p>
+<pre class="brush: sql">CREATE SCHEMA `blog` DEFAULT CHARACTER SET utf8;
+
+CREATE TABLE `blog`.`categories` (
+&nbsp; `id` INT NOT NULL AUTO&#95;INCREMENT,
+&nbsp; `name` VARCHAR(50) NOT NULL,
+&nbsp; PRIMARY KEY (`id`));
+&nbsp;&nbsp;
+CREATE TABLE `blog`.`authors` (
+&nbsp; `id` INT NOT NULL AUTO&#95;INCREMENT,
+&nbsp; `name` VARCHAR(50) NOT NULL,
+&nbsp; `email` VARCHAR(50) NOT NULL,
+&nbsp; PRIMARY KEY (`id`));
+
+CREATE TABLE `blog`.`articles` (
+&nbsp; `id` INT NOT NULL AUTO&#95;INCREMENT,
+&nbsp; `title` VARCHAR(100) NOT NULL,
+&nbsp; `summary` TEXT(1000) NOT NULL,
+&nbsp; `body` TEXT NOT NULL,
+&nbsp; `createdAt` DATE&nbsp; NOT NULL,
+&nbsp; `categoryId` INT NOT NULL,
+&nbsp; `authorId` INT NOT NULL,
+&nbsp; PRIMARY KEY (`id`),
+&nbsp; INDEX `categoryId&#95;idx` (`categoryId` ASC),
+&nbsp; INDEX `authorId&#95;idx` (`authorId` ASC),
+&nbsp; CONSTRAINT `category&#95;fk`
+&nbsp; &nbsp; FOREIGN KEY (`categoryId`)
+&nbsp; &nbsp; REFERENCES `blog`.`categories` (`id`),
+&nbsp; CONSTRAINT `author&#95;fk`
+&nbsp; &nbsp; FOREIGN KEY (`authorId`)
+&nbsp; &nbsp; REFERENCES `blog`.`authors` (`id`));&nbsp;</pre>
+<p>Then, let's put one author, two categories and three articles into the database.</p>
+<pre class="brush: sql">INSERT INTO `blog`.`authors` (`id`, `name`, `email`)
+&nbsp; VALUES (0, 'Tomas Tulka', 'tomas.tulka@gmail.com');
+
+INSERT INTO `blog`.`categories` (`id`, `name`)
+&nbsp; VALUES (0, 'PHP'), (0, 'Java');
+
+INSERT INTO `blog`.`articles` (`id`, `title`, `summary`, `body`, `createdAt`, `categoryId`, `authorId`)
+&nbsp; VALUES
+&nbsp; &nbsp; (0, 'Sample PHP blog post',&nbsp;
+&nbsp; &nbsp; 'Lorem ipsum dolor sit amet.',
+&nbsp; &nbsp; 'Sed vitae tincidunt magna. Sed pretium neque commodo mauris lobortis, quis finibus dolor malesuada.',
+&nbsp; &nbsp; '2018-05-01', 1, 1),&nbsp;
+&nbsp; &nbsp; (0,&nbsp; 'Another PHP blog post',&nbsp;
+&nbsp; &nbsp; 'Donec id pellentesque elit, sit amet accumsan mi.',
+&nbsp; &nbsp; 'Duis molestie tellus quis orci venenatis, ac pretium quam malesuada. Vivamus congue justo nulla, sit amet pharetra purus condimentum at.',
+&nbsp; &nbsp; '2018-05-02', 1, 1),&nbsp;
+&nbsp; &nbsp; (0,&nbsp; 'Java blog post',&nbsp;
+&nbsp; &nbsp; 'Praesent porta sagittis diam non interdum.',
+&nbsp; &nbsp; 'Semper a nunc nec dapibus. Sed tristique vel ipsum vitae euismod. Aenean vel nibh ac diam ullamcorper porta id at purus.',
+&nbsp; &nbsp; '2018-05-02', 2, 1);</pre>
+<p>After creating the database schema and putting some test data, we can discuss the service architecture design.&nbsp;</p>
+<h2>REST API&nbsp;</h2>
+<p>We will use the <a href="https://martinfowler.com/articles/richardsonMaturityModel.html#level2" title="REST Verbs">Richardson Maturity Model</a> approach of <strong>HTTP verbs</strong>, simply:&nbsp;</p>
+<ul>
+<li><code>GET endpoint</code> - listing items</li>
+<li><code>GET endpoint/{id}</code> - item detail</li>
+<li><code>POST endpoint</code> - creating a new item</li>
+<li><code>PUT endpoint/{id}</code> -&nbsp;updating an existing item</li>
+<li><code>DELETE&nbsp;endpoint/{id}</code> - deleting an existing item</li>
+</ul>
+<h2>Microservices and Domain-Driven Design</h2>
+<p>We will model our microservice around a <a href="https://martinfowler.com/bliki/DDD&#95;Aggregate.html" target="_blank" title="DDD Aggregate">DDD Aggregate</a>, in this case around the&nbsp;<em>Article</em>.</p>
+<p>For sake of simplicity we model our Article aggregate as an <a href="https://martinfowler.com/bliki/AnemicDomainModel.html" target="_blank" title="Anemic Domain Model">Anemic Domain Entity</a>. With a maturer domain model the entity should be modeled as immutable object, created only via a constructor or a Factory, containing only getters and behavior methods. Such a domain object shouldn't be definitely exposed to the client's view (like we are doing), but should be transformed into a <a href="https://en.wikipedia.org/wiki/Data&#95;transfer&#95;object" target="_blank" title="DTO">DTO</a>.</p>
+<p><code><strong>domain/Article.php</strong></code> </p>
+<pre class="brush: php">class Article {
+    public $id;
+    public $title;
+    public $summary;
+    public $body;
+    public $createdAt;
+
+    public $categoryId;
+
+    public $author;
+}
+
+class ArticleAuthor {
+    public $id;
+    public $name;
+    public $email;
+}&nbsp;</pre>
+<p>Why is there the class <code>ArticleAuthor</code>, why don't we create a separate class <em>Author</em> for that purpose? Well, we just don't need all the data of the author, an article needs only few of them. If, in the future, more attributes will be added to the <em>Author</em> entity, the Article structure should stay untouched. The object of the class <code>ArticleAuthor</code> is an <a href="https://martinfowler.com/bliki/ValueObject.html" target="_blank" title="Value Object">Value Object</a> and is accessible only thru the aggregate's root. So remains the Article consistent event when the Author entity changes its structure. Instead of ArticleAuthor we can use the name Author within different namespaces (<code>articles</code>&nbsp;and&nbsp;<code>authors</code>).</span></p>
+<h2>Persistence</h2>
+<p>According the DDD theory, <strong>each aggregate has a matching repository</strong>.&nbsp;The repository is the mechanism you should use to retrieve and persist aggregates. Obviously, we will persist the data into a database, but the <strong>persistence is a point of decision</strong> which could be (and should be) made at the latest possible point. And this is exactly what a repository makes possible.</p>
+<p><code><strong>domain/ArticleRepo.php</strong></code></p>
+<pre class="brush: php">require&#95;once &#95;&#95;DIR&#95;&#95; . '/Article.php';
+
+interface ArticleRepo {
+    public function fetchAll($categoryId, $authorId, $start, $limit);
+    public function fetchOne($id);
+    public function create(Article $article);
+    public function update($id, Article $article);
+    public function delete($id);
+}</pre>
+<p>This <strong>interface decouples the client code</strong> (the service) from the persistence decision. It can be for example implemented as an in-memory storage in the early phases of the development.</p>
+<p>We create a <a href="http://php.net/manual/book.pdo.php" title="PDO">PDO</a>-based implementation:</p>
+<p><code><strong>infrastructure/ArticleRepoPDO.php</strong></code></p>
+<pre class="brush: php">require&#95;once &#95;&#95;DIR&#95;&#95; . '/../domain/Article.php';
+require&#95;once &#95;&#95;DIR&#95;&#95; . '/../domain/ArticleRepo.php';
+
+class ArticleRepoPDO implements ArticleRepo {
+
+    private $conn;
+
+    private $articles&#95;table = 'articles';
+    private $articles&#95;categories&#95;table = 'categories';
+    private $authors&#95;table = 'authors';
+
+    public function &#95;&#95;construct(PDO $conn){
+        $this-&gt;conn = $conn;
+    }
+
+    function fetchAll($categoryId = null, $authorId = null, $start = 0, $limit = 10) {
+        $q = "SELECT a.id, a.title, a.summary, a.createdAt, a.categoryId, a.authorId, au.name authorName, au.email authorEmail
+                FROM {$this-&gt;articles&#95;table} a
+                    LEFT JOIN {$this-&gt;authors&#95;table} au ON a.authorId = au.id
+                WHERE 1=1 ";
+
+        $params = array('start' =&gt; (int)$start, 'limit' =&gt; (int)$limit);
+
+        if ($categoryId) {
+            $q .= " AND a.categoryid = :categoryId";
+            $params['categoryId'] = (int)$categoryId;
+        }
+        if ($authorId) {
+            $q .= " AND a.authorId = :authorId";
+            $params['authorId'] = (int)$authorId;
+        }
+
+        $q .="  ORDER BY a.createdAt DESC, a.id DESC
+                LIMIT :start,:limit";
+
+        $stmt = $this-&gt;conn-&gt;prepare($q);
+
+        foreach ($params as $param =&gt; $value) {
+            $stmt-&gt;bindValue($param, $value, PDO::PARAM&#95;INT);
+        }
+
+        $stmt-&gt;execute();
+
+        $articles = array();
+
+        while ($row = $stmt-&gt;fetch(PDO::FETCH&#95;ASSOC)){
+          $article = new Article();
+
+          $article-&gt;id = (int)$row['id'];
+          $article-&gt;title = $row['title'];
+          $article-&gt;summary = $row['summary'];
+          $article-&gt;createdAt = $row['createdAt'];
+          $article-&gt;categoryId = (int)$row['categoryId'];
+
+          $article-&gt;author = new ArticleAuthor();
+          $article-&gt;author-&gt;id = (int)$row['authorId'];
+          $article-&gt;author-&gt;name = $row['authorName'];
+          $article-&gt;author-&gt;email = $row['authorEmail'];
+
+          array&#95;push($articles, $article);
+        }
+
+        return $articles;
+    }
+
+    public function fetchOne($id) {
+        $q = "SELECT a.id, a.title, a.summary, a.body, a.createdAt, a.categoryId, a.authorId, au.name authorName, au.email authorEmail
+                FROM {$this-&gt;articles&#95;table} a
+                    LEFT JOIN {$this-&gt;authors&#95;table} au ON a.authorId = au.id
+                WHERE a.id = :id ";
+
+        $stmt = $this-&gt;conn-&gt;prepare($q);
+        $stmt-&gt;bindValue('id', (int)$id, PDO::PARAM&#95;INT);
+        $stmt-&gt;execute();
+
+        $article = null;
+
+        if ($row = $stmt-&gt;fetch(PDO::FETCH&#95;ASSOC)){
+          $article = new Article();
+
+          $article-&gt;id = (int)$row['id'];
+          $article-&gt;title = $row['title'];
+          $article-&gt;summary = $row['summary'];
+          $article-&gt;body = $row['body'];
+          $article-&gt;createdAt = $row['createdAt'];
+          $article-&gt;categoryId = (int)$row['categoryId'];
+
+          $article-&gt;author = new ArticleAuthor();
+          $article-&gt;author-&gt;id = (int)$row['authorId'];
+          $article-&gt;author-&gt;name = $row['authorName'];
+          $article-&gt;author-&gt;email = $row['authorEmail'];
+        }
+
+        return $article;
+    }
+
+    public function create($article) {
+        $q = "INSERT INTO {$this-&gt;articles&#95;table} (id, title, summary, body, createdAt, categoryId, authorId)
+                VALUES (0,
+                  '{$article-&gt;title}',
+                  '{$article-&gt;summary}',
+                  '{$article-&gt;body}',
+                  '{$article-&gt;createdAt}',
+                  {$article-&gt;categoryId},
+                  {$article-&gt;authorId}
+                )";
+
+        $stmt = $this-&gt;conn-&gt;prepare($q);
+        $stmt-&gt;execute();
+
+        $article-&gt;id = $this-&gt;conn-&gt;lastInsertId();
+
+        return $article;
+    }
+
+    public function update($id, $article) {
+        $q = "UPDATE {$this-&gt;articles&#95;table}
+                SET title = '{$article-&gt;title}',
+                    summary = '{$article-&gt;summary}',
+                    body = '{$article-&gt;body}',
+                    createdAt = '{$article-&gt;createdAt}',
+                    categoryId = {$article-&gt;categoryId},
+                    authorId = {$article-&gt;authorId}
+                WHERE id = :id";
+
+        $stmt = $this-&gt;conn-&gt;prepare($q);
+        $stmt-&gt;bindValue('id', (int)$id, PDO::PARAM&#95;INT);
+        $stmt-&gt;execute();
+
+        $count = $stmt-&gt;rowCount();
+        return $count &gt; 0;
+    }
+
+    public function delete($id) {
+        $article = $this-&gt;fetchOne($id);
+        if ($article === null) {
+            return false;
+        }
+
+        $q = "DELETE FROM {$this-&gt;articles&#95;table} WHERE id = :id ";
+
+        $stmt = $this-&gt;conn-&gt;prepare($q);
+        $stmt-&gt;bindValue('id', (int)$id, PDO::PARAM&#95;INT);
+        $stmt-&gt;execute();
+
+        $count = $stmt-&gt;rowCount();
+        return $count &gt; 0;
+    }
+}&nbsp;</pre>
+<p>Constructor of the repository class needs a PDO database connection. We deal with that with a help of the <em>Factory</em> pattern.</p>
+<p>We create a <code>Database</code> interface which must be implemented by all the persistence providers, MySQL in our case:</p>
+<p><code><strong>infrastructure/db/Database.php</strong></code></p>
+<pre class="brush: php">interface Database {
+    public function getConnection();  // returns a PDO connection object
+}&nbsp;</pre>
+<p><code><strong>infrastructure/db/DatabaseMySql.php</strong></code></p>
+<pre class="brush: php">require&#95;once &#95;&#95;DIR&#95;&#95; . '/Database.php';
+
+class DatabaseMySql implements Database {
+    private $conn;
+
+    function &#95;&#95;construct($host, $db, $username, $password) {
+        try {
+            $this-&gt;conn = new PDO("mysql:host={$host};dbname={$db}", $username, $password);
+            $this-&gt;conn-&gt;setAttribute(PDO::ATTR&#95;ERRMODE, PDO::ERRMODE&#95;EXCEPTION);
+            $this-&gt;conn-&gt;setAttribute(PDO::MYSQL&#95;ATTR&#95;FOUND&#95;ROWS, true);
+            $this-&gt;conn-&gt;exec("set names utf8");
+
+        } catch(PDOException $e){
+            throw new Exception('Connection error: ' . $e-&gt;getMessage(), 0, $e);
+        }
+    }
+
+    public function getConnection() {
+        return $this-&gt;conn;
+    }
+}&nbsp;</pre>
+<p>Our factory has a static method for getting the right PDO connection:</p>
+<p><code><strong>infrastructure/db/DatabaseFactory.php</strong></code></p>
+<pre class="brush: php">require&#95;once &#95;&#95;DIR&#95;&#95; . '/DatabaseMySql.php';
+
+class DatabaseFactory {
+  public static function getDatabase($type, $host, $db, $username, $password) {
+    switch ($type) {
+      case 'mysql':
+        return new DatabaseMySql($host, $db, $username, $password);
+      default:
+        throw new Exception('Unknown database type: ' . $type);
+    }
+  }
+}</pre>
+<p>The factory can be used as following:</p>
+<pre class="brush: php">$db = DatabaseFactory::getDatabase('mysql', 'localhost', 'blog', 'root', '1234');</pre>
+<h2>Controller</h2>
+<p>The term comes from <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller" target="_blank" title="MVC">MVC</a> design pattern. The responsibility of the controller in the application is to<strong> process the user input into output</strong>. This is the right place where the parameters should be validated (data types, range etc., the business validation is not meant here - that belongs to the domain services), proceeded and transformed back to the client.</p>
+<p>The important point here is the controller shouldn't know anything about the fact, that we're developing a web application. The web-specifics must be present only in the application itself, as we show in a moment.&nbsp;</p>
+<p><code><strong>application/ArticleController.php</strong></code> </p>
+<pre class="brush: php">require&#95;once &#95;&#95;DIR&#95;&#95; . '/../domain/ArticleRepo.php';
+
+class ArticleController {
+
+  private $repo;
+
+  public function &#95;&#95;construct(ArticleRepo $repo){
+    $this-&gt;repo = $repo;
+  }
+
+  public function detailRequest($id) {
+    $article = $this-&gt;repo-&gt;fetchOne((int)$id);
+
+    return $article;
+  }
+
+  public function listRequest($params) {
+    $limit = 10;
+
+    $categoryId = $this-&gt;getIfSet($params, 'categoryId');
+    $authorId = $this-&gt;getIfSet($params, 'authorId');
+    $page = $this-&gt;getIfSet($params, 'page', 0);
+
+    $articles = $this-&gt;repo-&gt;fetchAll((int)$categoryId, (int)$authorId, $page &#42; $limit, $limit);
+
+    return $articles;
+  }
+
+  public function createRequest($params) {
+    $article = new Article();
+    $article-&gt;title = $params['title'];
+    $article-&gt;summary = $params['summary'];
+    $article-&gt;body = $params['body'];
+    $article-&gt;createdAt = $params['createdAt'];
+    $article-&gt;categoryId = (int)$params['categoryId'];
+    $article-&gt;authorId = (int)$params['authorId'];
+
+    if (!$article-&gt;title || !$article-&gt;summary || !$article-&gt;body || !$article-&gt;createdAt || !$article-&gt;categoryId || !$article-&gt;authorId) {
+      return array('error' =&gt; 'Incorrect payload.');
+    }
+
+    $article = $this-&gt;repo-&gt;create($article);
+
+    return (int)$article-&gt;id;
+  }
+
+  public function updateRequest($id, $params) {
+    $article = new Article();
+    $article-&gt;title = $params['title'];
+    $article-&gt;summary = $params['summary'];
+    $article-&gt;body = $params['body'];
+    $article-&gt;createdAt = $params['createdAt'];
+    $article-&gt;categoryId = (int)$params['categoryId'];
+    $article-&gt;authorId = (int)$params['categoryId'];
+
+    return $this-&gt;repo-&gt;update($id, $article);
+  }
+
+  public function deleteRequest($id) {
+    return $this-&gt;repo-&gt;delete($id);
+  }
+
+  // ///////// HELPER FUNCTIONS /////////////////////////////////////
+
+  private function getIfSet($params, $var, $def = null) {
+    return isset($params[$var]) ? $params[$var] : $def;
+  }
+}</pre>
+<h2>Putting It All Together&nbsp;</h2>
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/BlogArticlesDesign.png" alt="Blog Articles Architecture" width="100%"/></p>
+<p>The picture above shows the service components, double-lines represent layers boundaries. As you can see, <strong>all the inter-boundary communication is through interfaces</strong>, which define an API of every layer.</p>
+<p>Finally we have all the blocks we need to build our service.</p>
+<p>To keep things clean, we create a database configuration in a separate file:</p>
+<p><code><strong>config/db.config.php</strong></code></p>
+<pre>define('DB&#95;TYPE', 'mysql');
+define('DB&#95;HOST', 'localhost');
+define('DB&#95;NAME', 'blog');
+define('DB&#95;USER', 'root');
+define('DB&#95;PASS', '1234');&nbsp;</pre>
+<p>This configuration will be loaded withing the application code.</p>
+<p>The application&nbsp;code is here to <strong>serve the request</strong> and&nbsp;<strong>assembly the components</strong>, this the only &quot;dirty&quot; code doing all the injections; a dependency-injection framework could be used here as well:</p>
+<p><code><strong>articles.php</strong></code></p>
+<pre class="brush: php">header("Access-Control-Allow-Origin: &#42;");
+header("Content-Type: application/json; charset=UTF-8");
+
+require&#95;once &#95;&#95;DIR&#95;&#95; . '/config/db.config.php';
+require&#95;once &#95;&#95;DIR&#95;&#95; . '/application/ArticleController.php';
+require&#95;once &#95;&#95;DIR&#95;&#95; . '/infrastructure/ArticleRepoPDO.php';
+require&#95;once &#95;&#95;DIR&#95;&#95; . '/infrastructure/db/DatabaseFactory.php';
+
+$db = DatabaseFactory::getDatabase(DB&#95;TYPE, DB&#95;HOST, DB&#95;NAME, DB&#95;USER, DB&#95;PASS);
+
+$repo = new ArticleRepoPDO($db-&gt;getConnection());
+
+$controller = new ArticleController($repo);
+
+$response = null;
+
+switch ($&#95;SERVER['REQUEST&#95;METHOD']) {
+  case 'GET':
+    if (isset($&#95;GET['id'])) {
+      $response = $controller-&gt;detailRequest($&#95;GET['id']);
+
+    } else {
+      $response = $controller-&gt;listRequest($&#95;GET);
+    }
+    if ($response === null) {
+      http&#95;response&#95;code(404);
+
+    } else {
+      echo json&#95;encode($response);
+    }
+    break;
+
+  case 'POST':
+    $&#95;DATA = parseRequestData();
+    $response = $controller-&gt;createRequest($&#95;DATA);
+
+    if ($response === null) {
+      http&#95;response&#95;code(400);
+
+    } else {
+      http&#95;response&#95;code(201);
+      echo json&#95;encode($response);
+    }
+    break;
+
+  case 'PUT':
+    if (!isset($&#95;GET['id'])) {
+      http&#95;response&#95;code(400);
+      echo json&#95;encode(array('error' =&gt; 'Missing "id" parameter.'));
+    }
+
+    $&#95;DATA = parseRequestData();
+    $response = $controller-&gt;updateRequest($&#95;GET['id'], $&#95;DATA);
+
+    if ($response === false) {
+      http&#95;response&#95;code(404);
+      echo json&#95;encode(array('error' =&gt; 'Article not found.'));
+    } else {
+      http&#95;response&#95;code(204);
+    }
+    break;
+
+  case 'DELETE':
+    if (!isset($&#95;GET['id'])) {
+      http&#95;response&#95;code(400);
+      header("Location: {$&#95;SERVER['REQUEST&#95;URI']}/{$response}");
+    }
+
+    $response = $controller-&gt;deleteRequest($&#95;GET['id']);
+
+    if ($response === false) {
+      http&#95;response&#95;code(404);
+      echo json&#95;encode(array('error' =&gt; 'Article not found.'));
+    } else {
+      http&#95;response&#95;code(204);
+    }
+    break;
+
+  case 'OPTIONS':
+    header('Allow: GET POST PUT DELETE OPTIONS');
+    break;
+
+  default:
+    http&#95;response&#95;code(405);
+    header('Allow: GET POST PUT DELETE OPTIONS');
+}
+
+// ///////// HELPER FUNCTIONS /////////////////////////////////////
+
+function parseRequestData() {
+  $contentType = explode(';', $&#95;SERVER['CONTENT&#95;TYPE']);
+  $rawBody = file&#95;get&#95;contents('php://input');
+  $data = array();
+
+  if (in&#95;array('application/json', $contentType)) {
+    $data = json&#95;decode($rawBody, true);
+
+  } else {
+    parse&#95;str($data, $data);
+  }
+
+  return $data;
+}</pre>
+<h2>Production</h2>
+<p>In production we want our API to be agnostic of the underlying technology. We can achieve that via setting rules of the HTTP server:</p>
+<p><code><strong>.htaccess</strong></code></p>
+<pre class="brush: plain">RewriteEngine On
+RewriteRule ^articles$ articles.php [NC,L]
+RewriteRule ^articles/([0-9]+)$ articles.php?id=$1 [NC,L]&nbsp;</pre>
+<p>And now we can call the endpoint without the <code>.php</code> suffix.</p>
+<h2>Usage&nbsp;</h2>
+<p>The usage is pretty straight-forward:</p>
+<pre>curl http://localhost/articles
+curl http://localhost/articles?categoryId=1
+curl http://localhost/articles?authorId=1
+curl http://localhost/articles?categoryId=1&amp;authorId=1
+
+curl http://localhost/articles/1
+
+curl http://localhost/articles -X POST -H "Content-Type: application/json" -d @data.json
+
+curl http://localhost/articles/4 -X PUT -H "Content-Type: application/json" -d @data.json
+
+curl http://localhost/articles/4 -X DELETE&nbsp;</pre>
+<p><code><strong>data.json</strong></code></p>
+<pre class="brush: plain">{ "title": "New article",
+  "summary": "Lorem ipsum",
+  "body": "Lorem ipsum dolor sit amet",
+  "createdAt": "2018-05-03",
+  "categoryId": 1,
+  "authorId": 1
+}&nbsp;</pre>
+<h2>Source Code</h2>
+<p>You can find the whole project source code on <a href="https://github.com/ttulka/blog-code-samples/tree/master/php-rest-articles" title="Source code">GitHub</a>.</p>
+<p>Enjoy!</p>

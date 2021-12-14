@@ -1,0 +1,44 @@
+<p>Let's consider a trivial example of a communication between two independent services.</p>
+<p><img src="/storage/multitenant-security.png" alt="communication between two independent services" /></p>
+<p>Service A and Service B are in different realms untrusted to each other.</p>
+<h2>Security Levels</h2>
+<p>There are several levels of security when talking about a communication between systems:</p>
+<h3>1. Security Level: Don't trust anyone</h3>
+<p><img src="/storage/multitenant-security-level-1.png" alt="1. Security level" /></p>
+<p>This is the most secure model. It can be achive only by an active client establishing the communication.</p>
+<p>In this case, services don't know anything about each other - the client must know all the communication details and control the whole flow.</p>
+<p>If you don't trust anyone, you have to do everything by yourself...</p>
+<h3>2. Security Level:  In your name</h3>
+<p><img src="/storage/multitenant-security-level-2.png" alt="2. Security level" /></p>
+<p>In this model, a part of the communication is moved to the service code and the calling service acts partially on behalf of the client.</p>
+<p>Everytime the client sends its credentials to the Service A he manifests his trust to the service. The Service A uses client's identity to build trust between Service B. The identity can be implemented for example via a security token.</p>
+<p>The Service A can't communicate with the Service B without client's identity so it's unable to access any data but the client's one.</p>
+<h3>3. Security Level:  We're all friends</h3>
+<p><img src="/storage/multitenant-security-level-3.png" alt="3. Security level" /></p>
+<p>On this level you practically loose the multitenant-specific secuirity whatsoever. That could be okay in some cases like logging, collecting anonymous statistics etc., but we have to choose out friends carefully.</p>
+<p>If such a kind of trust is supported, the Service A can access any data of any client in the Service B. It can even make an identity up which doesn't exist (if the Service B is just blindly accepting the input).</p>
+<p>This model can be implemented using <em>API keys</em> or application certificates.</p>
+<h3>4. Security Level:  Whatever makes you happy</h3>
+<p>Pretty obvious one - the Service B has a public API accesible without any needed trust.</p>
+<p>There are definitely valid use-cases, but don't make your service public as long as you're not 100% sure!</p>
+<h2>Real-World Example</h2>
+<p>We will show a simple model of a multitenant system based on the <b>second security level</b> as described above.</p>
+<p>Let's consider a Service A consuming client's data and processing them somehow (e.g. saving into a database).</p>
+<p>The data can be later used for a post-procesing in the Service B.
+</p>
+<p>Because the Service A plays only the role of a data source and its business logic is completely independent on the post-processing and the Service B is a general service knowing nothing about its data sources we want to decouple both services as much as possible. Using <em>event-driven architecture</em> makes perfectly sense in this use-case.</p>
+<p>We build a plugin Adapter in the Service A to consume the data and forward them to the Service B. The Adapter is conceptually a part of the Service A, but it's loosly coupled to it and can be plugged-in/out completely independently on the life-cycle of the service.
+
+</p>
+<p><img src="/storage/multitenant-security-example-1.png" alt="Real-World Example 1" /></p>
+<p>When the Client sends data to the Service A (1) he uses a token to authorize himself. The Service A accepts the request, processes it and fires an event including the data (or some reference to them) and authorization token (2). The Adapter reacts on the event and uses the client's token to forward the data to the Service B (3).</p>
+<p>Gray lines separate three different realms of trust: Client's, Service A's and B's realms. Inside a realm everything trusted, outside the realm nothing is trusted.</p>
+<h3>Another example</h3>
+<p>If you are developing for the cloud, the following scenario should sound familier to you: You want to process data with a large file attachment. First, you make a request to the service with a security token, a data record is created and a signed upload URL is returned in the response. Second, the client puts the file data to the upload URL.</p>
+<p>The Adapter them must save the session information to be able to react to the event when the upload is finished.</p>
+<p>To save the token internally in the service is not enough in this situation because the upload can take longer than the token expiration time is. The Adapter have to get a temporary but long enough access to the Service B. This can be implemented using API keys.</p>
+<p><img src="/storage/multitenant-security-example-2.png" alt="Real-World Example 2" width="100%" /></p>
+<p>When the Client sends metadata (like a file-name) to the Service A (1) he uses a token to authorize himself. The Service A accepts the request, processes it, fires an event including the metadata and security token (2), and returns a signed upload URL in the response. The Adapter reacts on the event, uses the client's token to demand an API key from the Service B (3A), then saves the API key internal with the metadata. In parallel the Client uses the upload URL to upload a file data to the storage of the Service A (3B). This fires an event containing the file metadata (4). On the event reacts the Adapter by looking up the API key connected to the metadata (5). The Adapter uses then the API key to upload the file data to the Service B (6).</p>
+<h4>What about asynchrony?</h4>
+<p>One problem could be the absense of order of the received events (that is natural for event-driven systems). It means, the event &quot;file uploaded&quot; can come before the API key retreiving is done or even (but very unlikely) before the &quot;upload requested&quot; event is caught by the Adapter. A solution here is not to consume the &quot;file uploaded&quot; event to be received again and again until the look-up is successful.</p>
+<p>Security first!</p>

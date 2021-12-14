@@ -1,0 +1,208 @@
+<p>Indeed, while white-box testing we do see into the component, but that doesn't mean we access implementation details <em>directly</em>. What's more, <em>white</em> is the opposite of black, but white is not transparent after all...</p>
+<p>To avoid confusion, further we will strictly use its alternative name <em>glass-box testing</em>. Glass is transparent but impermeable - exactly like a real glass-box test! </p>
+<h2>Glass-Box Testing</h2>
+<p>What is glass-box testing actually? Even by glass-box testing we still <strong>access the component only via its API</strong>, but we do have some <strong>internal knowledge</strong> about what's going on inside (as glass is transparent), which makes use of it for better &quot;informed&quot; tests.</p>
+<p>For example to find interesting test cases and input combinations (as we usually can't test all possible variants of input exhaustively).</p>
+<p><strong>Without this internal knowledge we can't do code coverage</strong> - how can we know how many lines of code are test-covered, when we actually don't know the code?!</p>
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/glassbox.png" alt="Glass-box testing" /> </p>
+<p>Consider an example code (in Java):</p>
+<pre class="brush: java">interface Saver {
+
+  void save(UUID id, Object input);
+}
+</pre>
+<p>As the method <code>save</code> doesn't return anything (<code>void</code>), it is very difficult to test it only using its API contract (interface) - all we can do is to call the method with a combination of input parameters and check if no error occurs.</p>
+<p>Nevertheless, we can assume existence of a <code>load</code> method somewhere else:</p>
+<pre class="brush: java">interface Loader {
+
+  Object load(UUID id);
+}
+</pre>
+<p>And, theoretically, we can use this interface to test if the record can be loaded after being saved.</p>
+<p>Such a design obviously sucks, operations for saving and loading objects should stick together in a single coherent contract:</p>
+<pre class="brush: java">interface Repository {
+
+  void save(UUID id, Object input);
+
+  Object load(UUID id);
+}
+</pre>
+<p>Now, we can easily test the whole scenario, because it really doesn't make sense anyway to test functions that are supposed to work with each other in isolation:</p>
+<pre class="brush: java">@Test
+public void inMemoryRepositoryTest() {
+  Repository repo = new InMemoryRepository();
+  UUID id = UUID.randomUUID();
+
+  assertNull(repo.load(id));
+
+  repo.save(1, "test");
+
+  assertEquals("test", repo.load(id));
+}
+</pre>
+<h2>We Don't Need No Mocks!</h2>
+<p>Consider another example of a delivery service:</p>
+<pre class="brush: java">interface DeliveryService {
+
+  void dispatch(String productId, String customerId);
+}
+</pre>
+<p>One domain rule says that a <em>Promo product</em> cannot be delivered:</p>
+<pre class="brush: java">interface Product {
+  ...
+  boolean deliverable();
+}
+
+class PromoProduct implements Product {
+
+  PromoProduct(String name, Double price) { ... }
+  ...
+  public boolean deliverable() { return false; }
+}
+</pre>
+<p>Our simple delivery service loads a product and a customer from their repositories and saves them into its repository to be proceeded:</p>
+<pre class="brush: java">class SimpleDeliveryService implements DeliveryService {
+
+  private final Repository productRepo, customerRepo, deliveryRepo;
+
+  SimpleDeliveryService(
+      Repository productRepo, Repository customerRepo, Repository deliveryRepo) {
+    this.productRepo = productRepo;
+    this.customerRepo = customerRepo;
+    this.deliveryRepo = deliveryRepo;
+  }
+
+  public void dispatch(Long productId, Long customerId) {
+    Product product = this.productRepo.load(productId);
+
+    if (!product.deliverable()) {
+      throw new UndeliverableProductException(product);
+    }
+
+    Customer customer = this.customerRepo.load(customerId);
+
+    Delivery delivery = new Delivery(product,  customer, LocalDateTime.now());
+    this.deliveryRepo.save(UUID.randomUUID(), delivery);
+  }
+}
+</pre>
+<p>For our domain rule we come up with a unit test:</p>
+<pre class="brush: java">@Test
+public void shouldFailForPromoProductTest() {
+  Repository productRepo = mock(Repository.class);
+  UUID productId = UUID.randomUUID();
+  productRepo.save(productId, new PromoProduct("Test", 12.3));
+
+  Repository customerRepo = mock(Repository.class);
+  UUID customerId = UUID.randomUUID();
+  customerRepo.save(customerId, new Customer("John Smith", "Evergreen Terrace 123"));
+
+  DeliveryService service = new SimpleDeliveryService(
+      productRepo, customerRepo, mock(Repository.class));
+  try {
+    service.dispatch(productId, customerId);
+
+    fail("Promo product should not be to deliver.");
+
+  } catch (UndeliverableProductException ignore) {
+    // we expect this to happen
+  }
+}
+</pre>
+<p>Uff, that was a lot of stuff we had to do to test such a simple rule. We had to mock three repository objects!</p>
+<p>Maybe we should re-think our contract once more:</p>
+<pre class="brush: java">interface DeliveryService {
+
+  void dispatch(Product product, Customer customer);
+}
+
+class SimpleDeliveryService implements DeliveryService {
+
+  private final Repository deliveryRepo;
+
+  SimpleDeliveryService(Repository deliveryRepo) {
+    this.deliveryRepo = deliveryRepo;
+  }
+
+  public void dispatch(Product product, Customer customer) {
+    if (!product.deliverable()) {
+      throw new UndeliverableProductException(product);
+    }
+
+    Delivery delivery = new Delivery(product, customer, LocalDateTime.now());
+    this.deliveryRepo.save(UUID.randomUUID(), delivery);
+  }
+}
+</pre>
+<p>Now, things got much easier, we saved several lines of code (to be test-covered) and two mocks:</p>
+<pre class="brush: java">@Test
+public void shouldFailForPromoProductTest() {
+  DeliveryService service = new SimpleDeliveryService(mock(Repository.class));
+  try {
+    service.dispatch(
+        new PromoProduct("Test", 12.3),
+        new Customer("John Smith", "Evergreen Terrace 123")
+    );
+
+    fail("Promo product should not be to deliver.");
+
+  } catch (UndeliverableProductException ignore) {
+    // we expect this to happen
+  }
+}
+</pre>
+<p>This is pretty cool, but can we go even further?</p>
+<pre class="brush: java">class Delivery {
+
+  private final Product product;
+  private final Customer customer;
+  private final LocalDateTime createdAt;
+
+  Delivery(Product product, Customer customer) {
+    if (!product.deliverable()) {
+      throw new UndeliverableProductException(product);
+    }
+    this.product = product;
+    this.customer = customer;
+    this.createdAt = LocalDateTime.now();
+  }
+}
+
+interface DeliveryService {
+
+  void dispatch(Delivery delivery);
+}
+
+class SimpleDeliveryService implements DeliveryService {
+
+  private final Repository deliveryRepo;
+
+  SimpleDeliveryService(Repository deliveryRepo) {
+    this.deliveryRepo = deliveryRepo;
+  }
+
+  public void dispatch(Delivery delivery) {
+    this.deliveryRepo.save(UUID.randomUUID(), delivery);
+  }
+}
+</pre>
+<p>Our domain rule is now fully implemented in the <code>Delivery</code> domain object while <code>DeliveryService</code> was reduced just to integration with the external resource (repository).</p>
+<p>Consequently, we don't need mocks in the test anymore:</p>
+<pre class="brush: java">@Test
+public void shouldFailForPromoProductTest() {
+  try {
+    new Delivery(
+        new PromoProduct("Test", 12.3),
+        new Customer("John Smith", "Evergreen Terrace 123")
+    );
+
+    fail("Promo product should not be to deliver.");
+
+  } catch (UndeliverableProductException ignore) {
+    // we expect this to happen
+  }
+}
+</pre>
+<p>The <strong>domain rule is now test covered with a simple unit test</strong> without need to use (or mock) the delivery service.</p>
+<p><strong>Services must be tested as a part of integration testing</strong> against real resources (e.g. databases) to check if they are correctly integrated, but domain rules stays in the deepest part of the domain model and could be fully covered with simple unit tests without any need of mocking.</p>
+<p>Happy testing!</p>

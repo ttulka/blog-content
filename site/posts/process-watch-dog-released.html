@@ -1,0 +1,29 @@
+<pre class="brush: xml">&lt;dependency&gt;
+&nbsp; &nbsp; &lt;groupId&gt;cz.net21.ttulka.exec&lt;/groupId&gt;
+&nbsp; &nbsp; &lt;artifactId&gt;process-watch-dog&lt;/artifactId&gt;
+&nbsp; &nbsp; &lt;version&gt;1.0.0&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>Consider a very simple tooling class for executing new processes. Put the watch dog to kill processes after 2 minutes:</p>
+<pre class="brush: java">import cz.net21.ttulka.exec.ProcessWatchDog;
+
+public class ProcessExecutorTool {
+
+&nbsp; &nbsp; private static int TIMEOUT = 2 ✱ 60 ✱ 1000; // 2 minutes
+
+&nbsp; &nbsp; private static ProcessWatchDog watchDog = new ProcessWatchDog();
+
+&nbsp; &nbsp; public static int executeExternalProcess(String... cmd) {
+&nbsp; &nbsp; &nbsp; &nbsp; try {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ProcessBuilder builder = new ProcessBuilder(cmd);
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Process process = builder.start();
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; watchDog.watch(process, TIMEOUT);   // release the dog!</pre>
+<pre class="brush: java">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; process.waitFor();
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; return process.exitValue();</pre>
+<pre class="brush: java">&nbsp; &nbsp; &nbsp; &nbsp; } catch (Exception e) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; throw new RuntimeException("Exception by executing '" + cmd + "'.", e);
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; }
+}</pre>
+<p>All about:&nbsp;<a href="https://github.com/ttulka/process-watch-dog"><strong>https://github.com/ttulka/process-watch-dog</strong></a> </p>
+<p>Happy watching!</p>

@@ -1,0 +1,195 @@
+<p>In the previous parts of this <a href="/learning-webassembly-series" target="_blank">series</a>, we already executed Wasm modules in a browser. In this part, we will continue in explaining the <a href="https://developer.mozilla.org/en-US/docs/WebAssembly/Using_the_JavaScript_API" target="_blank">WebAssembly JavaScript API</a> that makes all this possible.</p>
+
+<h2>Wasm Module Initializing</h2>
+
+<p>The easiest way to load and execute Wasm code in a browser is the <code>WebAssembly.instantiateStreaming</code> function:</p>
+
+<pre>
+WebAssembly
+  .instantiateStreaming(fetch('some.wasm'))
+  .then(obj =&gt; {
+    ...
+  });
+</pre>
+
+<p>The initialized object has two attributes: <code>instance</code> and <code>module</code>. The <code>module</code> object contains stateless Wasm code that can be efficiently shared and initialized multiple times. The <code>instance</code> object is stateful, executable instance of a Wasm module.</p>
+
+<p class="warning">To make the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API" target="_blank">Fetch API</a> work you must serve the web page via HTTP(S).</p>
+
+<h2>Calling Wasm Functions</h2>
+
+<p>The interesting attribute of the <code>instance</code> object is the <code>exports</code> object which contains all exported functions from the Wasm module:</p>
+
+<pre>
+WebAssembly
+  .instantiateStreaming(fetch('some.wasm'))
+  .then(obj =&gt; {
+    obj.instance.exports.myfunc1();
+    obj.instance.exports.myfunc2();
+  });
+</pre>
+
+<p>The JavaScript code can synchronously call the <em>exports</em>, which are exposed as normal JavaScript functions; with parameters and result values:</p>
+
+<pre>
+WebAssembly
+  .instantiateStreaming(fetch('some.wasm'))
+  .then(obj =&gt; {
+    obj.instance.exports.myfunc1(1, 2, 3);
+    var res = obj.instance.exports.myfunc2();
+  });
+</pre>
+
+<h2>Importing JavaScript Functions</h2>
+
+<p>JavaScript functions can also be synchronously called by Wasm code by passing in as <em>imports</em> to a Wasm module instance:</p>
+
+<pre>
+(module
+  (import "js" "log"
+    (func $log (param i32)))
+
+  (func (export "logIt")
+    i32.const 42
+    call $log))
+</pre>
+
+<p>Now, we call the exported function with the imported <code>console.log</code>:</p>
+
+<pre>
+WebAssembly
+  .instantiateStreaming(fetch('log.wasm'), {
+    js: { log: console.log }
+  })
+  .then(({instance}) =&gt; {
+    instance.exports.logIt();
+  });
+</pre>
+
+<p>We can see the result in the dev console:</p>
+
+<pre>
+&raquo; 42
+</pre>
+
+<h2>Advanced Logging Example</h2>
+
+<p>In the <a href="/learning-webassembly-4-wasm-memory-and-working-with-strings" target="_blank">previous part</a>, we have worked with Wasm memory objects. Now, we put it all together and create proper logging from a Wasm module.</p>
+
+<p>We have to import a function taking two parameters: the offset and length of the data in the memory:</p>
+
+<pre>
+(module
+  (import "js" "log"
+    (func $log (param i32 i32)))
+
+  (import "js" "mem" (memory 1))
+  (data (i32.const 0) "Hello")
+
+  (func (export "logIt")
+    i32.const 0  ;; offset to log
+    i32.const 5  ;; length to log
+    call $log))
+</pre>
+
+<p>In JavaScript, the imported function takes a memory chunk defined by the offset and length parameters, decodes it as a string, and prints it to the console:</p>
+
+<pre>
+var mem = new WebAssembly.Memory({initial:1});
+
+WebAssembly
+  .instantiateStreaming(fetch('mem.wasm'), {
+    js: {
+      mem,
+      log: <b>(offset, length) =&gt;
+        logMemory(mem, offset, length)</b>
+    }
+  })
+  .then(({instance}) =&gt; {
+    instance.exports.logIt();
+  });
+
+function <b>logMemory</b>(memory, offset, length) {
+  var bytes = new Uint8Array(memory.buffer, offset, length);
+  var str = new TextDecoder('utf8').decode(bytes);
+
+  console.log(str);
+}
+</pre>
+
+<p>We can see the result in the dev console:</p>
+
+<pre>
+&raquo; Hello
+</pre>
+
+<h2>Global Variables</h2>
+
+<p>We can create global variables accessible from both JavaScript and Wasm, importable/exportable across one or more module instances.</p>
+
+<p>First, we must define a variable in the global section:</p>
+
+<pre>
+(module
+  (global $g (import "js" "glob") (mut i32))
+  ...
+)
+</pre>
+
+<p>We call it simply <code>$g</code> and define it as mutable, of type 32-bit integer. Optionally, we will import the global instance from JavaScript code, so we can modify it directly in JavaScript.</p>
+
+<div class="note">
+<p>When the instance is not imported, a default value must be provided:</p>
+<pre>
+(global $g1 (mut i32) (i32.const 42))
+</pre>
+</div>
+
+<p>Then, we add a getter and a setter for the global variable:</p>
+
+<pre>
+(module
+  (global $g (import "js" "glob") (mut i32))
+
+  (func (export "getGlobal")
+        (result i32)
+    <b>global.get $g</b>)
+
+  (func (export "setGlobal")
+        (param $value i32)
+    local.get $value
+    <b>global.set $g</b>)
+)
+</pre>
+
+<p>Now, we can access and modify the same instance of the global variable in both Wasm and JavaScript:</p>
+
+<pre>
+// mutable global variable, default value: 2
+var glob = new <b>WebAssembly.Global</b>({
+             value: "i32", mutable: true}, 2);
+
+WebAssembly
+  .instantiateStreaming(fetch('glob.wasm'), {
+    js: { glob }
+  })
+  .then(({instance}) =&gt; {
+    console.log(instance.exports.getGlobal());
+    // prints '2'
+
+    <b>glob.value =</b> 3;
+    console.log(instance.exports.getGlobal());
+    // prints '3'
+
+    instance.exports.setGlobal2(4);
+    console.log(instance.exports.getGlobal());
+    // prints '4'
+  });
+</pre>
+
+<h2>Further Steps</h2>
+
+<p>In the <a href="/learning-webassembly-6-running-wasm-in-nodejs">next part</a> of this <a href="/learning-webassembly-series">series</a>, we will see how to run Wasm instances in Node.js.</p>
+
+<p>Stay tuned!</p>
+

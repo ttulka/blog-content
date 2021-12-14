@@ -1,0 +1,77 @@
+<p>This is the first part of a <a href="/learning-webassembly-series" target="_blank">series</a> about programming in WebAssembly (Wasm) for beginners. The goal is to give you the first impression of what Wasm is and how it can be beneficial for your own projects. The further the series goes the deeper we will delve into the topic.</p>
+
+<p>I suppose you have already heard about WebAssembly; how performant, lightweight, secure, and overall <a href="https://hacks.mozilla.org/2019/03/standardizing-wasi-a-webassembly-system-interface/" target="_blank">promising</a> it is. Otherwise, you probably would not be reading this text right now, would you? So, I will just skip all that fluff and go directly to the more interesting stuff: like how to <em>write</em> Wasm code and how to actually <em>use</em> it.</p>
+
+<h2>Wasm and Wat</h2>
+
+<p><em>Wasm</em> is a binary format (files with the <code>.wasm</code> extension). It also has a textual representation called <em>Wat</em> (files with the <code>.wat</code> extension). Wat could easily be generated from the binary format, for example via developer tools in the browser.</p>
+
+<p>Albeit Wat is a text format readable by humans, it is still pretty low-level — programming complex systems in Wat would quickly become a nightmare. But no worries, Wasm can be compiled from <a href="https://github.com/appcypher/awesome-wasm-langs" target="_blank">many</a> <a href="https://webassembly.org/getting-started/developers-guide/" target="_blank">languages</a> like Rust, C/C++, Go, or Kotlin. Just choose your favourite one!</p>
+
+<h2>Hello, WebAssembly!</h2>
+
+<p>To understand the very basics we will start at quite a low-level. Well, not on the binary level, all in all, it was never meant to be written or read by humans. We will create a simple <i>Hello world</i> program in Wat, the WebAssembly text format.</p>
+
+<p>Copy and save the following code into a file (hello.wat):</p>
+
+<pre>
+(module
+  (func (export "main")
+        (result i32)
+    i32.const 42
+    return))
+</pre>
+
+<p>Wait a minute, there is no “Hello” in the code above! This is the first catch: WebAssembly does not have a value <a href="https://webassembly.github.io/spec/core/syntax/types.html" target="_blank">type</a> that would represent <em>strings</em>. We have only <a href="https://webassembly.github.io/spec/core/syntax/values.html" target="_blank">numeric types</a> in our base equipment. For now, 42, <a href="https://en.wikipedia.org/wiki/Phrases_from_The_Hitchhiker%27s_Guide_to_the_Galaxy#Answer_to_the_Ultimate_Question_of_Life,_the_Universe,_and_Everything_(42)" target="_blank">the answer</a> to the ultimate question of life, the universe, and everything, will serve as our “hello, world” phrase.</p>
+
+<p>To test the code, we can use the <a href="https://github.com/webassembly/wabt" target="_blank">WebAssembly Binary Toolkit</a>. First, we must compile the Wat text format into the Wasm binary format (hello.wasm):</p>
+
+<pre>
+$ wat2wasm hello.wat -o hello.wasm
+</pre>
+
+<p>We can run it with an interpreter from the same toolkit:</p>
+
+<pre>
+$ wasm-interp --run-all-exports hello.wasm
+</pre>
+
+<p>The following output should appear:</p>
+
+<pre>
+main() =&gt; i32:<b>42</b>
+</pre>
+
+<p>We can run the same code in the browser, too:</p>
+
+<pre class="brush: html">
+&lt;html&gt;
+&lt;body&gt;
+&lt;script&gt;
+  WebAssembly
+    .instantiateStreaming(fetch(&apos;hello.wasm&apos;))
+    .then(({instance}) =&gt;
+        console.log(instance.exports.main())
+    );
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+<p class="warning">For the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API" target="_blank">Fetch API</a> to work the HTML page must be served via HTTP(s). Tools like <a href="https://github.com/ttulka/dir2http" target="_blank">dir2http</a> do the job.</p>
+
+<p>After opening the page in a browser we should see the answer in the dev console:</p>
+
+<pre>
+&raquo; 42
+</pre>
+
+<p>As just shown, the identical WebAssembly program can run both inside and outside a browser. This shows the great potential of WebAssembly to become a universal programming platform for both web clients and server applications.
+
+<h2>Further Steps</h2>
+
+<p>All right, we have written our first program in Wasm and now we know the answer to the ultimate question. What's next?</p>
+
+<p>In the <a href="/learning-webassembly-2-wasm-binary-format">second part</a> of this <a href="/learning-webassembly-series">series</a>, we will go deeper and explain byte by byte what actually happens under the hood.</p>
+
+<p>Stay tuned!</p>

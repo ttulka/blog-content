@@ -1,0 +1,15 @@
+<p>There is a great library to achive this: <a href="https://www.npmjs.com/package/jasmine-ts" target="_blank">jasmine-ts</a>. But how to debug such tests within your&nbsp;IntelliJ IDE?</p>
+<p>You need to use the Node.js plugin and configure it to run/debug the <code>jasmine-ts</code> like following:</p>
+<p><img src="/storage/jasmine-ts-debug.png" alt="jasmine-ts debug from IntelliJ" width="100%" /></p>
+<p>I'm developing under Windows, but for Mac or Linux would be the situation almost the same.</p>
+<p>The meaning of the settings is following:</p>
+<p> </p>
+<ul>
+<li><em>Working directory</em> is the location of my TypeScript project, generally it the directory where your Jasmine configuration is located.</li>
+<li><em>JavaScript file</em> is the <code>jasmine-ts</code> bootstrap file. My local <code>npm</code>&nbsp;repository is located in my home ordner under&nbsp;<code>AppData\Roaming\npm\node_modules</code>, this is the folder where <code>jasmine-ts</code> is installed into.</li>
+<li><em>Application parameters</em> are used to debug a concrete test suite. If you want to debug all the Jasmine tests, leave this field empty. In my case, all my Jasmine test files are located under the <code>test</code> sub-folder in my project directory.</li>
+</ul>
+<p>Then just set up some breakpoints and click the Run/Debug button.</p>
+<p>Here we go...&nbsp;</p>
+<p>Happy debugging!</p>
+<p> </p>

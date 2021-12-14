@@ -1,0 +1,167 @@
+<p>Technically, we can use POST for everything in the same sense as we can create the whole web with just a DIV element. However, just because we can doesn’t mean we should.</p>
+
+<p><a href="https://en.wikipedia.org/wiki/Richardson_Maturity_Model">Practitioners</a> of RESTful API design teach us to use the HTTP verbs in a sensible way to achieve a level of semantics for our HTTP endpoints. This semantics helps implementers meet user expectations and gives users insight into the intended use.</p>
+
+<p>While the methods GET, DELETE, and HEAD are easy to understand and usually used correctly, methods POST, PUT, and PATCH are often used interchangeably and insensibly.</p>
+
+<p>Let us define simple guidelines for distinguishing where to use what method when designing an HTTP API.</p>
+
+<h2>POST vs PUT and PATCH</h2>
+
+<p>While PUT is <strong>idempotent</strong>, POST is not. By its <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PATCH">specification</a>, PATCH is not necessarily idempotent, but it is strongly recommended to make it so wherever it is possible.</p>
+
+<p><em>Idempotence</em> means that calling the endpoint repetitively will leave the system in the same state. Let us demonstrate this on an example:</p>
+
+<p>Calling <code>POST /product</code> two times will create two resources:</p>
+
+<pre>
+&gt; POST /product
+{
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+&lt; 201
+
+&gt; POST /product
+{
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+&lt; 201
+
+&gt; GET /product
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;
+}, {
+  &quot;id&quot;: 101,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:51&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+</pre>
+
+<p>While calling <code>PUT /product</code> two times should only create a single one:</p>
+
+<pre>
+&gt; PUT /product
+{
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+&lt; 201
+
+&gt; PUT /product
+{
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+&lt; 204
+
+&gt; GET /product
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+</pre>
+
+<p>There could also be valid use-cases when we need to modify the resource in a non-idempotent manner. An example would be incrementing a resource’s attribute. Such use-cases are, however, quite rare. Here we would use PATCH:</p>
+
+<pre>
+&gt; PATCH /product/100
+{
+  &quot;views&quot;: &quot;$increment&quot;
+}
+&lt; 204
+
+&gt; GET /product/100
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;,
+  &quot;views&quot;: 1
+}
+
+&gt; PATCH /product/100
+{
+  &quot;views&quot;: &quot;$increment&quot;
+}
+&lt; 204
+
+&gt; GET /product/100
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;,
+  &quot;views&quot;: 2
+}
+</pre>
+
+<h2>PUT vs PATCH</h2>
+
+<p>Both PUT and PATCH are meant to modify existing resources. The difference is that PUT modifies the <strong>entire</strong> resource while PATCH mutates the resource only <strong>partially</strong>.</p>
+
+<p>To demonstrate this on an example, consider the following Product resource:</p>
+
+<pre>
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;,
+  &quot;price&quot;: 3.5
+}
+</pre>
+
+<p>What if a product administrator wants to change the Price value of the Product?</p>
+
+<p>When using PATCH, only the particular attribute is modified:</p>
+
+<pre>
+&gt; PATCH /product/100
+{
+  &quot;price&quot;: 5.0
+}
+&lt; 204
+
+&gt; GET /product/100
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;,
+  &quot;price&quot;: 5.0
+}
+</pre>
+
+<p>On the contrary, PUT will update the entire resource:</p>
+
+<pre>
+&gt; PUT /product/100
+{
+  &quot;price&quot;: 5.0
+}
+&lt; 204
+
+&gt; GET /product/100
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: null,
+  &quot;name&quot;: null,
+  &quot;price&quot;: 5.0
+}
+</pre>
+
+<p>A real-world implementation would probably reject such a request as invalid; we have just demonstrated the concept.</p>
+
+<h2>Conclusion</h2>
+
+<p>Using HTTP methods consistently will establish a well-defined contract between its users and implementers. APIs with clear semantics are easier to follow and evolve.</p>
+
+<p>Idempotent endpoints ensure better robustness of the system and it is desired to make as many resources as possible be idempotent.</p>
+
+<p>Exceptions and edge cases should be well documented and communicated.</p>
+
+<p>Happy end-pointing!</p>
+

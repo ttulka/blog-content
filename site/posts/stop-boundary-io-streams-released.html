@@ -1,0 +1,49 @@
+<pre class="brush: xml">&lt;dependency&gt;
+    &lt;groupId&gt;cz.net21.ttulka.io&lt;/groupId&gt;
+    &lt;artifactId&gt;boundary-io-streams&lt;/artifactId&gt;
+    &lt;version&gt;1.2.0&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>To stop consuming a stream after a boundary was reached it is possible to use the <code>StopBoundaryInputStream</code> class and the convenience class <code>StopBoundaryOutputStream</code> to generate such a stream. The stop boundary streaming is still using a boundary to separate sub-streams, but when a stop boundary occurs the rest of the input stream is ignored.</p>
+<p>Let's take a look at a simple example:&nbsp;</p>
+<pre class="brush: java">String[] values = {
+    "abcde", "ABCDE", "12345"
+};
+
+byte[] boundary = "|".getBytes();
+byte[] stopBoundary = "#".getBytes();
+
+ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+
+StopBoundaryOutputStream out = new StopBoundaryOutputStream(bytes, boundary, stopBoundary);
+
+for (String s : values) {
+    out.write(s.getBytes());
+    out.boundary();
+}
+out.stopBoundary();
+out.write("xyz".getBytes());    // some junk at the end
+
+//System.out.println(bytes);    // prints `abcde|ABCDE|12345|#xyz`
+
+StopBoundaryInputStream in = new StopBoundaryInputStream(
+        new ByteArrayInputStream(bytes.toByteArray()), boundary, stopBoundary);
+
+for (InputStream is : in) {
+    int b;
+    while ((b = is.read()) != -1) {
+        System.out.print((char) b);
+    }
+    System.out.println();
+}
+
+// close streams...
+</pre>
+<p>The code above prints:</p>
+<pre>abcde
+ABCDE
+12345
+</pre>
+<p>Previous post about the library: <a href="/boundary-io-streams-released">Boundary I/O Streams Released!</a></p>
+<p>All about: <a href="https://github.com/ttulka/boundary-io-streams"><strong>https://github.com/ttulka/boundary-io-streams</strong></a></p>
+<p> </p>
+<p>Happy streaming!</p>

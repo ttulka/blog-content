@@ -1,0 +1,101 @@
+<p>In the previous post about <a href="/2d-video-game-in-assemblyscript-tutorial">building a 2D Video Game in AssemblyScript</a>, we have inversed the control loop and gave the JS glue code the job to render the game animation.</p>
+
+<p>This means, the browser, not the game, is in control of the frame rate:</p>
+
+<pre class="brush: javascript">
+const updateCall = () => update(wasm, mem, imageData, argb);
+setInterval(updateCall, 100); // frame rate
+
+// ...
+
+function update(wasm, mem, imageData, argb) {
+  // call the Wasm module to update the game
+  wasm.update(control);
+
+  // render the game on canvas
+  argb.set(mem.subarray(0, WIDTH * HEIGHT));
+  ctx.putImageData(imageData, 0, 0);
+}
+</pre>
+
+<p>This works fine for the example, but in a real-world scenario, we usually don’t want to move the game settings (such as frame rate) out of the game logic.</p>
+
+<h2>Synchronous canvas rendering</h2>
+
+<p>A naive approach would be to put the rendering loop into the Wasm module:</p>
+
+<pre class="brush: typescript">
+export declare function render(): void
+
+// ...
+
+start(): void {
+  // ...
+
+  while (true) {
+    this.update();  // update the game
+    render();       // request rendering
+    this.sleep();   // wait based on FPS
+  }
+}
+</pre>
+
+<p>The function render would be imported into the module from JS and would take care of the canvas rendering:</p>
+
+<pre class="brush: javascript">
+const wasm = await WebAssembly
+  .instantiateStreaming(fetch('../build/optimized.wasm'), {
+    render: () => render(wasm, imageData, argb),
+    // ...
+
+function render(wasm, imageData, argb) {
+  const mem = new Uint32Array(wasm.memory.buffer);
+
+  argb.set(mem.subarray(0, WIDTH * HEIGHT));
+  ctx.putImageData(imageData, 0, 0);
+}
+</pre>
+
+<p>The problem with this approach is that it won’t work. In fact, nothing will be rendered as calling <code>ctx.putImageData</code> is truly <strong>synchronous and will wait until the script ends</strong>. And that never happens because of <code>while(true)</code>.</p>
+
+<h2>Giving control back to the game</h2>
+
+<p>Obviously, we cannot get rid of the rendering loop in JS but at least we can control the frame rate within the game.</p>
+
+<p>We will use <code>Window.requestAnimationFrame()</code> for the loop that renders the game usually 60 times per second:</p>
+
+<pre class="brush: javascript">
+const updateCall = () => {
+  update(wasm, mem, imageData, argb);
+  window.requestAnimationFrame(updateCall);
+}
+window.requestAnimationFrame(updateCall);
+</pre>
+
+<p>60 FPS is definitely too much for our demo game. We have to control the rate in the game. We will check if the game is ready to update and only then we perform the update. We simply return otherwise:</p>
+
+<pre class="brush: typescript">
+update(control: Controls): void {
+  if (!this.readyToUpdate()) {
+    return;
+  }
+  // update the game
+  // ...
+}
+
+private readyToUpdate(): boolean {
+  const now = Date.now();
+  if (now > this.lastUpdate + 1000 / FPS) {
+    this.lastUpdate = now;
+    return true;
+  }
+  return false;
+}
+</pre>
+
+<p>Now, the browser still controls the animation loop, but the <strong>game defines its frame rate</strong>.</p>
+
+<p>Check out the source code in an <a href="https://github.com/ttulka/2d-videogame-in-assemblyscript/tree/requestAnimationFrame">alternative branch on my GitHub</a>.</p>
+
+<p>Happy animating!</p>
+

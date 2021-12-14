@@ -1,0 +1,110 @@
+<p>Let's imagine, that we have two (or more) XML documents as the data sources. In our example we will use a list of products as the first document and a list of attributes (colors, in this case) as the second document. Each product as a ID of a color as its attribute, the name of the color is in the list of colors. We would like to show all the products with their color names in a nice HTML table.</p>
+<h2>Data sources </h2>
+<p><em><strong>products.xml</strong></em></p>
+<pre class="brush: xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;products&gt;
+&nbsp; &lt;product id="1001" color="A1"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Strawberry&lt;/name&gt;
+&nbsp; &lt;/product&gt;
+&nbsp; &lt;product id="1002" color="A2"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Blueberry&lt;/name&gt;
+&nbsp; &lt;/product&gt;
+&nbsp; &lt;product id="1003" color="A2"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Plum&lt;/name&gt;
+&nbsp; &lt;/product&gt;
+&nbsp; &lt;product id="1004" color="A3"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Green Apple&lt;/name&gt;
+&nbsp; &lt;/product&gt;
+&lt;/products&gt;</pre>
+<p><em><strong>colors.xml</strong></em></p>
+<pre class="brush: xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;colors&gt;
+&nbsp; &lt;color id="A1"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Red&lt;/name&gt;
+&nbsp; &lt;/color&gt;
+&nbsp; &lt;color id="A2"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Blue&lt;/name&gt;
+&nbsp; &lt;/color&gt;
+&nbsp; &lt;color id="A3"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Green&lt;/name&gt;
+&nbsp; &lt;/color&gt;
+&lt;/colors&gt;</pre>
+<h2>XSLT Transformation</h2>
+<p><em><strong>transformation.xsl</strong></em></p>
+<pre class="brush: xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" exclude-result-prefixes="xsl"&gt;&nbsp;
+
+&nbsp; &lt;xsl:param name="colorsFile"/&gt;
+&nbsp; &lt;xsl:variable name="colorsDoc" select="document($colorsFile)"/&gt;
+
+&nbsp; &lt;xsl:template match="/"&gt;
+&nbsp;&nbsp;&nbsp; &lt;html&gt;
+&nbsp;&nbsp;&nbsp; &lt;body&gt;
+&nbsp;&nbsp;&nbsp; &lt;table border="1" cellpadding="10"&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;tr bgcolor="#accfff"&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;th&gt;Name&lt;/th&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;th&gt;Color&lt;/th&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/tr&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;xsl:for-each select="products"&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;xsl:apply-templates select="product"/&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/xsl:for-each&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; &lt;/table&gt;
+&nbsp;&nbsp;&nbsp; &lt;/body&gt;
+&nbsp;&nbsp;&nbsp; &lt;/html&gt;
+&nbsp; &lt;/xsl:template&gt;
+
+&nbsp; &lt;xsl:template match="product"&gt;
+&nbsp;&nbsp;&nbsp; &lt;tr&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;td&gt;&lt;xsl:value-of select="name"/&gt;&lt;/td&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;td&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;xsl:variable name="colorId" select="@color"/&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;xsl:value-of select="$colorsDoc/colors/color[@id=$colorId]/name"/&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/td&gt;
+&nbsp;&nbsp;&nbsp; &lt;/tr&gt;
+&nbsp; &lt;/xsl:template&gt;
+
+&lt;/xsl:stylesheet&gt;</pre>
+<p>The parameter <code>colorsFile </code>takes its value from the processor (below), could be set to a file path like:</p>
+<pre class="brush: xml">&lt;xsl:param name="colorsFile" select="'../input/colors.xml'" /&gt;</pre>
+<h2>Java processor</h2>
+<p>In this article we're using a Java processor, the solution can be but very easily converted to the pure XSLT solution and another processor (for instance an internet browser) can be used.</p>
+<p>All the classes are from the sub-packages of the package <code>javax.xml</code>. </p>
+<pre class="brush: java">final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+
+final DocumentBuilder builder = factory.newDocumentBuilder();
+final Document document = builder.parse("products.xml");
+
+final TransformerFactory tFactory = TransformerFactory.newInstance();
+final Transformer transformer = tFactory.newTransformer(new StreamSource("transformation.xsl"));
+
+transformer.setParameter("colorsFile", "colors.xml");
+
+transformer.transform(new DOMSource(document), new StreamResult("output.html"));</pre>
+<p>And that's exactly what we wanted!</p>
+<p><strong><em>output.html</em></strong></p>
+<p>
+<table cellpadding="3" border="1">
+<tbody>
+<tr bgcolor="#accfff">
+<th>Name</th>
+<th>Color</th>
+</tr>
+<tr>
+<td>Strawberry</td>
+<td>Red</td>
+</tr>
+<tr>
+<td>Blueberry</td>
+<td>Blue</td>
+</tr>
+<tr>
+<td>Plum</td>
+<td>Blue</td>
+</tr>
+<tr>
+<td>Green Apple</td>
+<td>Green</td>
+</tr>
+</tbody>
+</table>
+</p>

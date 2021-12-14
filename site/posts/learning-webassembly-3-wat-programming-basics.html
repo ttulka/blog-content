@@ -1,0 +1,268 @@
+<p>In the <a href="/learning-webassembly-1-hello-world-of-wasm">first part</a> of this <a href="/learning-webassembly-series" target="_blank">series</a>, we saw a little <i>Hello world</i> program written in Wat. Albeit it was simple enough, it can be even simpler.</p>
+
+<p class="note">To compile Wat code into binary Wasm, you can use the <a href="https://github.com/webassembly/wabt" target="_blank">WebAssembly Binary Toolkit</a>: <code>wat2wasm test.wat -o test.wasm</code></p>
+
+<p>The following code is literally the simplest valid Wat program:</p>
+
+<pre>
+(module)
+</pre>
+
+<p>Nice, but not particularly useful. It does show us, however, one important concept of programming in Wat: <a href="https://en.wikipedia.org/wiki/S-expression" target="_blank">S-expression</a>.</p>
+
+<h2>S-expressions</h2>
+
+<p><em>S-expressions</em> (aka <em>symbolic expressions</em>) are a simple textual notation for representing trees. Basically, it is about nesting parenthesized lists. If you have ever seen the syntax of <a href="https://en.wikipedia.org/wiki/Lisp_(programming_language)" target="_blank">Lisp</a> you already know S-expressions.</p>
+
+<p>The module above is an example of a simple tree written as an S-expression. Well, it is a bit degenerated tree; it is only a standalone root. A slightly better example follows:</p>
+
+<pre>
+(module (memory 1) (func))
+</pre>
+
+<p>Here, we have a simple tree with one root module and two child nodes <code>memory</code> and <code>func</code>. The node <code>memory</code> has one attribute <code>1</code>.</p>
+
+<p>Every Wat program is practically a big S-expression with the root <code>module</code>.</p>
+
+<h2>Stack Machine</h2>
+
+<p>Wasm execution is defined in terms of a <em>stack machine</em>. Each instruction pushes and/or pops a certain value to/from a stack.</p>
+
+<p>We can demonstrate this idea with our favourite example:</p>
+
+<pre>
+(module
+  (func (export "main")
+        (result i32)
+    i32.const 42
+    return))
+</pre>
+
+<p>The code above defines a single function that is exported under the name <code>main</code>. The export name is fully arbitrary, it would work as <code>hello</code> or <code>Answer_to_the_Ultimate_Question</code> as well. The <a href="https://webassembly.github.io/spec/core/syntax/types.html#syntax-resulttype" target="_blank">result type</a> is of 32-bit integer.</p>
+
+<p>The body of the function has exactly two instructions: <code>i32.const</code> and <code>return</code>. The former pushes the literal <code>42</code> to the stack; the latter pops the value from the stack and returns as the function result.</p>
+
+<dl class="definition">
+  <dt><code>i32.const x</code></dt>
+  <dd>Pushes the 32-bit value <code>x</code> to the stack.</dd>
+  <dt><code>return</code></dt>
+  <dd>Exits the current function and returns the value(s) on the top of the stack.</dd>
+</dl>
+
+<p>We can achieve the same result by nesting S-expressions:</p>
+
+<pre>
+(module
+  (func (export "main")
+        (result i32)
+    (return
+      (i32.const 42))))
+</pre>
+
+<p>The stack-based programs are, however, much closer to how the program really executes, so, further on, we will stick with the stack-based programming model.</p>
+
+<p class="note">BTW, the <code>return</code> instruction could be omitted as the function returns the value(s) on the top of the stack automatically.</p>
+
+<p>A more advanced example would be a function for adding two numbers:</p>
+
+<pre>
+(module
+  (func (export "sum")
+        (param $a i32)
+        (param $b i32)
+        (result i32)
+    local.get $a
+    local.get $b
+    i32.add
+    return))
+</pre>
+
+<p>Here, the exported function <code>sum</code> takes two parameters named <code>$a</code> and <code>$b</code> and returns a 32-bit integer result. Parameters are practically local variables with values initialized by the caller.</p>
+
+<p>The instruction <code>local.get</code> pushes a variable to the stack, the instruction <code>i32.add</code> adds the two topmost values and pushes the result to the stack.</p>
+
+<dl class="definition">
+  <dt><code>local.get $x</code></dt>
+  <dd>Pushes the value of the variable <code>$x</code> to the stack.</dd>
+  <dt><code>i32.add</code></dt>
+  <dd>Pops the two topmost values on the stack, adds them, and pushes the result to the stack.</dd>
+</dl>
+
+<p>Enough the theory. Now, we will finally jump into programming.</p>
+
+<h2>Control Flow</h2>
+
+<p>Let’s take a look at <a href="https://webassembly.github.io/spec/core/syntax/instructions.html#control-instructions" target="_blank">control instructions</a> in Wat: <em>conditions</em> and <em>loops</em>.</p>
+
+<p>We will demonstrate these with a basic factorial algorithm. First, we must recall the algorithm:</p>
+
+<pre class="brush: javascript">
+function factorial(n) {
+  if (n <= 2) return n;
+  let fact = 1;
+  for (let i = 2; i <= n; i++) {
+      fact = fact * i;
+  }
+  return fact;
+}
+</pre>
+
+<p>Now, we program the same algorithm as a Wat function. The signature is straight-forward; one parameter, two local variables:</p>
+
+<pre>
+(func (export "fac_loop")
+      (param $n i32)
+      (result i32)
+      (local $i i32)
+      (local $fac i32)
+  ...)
+</pre>
+
+<p>For the first condition, we use <code>if-else-end</code> control instructions:</p>
+
+<pre>
+(func (export "fac_loop")
+      (param $n i32)
+      (result i32)
+      (local $i i32)
+      (local $fac i32)
+  i32.const 2
+  local.get $n
+  i32.ge_s
+  <b>if (result i32)</b>
+    local.get $n
+    return
+  <b>else</b>
+    ...
+  <b>end</b>)
+</pre>
+
+<dl class="definition">
+  <dt><code>i32.ge_s</code></dt>
+  <dd>Pops the two topmost values on the stack as signed 32-bit integers, compares them to be greater or equals, and pushes the result to the stack.</dd>
+</dl>
+
+<p>We simply push <code>$n</code> and <code>2</code> values to the stack and check them on being greater or equal. The factorial calculation happens in the else block:</p>
+
+<pre>
+(func (export "fac_loop")
+      (param $n i32)
+      (result i32)
+      (local $i i32)
+      (local $fac i32)
+  i32.const 2
+  local.get $n
+  i32.ge_s
+  if (result i32)
+    local.get $n
+    return
+  else
+    i32.const 1
+    local.set $fac
+    i32.const 2
+    local.set $i
+
+    <b>loop</b>
+      local.get $i
+      local.get $fac
+      i32.mul
+      local.set $fac
+
+      local.get $i
+      i32.const 1
+      i32.add
+      local.set $i
+
+      local.get $n
+      local.get $i
+      i32.ge_s
+      <b>br_if 0</b>
+    end
+
+    local.get $fac
+    return
+  end)
+</pre>
+
+<p>The <code>loop</code> instruction is controlled by the <code>br_if</code> instruction. If the condition passes, the loop continues.</p>
+
+<dl class="definition">
+  <dt><code>local.set $x</code></dt>
+  <dd>Pops the value on the top of the stack and assigns it to the variable <code>$x</code>.</dd>
+  <dt><code>i32.mul</code></dt>
+  <dd>Pops the two topmost values on the stack, multiplies them, and pushes the result to the stack.</dd>
+</dl>
+
+<p>The parameter of <code>br_if</code> is an index of the loop. Alternatively, an explicit label can be used:</p>
+
+<pre>
+loop $myloop
+  ...
+  br_if $myloop
+end
+</pre>
+
+<h2>Calling Functions</h2>
+
+<p>Decomposition is a handy tool every programmer should employ. Using the recursive factorial algorithm as an example we will show how to call functions inside a function in Wat.</p>
+
+<p>The algorithm reads as follows:</p>
+
+<pre class="brush: javascript">
+function factorial_rec(n) {
+  if (n <= 2) return n;
+  return n * factorial_rec(n - 1);
+}
+</pre>
+
+<p>The signature and first condition should be no surprise:</p>
+
+<pre>
+(func <b>$fac_rec</b>
+      (export "fac_rec")
+      (param $n i32)
+      (result i32)
+  i32.const 2
+  local.get $n
+  i32.ge_s
+  if (result i32)
+    local.get $n
+  else
+    ...
+  end
+  return)
+</pre>
+
+<p>An important difference is the function name <code>$fac_rec</code>. This makes it easier (in comparison to using indexes) to call the function within the module:</p>
+
+<pre>
+(func $fac_rec
+      (export "fac_rec")
+      (param $n i32)
+      (result i32)
+  i32.const 2
+  local.get $n
+  i32.ge_s
+  if (result i32)
+    local.get $n
+  else
+    local.get $n
+    i32.const 1
+    i32.sub
+    <b>call $fac_rec</b>
+    local.get $n
+    i32.mul
+  end
+  return)
+</pre>
+
+<p>The instruction <code>call</code> calls the referenced function with the parameter from the stack. The result of the call is pushed to the stack and multiplied by the value of the variable <code>$n</code>.</p>
+
+<h2>Further Steps</h2>
+
+<p>This time, we have focused on writing functions in Wat. We have shown function signatures, variables, and control flow instructions.</p>
+
+<p>In the <a href="/learning-webassembly-4-wasm-memory-and-working-with-strings">next part</a> of this <a href="/learning-webassembly-series">series</a>, we will explore the memory concept of Wasm and how to use it for working with complex data types such as strings.</p>
+
+<p>Stay tuned!</p>
+

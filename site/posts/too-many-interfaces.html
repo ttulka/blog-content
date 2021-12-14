@@ -1,0 +1,222 @@
+<h2>What Is an Interface</h2>
+<p>The term interface is overloaded. For the purpose of this text I use the following definition: <strong>An interface is a language construct</strong> typical for strongly typed programming languages like Java or Smalltalk. An interface specifies behavior of objects which implement it.</p>
+<p>Interfaces can be useful as a tool to implement good design practices like the Strategy pattern or the Interface segregation principle. On the other hand, <strong>mere use of interfaces doesn’t guarantee a good design</strong>. When overused, it could make things even worse.</p>
+
+<h2>Fallacies of Interfaces</h2>
+<p>Using interfaces does not automatically bring any benefits. Here are typical misconceptions:</p>
+<h3>Interfaces Are Abstractions</h3>
+<p>An abstraction means a separation of <em>what</em> from <em>how</em>. Abstractions separate a solution from its implementation. The reason is decomposition. Decomposition is about dividing a complex problem into smaller composable sub-problems. As Eric Elliott <a href="https://twitter.com/_ericelliott/status/1259561354203140096" target="_blank">tweeted</a>:</p>
+
+<blockquote class="quote">The essence of development is composition. The essence of software design is problem decomposition.</blockquote>
+
+<p>Although often used to implement it, an <strong>interface doesn’t necessarily mean abstraction</strong>; check out the following code:</p>
+
+<pre class="brush: java">
+import com.example.vegetateframework.orm.Entity;
+
+interface ProductRepository {
+
+  Entity&lt;Product&gt; findProduct(Long id);
+}
+</pre>
+
+<p>Is this a good abstraction? I don’t think so. The return type of the method is <code>Entity&lt;Product&gt;</code> which exposes the implementation details and binds the interface to an ORM framework. Another issue is the <code>Long</code> datatype of the product ID. Longs are usually used in the database for record IDs, but those database IDs must not leak into the interface. In my opinion, the name of the interface is bad too, as the term <em>Repository</em> is pure technical.</p>
+<p>There is nothing in the language itself to prevent us from writing such interfaces. In general, <a href="https://blog.ploeh.dk/2010/12/02/Interfacesarenotabstractions/" target="_blank">interfaces are not abstractions</a>.</p>
+<p>All the other upcoming points are driven by this particular misconception, but it’s still worth mentioning them here explicitly as they are probably the most justified causes for incorrectly using interfaces.</p>
+
+<h3>Interfaces Are Contracts</h3>
+<p>A contract is an unbreakable <strong>agreement between the provider and consumers</strong> about the expected functionality. Usually, describes behavior of a component in a declarative way.</p>
+<p>The level of abstraction is important. Consider the following example:</p>
+
+<pre class="brush: java">
+interface PriceCalculator {
+
+  Float calculatePrice(Product product);
+
+  Float applyDiscount(Integer discount, Float basePrice);
+}
+</pre>
+
+<p>The second method <code>applyDiscount</code> lives on a lower level of abstraction and shouldn’t be part of the interface. The class which implements this interface will probably have this method as a private member. Consumers of the contract are not interested in such low-level functionality and it’s not a good idea to bind them to it. Therefore, this interface is not a proper contract.</p>
+
+<h3>Interfaces Are Loose Coupling</h3>
+<p>Level of coupling is defined by the number of dependencies. <strong>Adding an additional level of indirection (an interface) doesn't make the code more decoupled</strong>.</p>
+<p>Compare these two code snippets:</p>
+
+<pre class="brush: java">
+class ShoppingCart {
+
+  private PriceCalculator priceCalc;
+  private Set&lt;CartItem&gt; items;
+
+  public Double totalAmount() {
+    return items.stream()
+        .mapToDouble(ci -&gt; ci.quantity() *
+            priceCalc.calculatePrice(ci.product())
+        ).sum();
+  }
+  // ...
+}
+
+class PriceCalculator {
+
+  public calculatePrice(Product product) {
+    return ...;
+  }
+}
+</pre>
+
+<pre class="brush: java">
+class ShoppingCart {
+
+  // as above ...
+}
+
+interface PriceCalculator {
+
+  calculatePrice(Product product);
+}
+
+class PriceCalculatorImpl implements PriceCalculator {
+
+  public calculatePrice(Product product) {
+    return ...;
+  }
+}
+</pre>
+
+<p>In the former snippet, the class <code>ShoppingCart</code> has a dependency to the concrete class <code>PriceCalculator</code>, while in the latter a new layer of indirection, the interface, was added.</p>
+<p>Did we make the code more loosely coupled? The <code>ShoppingCart</code> has still one dependency, nothing changed, but now there is a new dependency between the <code>PriceCalculator</code> interface and its implementation <code>PriceCalculatorImpl</code>. That means we’ve just made things worse! Complexity increased and the code became harder to understand. No good.</p>
+
+<h3>Interfaces Are Reuse</h3>
+<p>Planned reuse has a lot to do with the <a href="https://verraes.net/2014/08/dry-is-about-knowledge/" target="_blank">DRY</a> principle. When we find ourselves writing the same code several times, we usually cut the snippet out and put it into a separated module. Then, we reference this module as a dependency.</p>
+<p>Another motivation for creating incorrect reuse is speculation about future scenarios. The YAGNI principle addresses this issue, however, it’s still not uncommon to see this principle being violated even by experienced developers. But that's a different story.</p>
+<p><strong>Excessive aiming for reuse leads often to <a href="https://www.sandimetz.com/blog/2016/1/20/the-wrong-abstraction" target="_blank">wrong abstractions</a></strong>. Consider the following code:</p>
+
+<pre class="brush: java">
+interface Product {
+
+  String name();
+  Float price();
+}
+
+class ProductImpl implements Product {
+
+  private String name;
+  private Float price;
+
+  ProductImpl(String name, Float price) {
+    this.name = name;
+    this.price = price;
+  }
+  public String name() { return name; }
+  public Float price() { return price; }
+}
+</pre>
+
+<p>Does the interface make the code more reusable? Hardly. What is the benefit of that? I can’t think of any...</p>
+
+<h3>Interfaces Solve Circular Dependencies</h3>
+<p>Carola Lilienthal states in her book Sustainable Software Architecture:</p>
+
+<blockquote class="quote">If a system has cycles, it is because the tasks of the classes involved are not clearly defined.</blockquote>
+
+<p>Her observation tells us that the root cause of circular dependencies lies in incorrect design of the domain. It means the <strong>circular dependencies are fundamentally not a technical issue</strong> and therefore cannot be solved easily by mere technical solutions such as interfaces.</p>
+<p>Breaking circular dependencies with an interface as middleman may remove only compile circular dependencies in code, but not the circular dependencies in runtime. The bad thing is, when compile cycles disappear, the runtime circular dependencies become more or less invisible, what leads not only to remaining in the system but also to justifying more and more of them as the codebase gets bigger.</p>
+<p>Circular dependencies must be solved on the level of overall system design, otherwise a logical monolith (the Big ball of mud) will emerge. <strong>Interfaces often encourage hiding design flaws, such as high coupling and low cohesion, with purely technical shortcuts.</strong></p>
+
+<h2>What Is a Good Abstraction</h2>
+
+<blockquote class="quote">Keep things simple by not providing abstractions until the abstractions provide simplicity. ~ Kent Beck</blockquote>
+
+<p>Every construct in software development must be <a href="https://twitter.com/tomas_tulka/status/1264505013746925569" target="_blank">a solution to a problem</a>.</p>
+<p>A good abstraction is a <strong>solution to an actual problem</strong>. An unnecessary abstraction is waste in the best case or, worse, increase of accidental complexity of the system. A good abstraction <strong>reduces complexity and provides simplicity</strong>. An interface with only a single implementation is usually a wrong abstraction and should be eliminated.</p>
+<p>A good abstraction is <strong>simple and clear</strong>. All complicated <strong>details are hidden</strong> under a short and <strong>easy-to-use</strong> facade, that provides a clear insight and is intuitive to work with.</p>
+<p>A good abstraction is <strong>relevant</strong>. All irrelevant concerns are hidden or separated from the interface. A good abstraction must be <strong>designed with customer needs in mind</strong>. A well-designed interface focuses on ease of use, not ease of implementation.</p>
+<p>A good abstraction is <strong>domain-driven</strong>. No technical concern exists in the interface. Interfaces like <code>ProductService</code>, <code>ProductRepository</code> or <code>ProductFactory</code> are not particularly good abstractions.</p>
+
+<h3>Domain-Driven Abstractions</h3>
+<p>Domain-driven abstractions tend to be very <strong>stable</strong>. This idea is based on the presumption that business changes slower than software. It is a great benefit for code maintenance. Consider the following example:</p>
+
+<pre class="brush: java">
+class FindProduct {
+
+  Product byCode(String code) {
+    return ...
+  }
+}
+
+@RestController
+class CatalogController {
+
+  private FindProduct findProduct;
+
+  @GetMapping
+  Product findProduct(String code) {
+    return findProduct.byCode(code);
+  }
+}
+</pre>
+
+<p>In the example above, if we ever decide to replace the concrete class <code>FindProduct</code> with an interface, the client code will remain unchanged, because the <strong>abstraction is decoupled from the implementation</strong> structure:</p>
+
+<pre class="brush: java">
+interface FindProduct {
+
+  Product byCode(String code);
+}
+
+class FindProductJdbc implements FindProduct {
+
+  private JdbcTemplate jdbcTemplate;
+
+  Product byCode(String code) {
+    return jdbcTemplate.query(...);
+  }
+}
+
+class FindProductMongo implements FindProduct {
+
+  private MongoCollection collection;
+
+  Product byCode(String code) {
+    return collection.find(...);
+  }
+}
+
+@RestController
+class CatalogController {
+
+  // NO CHANGES NEEDED HERE :-)
+}
+</pre>
+
+<p>Good abstractions don't have to be sought, they emerge on their own when the design is domain-driven.</p>
+
+<h2>How Many Is Too Much</h2>
+<p>To summarize a bit, an interface is <em>too much</em> when it doesn’t serve a good abstraction, particularly:</p>
+<ul>
+    <li>has only one implementation,</li>
+    <li>is coupled to a concrete technology or implementation,</li>
+    <li>operates on multiple levels of abstraction,</li>
+    <li>contains irrelevant or unclear parts,</li>
+    <li>is not domain-driven,</li>
+    <li>is unstable.</li>
+</ul>
+
+<h2>But What About…?</h2>
+<p>There are several problem scenarios that are traditionally solved using interfaces. A lot of literature, articles and tutorials recommend such. A technical solution is always easier to understand and apply, but I believe it’s a cure for symptoms only, not for the cause.</p>
+
+<h3>Dependency Injection</h3>
+<p>Dependency injection is one of the most important principles in software development. Please, use it!</p>
+<p>In general, it controls which <em>object</em> is used. Choosing an <em>implementation</em> for an interface-based dependency is just a special case. The Dependency injection principle is equally useful without any additional level of indirection.</p>
+<p>Dependency injection doesn't need interfaces as well as a <strong>good abstraction doesn't need interfaces</strong>.</p>
+
+<h3>Mocking</h3>
+<p>If you find yourself in a situation you need to introduce an interface to make a module testable, try to step back first and think about the design of the module. Focus on cohesion and <a href="https://blogs.itemis.com/en/unit-tests-are-tests-of-modularity" target="_blank">modularity</a>. Proper decomposition can solve a lot of coupling issues without introducing any additional interface.</p>
+<p>When really needed, a concrete class can be mocked using existing tools as well.</p>
+
+<h2>Conclusion</h2>
+<p><em>Program to interfaces</em> is a well known practice, but one shouldn't take it literally. Instead, saying "<strong>program to abstractions</strong>", focusing more on <em>what</em> rather than <em>how</em>, may clear things up.</p>
+
+<p>Happy interfacing!</p>

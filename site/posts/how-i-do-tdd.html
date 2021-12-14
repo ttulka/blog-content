@@ -1,0 +1,29 @@
+<p><a href="https://www.oreilly.com/library/view/test-driven-development/0321146530/" target="_blank">Kent Beck</a> says that his father told him:</p>
+<blockquote class="quote">Make it work, make it right, make it fast.</blockquote>
+
+<p>Don't get me wrong, code must work, but that just shouldn't be the number one priority.</p>
+
+<p align="center"><blockquote class="twitter-tweet tw-align-center"><p lang="en" dir="ltr">It is more important for code to be changeable than that it work. Code that does not work, but that is easy to change, can be made to work with minimum effort. Code that works but that is hard to change will soon not work and be hard to get working again.</p>&mdash; Uncle Bob Martin (@unclebobmartin) <a href="https://twitter.com/unclebobmartin/status/1192392951294500864?ref_src=twsrc%5Etfw">November 7, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></p>
+
+<p>In TDD, design and refactoring towards a better architecture come first when the feature is already implemented and tests are green. Refactoring then often needs to rewrite and delete a lot of code, activity which not everyone likes to do, especially when the code has just been written.</p>
+
+<p>Taking TDD dogmatically so often leads to a perfectly working code with a poor design.</p>
+
+<p>I find more eligible to apply TDD first in the implementation phase. The process of development so looks like follows:</p>
+
+<ol>
+	<li>Understand the problem.</li>
+	<li>Design the API clearly without any implementation concerns.</li>
+	<li>Implement requirements one by one applying TDD.</li>
+</ol>
+
+<p>This approach ensures a well-designed architecture with all benefits of TDD.</p>
+
+<p>It's still necessary to keep <i>"make it right"</i> after <i>"make it work"</i> as it means optimization and polishing the code like removing duplicates, restructuring methods, renaming variables etc. The API should remain untouched and the tests ensure all is still working.</p>
+
+<p>To paraphrase Kent:</p>
+
+<blockquote class="quote">Understand it, design it, make it work, make it right.</blockquote>
+
+<p>Happy testing!</p>
+

@@ -1,0 +1,465 @@
+generator:
+  source: site
+  target: build/site
+
+blog:
+  title: "Tomas Tulka's Blog"
+  description: "Random thoughts about programming and other stuff."
+  author: "Tomas Tulka"
+  url: https://blog.ttulka.com/
+
+pages:
+  - privacypolicy
+  - about
+
+posts:
+  - title: "Containers under the Hood"
+    uri: containers-under-the-hood
+    createdAt: 2021-10-06
+    summary: "Let’s talk about the underlying technology that enables containers under Linux, and build a container from scratch!"
+    tags: Docker,Containers,DevOps,Linux
+  - title: "Building Container Images without a Dockerfile"
+    uri: building-container-images-without-dockerfile
+    createdAt: 2021-09-30
+    summary: "Container images are just tarballs with a bit of configuration. Dockerfiles are just one option to create them."
+    tags: Docker,Containers,DevOps
+  - title: "WebAssembly Serverless Computing from Scratch"
+    uri: webassembly-serverless-computing-from-scratch
+    createdAt: 2021-09-29
+    summary: "Humble proof of concept of a serverless computing platform in Node.js based on the idea of nanoprocesses."
+    tags: WebAssembly,Serverless,Cloud,Containers,Programming
+  - title: "Serverless Is Not Just Lambda"
+    uri: serverless-is-not-just-lambda
+    createdAt: 2021-08-23
+    summary: "Let’s take a look at the serverless AWS offerings that will save us a lot of money and effort."
+    tags: Cloud
+  - title: "Java Concurrency Made Easy"
+    uri: java-concurrency-made-easy
+    createdAt: 2021-08-16
+    summary: "About motivation for the project Loom and some boring concurrent code as a bonus."
+    tags: Java,Programming
+  - title: "A Note on Animation in Canvas with WebAssembly"
+    uri: animation-in-canvas-with-webassembly
+    createdAt: 2021-07-21
+    summary: "Giving back control of the game rendering loop to the WebAssembly module. Partly."
+    tags: AssemblyScript,WebAssembly,Programming
+  - title: "Learning WebAssembly Series"
+    uri: learning-webassembly-series
+    createdAt: 2021-07-19
+    summary: "A series of learning texts covering the first steps with WebAssembly for complete beginners."
+    tags: WebAssembly,Programming
+    highlight: true
+  - title: "2D Video Game in AssemblyScript Tutorial"
+    uri: 2d-video-game-in-assemblyscript-tutorial
+    createdAt: 2021-07-01
+    summary: "How to build a web-based video game from scratch with HTML canvas and AssemblyScript."
+    tags: AssemblyScript,WebAssembly,Programming
+  - title: "Difference between POST, PUT, and PATCH"
+    uri: difference-between-post-put-and-patch
+    createdAt: 2021-06-13
+    summary: "Practical guidelines for meaningful use of the modifying HTTP methods with examples."
+    tags: API Design,REST
+  - title: "Spring Boot Custom Components"
+    uri: spring-boot-custom-components
+    createdAt: 2021-06-04
+    summary: "Let's build domain-oriented custom components with Spring Boot starters, auto-configuration and configuration properties."
+    tags: Spring Boot,Spring,Software Architecture
+    highlight: true
+  - title: "How to Test Date and Time in Spring Boot"
+    uri: how-to-test-date-and-time-in-spring-boot
+    createdAt: 2021-05-27
+    summary: "Testing temporal events in Spring Boot Java applications with JUnit 5 and Spring Boot Test."
+    tags: Testing,Spring Boot,Java,Programming
+  - title: "OOP Is Still Cool in 2021"
+    uri: oop-is-still-cool
+    createdAt: 2021-05-21
+    summary: "Object-oriented programming might not be perfect but it is still the best we have."
+    tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
+    highlight: true
+  - title: "My Favorite Esolangs"
+    uri: my-favorite-esolangs
+    createdAt: 2021-04-25
+    summary: "It’s Sunday, a perfect day to do something useless and impractical, yet beautiful, like esoteric programming languages."
+    tags: Programming
+  - title: "Compiling to WebAssembly with Binaryen"
+    uri: compiling-to-webassembly-with-binaryen
+    createdAt: 2021-04-05
+    summary: "Compile your own programming language to WebAssembly binary instruction format (Wasm) using Binaryen’s JavaScript API."
+    tags: WebAssembly,Programming,Esolang
+  - title: "Rethinking API Versioning with Domain-Driven Design"
+    uri: rethinking-api-versioning-with-domain-driven-design
+    createdAt: 2021-02-19
+    summary: "How to manage breaking changes elegantly and get rid of version IDs for good by being nice to your clients."
+    tags: API Design,DDD,REST
+  - title: "React Custom Context Hook"
+    uri: react-custom-context-hook
+    createdAt: 2021-02-04
+    summary: "Updatable React context Hook with custom logic in TypeScript."
+    tags: React,Frontend,TypeScript,Programming
+  - title: "Learning WebAssembly #10: Image Processing in AssemblyScript"
+    uri: learning-webassembly-10-image-processing-in-assemblyscript
+    createdAt: 2021-01-30
+    summary: "WebAssembly is a great fit for image processing. We will manipulate image data with a simple Wasm function written in AssemblyScript and run it in the web browser."
+    tags: WebAssembly,AssemblyScript,Programming
+  - title: "Learning WebAssembly #9: AssemblyScript Basics"
+    uri: learning-webassembly-9-assemblyscript-basics
+    createdAt: 2021-01-24
+    summary: "AssemblyScript is a free and open source TypeScript-like language that gives developers low-level control over Wasm features."
+    tags: AssemblyScript,WebAssembly,Programming
+  - title: "Learning WebAssembly #8: Compiling into Wasm"
+    uri: learning-webassembly-8-compiling-into-wasm
+    createdAt: 2021-01-17
+    summary: "There are plenty of languages Wasm can be compiled from. C, Kotlin, and AssemblyScript are only a few of them."
+    tags: WebAssembly,Programming
+  - title: "Learning WebAssembly #7: Introducing WASI"
+    uri: learning-webassembly-7-introducing-wasi
+    createdAt: 2021-01-09
+    summary: "Accessing operating system features from Wasm with examples in Wat."
+    tags: WebAssembly,Programming
+  - title: "Learning WebAssembly #6: Running Wasm in Node.js"
+    uri: learning-webassembly-6-running-wasm-in-nodejs
+    createdAt: 2021-01-06
+    summary: "Running Wasm code in Node.js, the popular backend platform."
+    tags: WebAssembly,Programming
+  - title: "Learning WebAssembly #5: Running Wasm in the Browser"
+    uri: learning-webassembly-5-running-wasm-in-the-browser
+    createdAt: 2021-01-04
+    summary: "Executing Wasm code in a browser via WebAssembly JavaScript API."
+    tags: WebAssembly,Programming
+  - title: "Learning WebAssembly #4: Wasm Memory and Working with Strings"
+    uri: learning-webassembly-4-wasm-memory-and-working-with-strings
+    createdAt: 2021-01-04
+    summary: "Dealing with strings and other complex data types via Wasm memory mechanism."
+    tags: WebAssembly,Programming
+  - title: "Learning WebAssembly #3: Wat Programming Basics"
+    uri: learning-webassembly-3-wat-programming-basics
+    createdAt: 2021-01-04
+    summary: "Learning basic building blocks of programming in WebAssembly text format (Wat)."
+    tags: WebAssembly,Programming
+  - title: "Learning WebAssembly #2: Wasm Binary Format"
+    uri: learning-webassembly-2-wasm-binary-format
+    createdAt: 2021-01-04
+    summary: "Discovering the basic representation of WebAssembly: binary and text formats."
+    tags: WebAssembly,Programming
+  - title: "Learning WebAssembly #1: Hello, World of Wasm!"
+    uri: learning-webassembly-1-hello-world-of-wasm
+    createdAt: 2021-01-04
+    summary: "Getting started with WebAssembly: writing and executing a simple program in Wat."
+    tags: WebAssembly,Programming
+  - title: "Keep Options Open"
+    uri: keep-options-open
+    createdAt: 2020-12-26
+    summary: "Keeping options open is one of the most useful principles of Clean Architecture. Let’s dive deeper with code examples in Java and Spring framework."
+    tags: Software Architecture,Design Patterns,Deployment
+  - title: "Documentation Boosts Development"
+    uri: documentation-boosts-development
+    createdAt: 2020-12-22
+    summary: "How writing documentation can improve implementation and overall quality of software."
+    tags: Documentation
+  - title: "Shades of Tests"
+    uri: shades-of-tests
+    createdAt: 2020-12-11
+    summary: "Practical examples of software testing in Java using Spring Boot Test without mocking frameworks."
+    tags: Testing,Programming,Java,Spring Boot,Spring
+  - title: "How Cohesion and Coupling Correlate"
+    uri: how-cohesion-and-coupling-correlate
+    createdAt: 2020-10-20
+    summary: "Cohesion done right reduces the coupling and complexity of systems."
+    tags: Software Architecture,Design Patterns
+    highlight: true
+  - title: "The Interface Segregation Principle with Lambdas"
+    uri: the-interface-segregation-principle-with-lambdas
+    createdAt: 2020-10-07
+    summary: "How to implement the ISP using simple functions to reduce coupling and complexity at the same time."
+    tags: Design Patterns,Programming
+  - title: "Monolithic Objects"
+    uri: monolithic-objects
+    createdAt: 2020-09-28
+    summary: "Don't model the real world, model your business!"
+    tags: OOP,SOA,Monolith,Software Architecture
+  - title: "DevOps Ad Absurdum"
+    uri: devops-ad-absurdum
+    createdAt: 2020-09-22
+    summary: "DevOps is about communication and responsibility. A great product is the result of great cooperation."
+    tags: DevOps,Team,Agile
+  - title: "You Aren’t Gonna Need Microservices"
+    uri: you-are-not-gonna-need-microservices
+    createdAt: 2020-07-21
+    summary: "Do you really need a cluster of pods, service mesh, and stream-processing platform right now?"
+    tags: Microservices,Software Architecture,Monolith,Design Patterns,SOA
+  - title: "Good and Bad Monolith"
+    uri: good-and-bad-monolith
+    createdAt: 2020-06-09
+    summary: "It is unfortunate that monolith has become a dirty word. In fact, a physical monolith is typically the right thing to do. Pure evil is monolithic thinking."
+    tags: Software Architecture,Microservices,SOA,Monolith,DDD
+    highlight: true
+  - title: "Java Records Aren’t Necessarily Evil"
+    uri: java-records-are-not-necessarily-evil
+    createdAt: 2020-06-04
+    summary: "How do Java Records fit to the object-oriented design?"
+    tags: OOP,Programming,Java
+  - title: "Too Many Interfaces"
+    uri: too-many-interfaces
+    createdAt: 2020-06-02
+    summary: "Interfaces are good stuff. Does that mean the more the better?"
+    tags: Abstraction,OOP,Programming
+  - title: "No Internals in Configuration API"
+    uri: no-internals-in-configuration-api
+    createdAt: 2020-05-23
+    summary: "Configuration is part of the application API, so the same rules apply to it: no leak of implementation detail."
+    tags: API Design,Deployment,Software Architecture
+  - title: "Colored Services"
+    uri: colored-services
+    createdAt: 2020-05-04
+    summary: "Defining service boundaries is hard. Let's bring some colors and make it fun!"
+    tags: SOA,Microservices,Software Architecture
+  - title: "What Is a Repository"
+    uri: what-is-a-repository
+    createdAt: 2020-04-14
+    summary: "Which purpose has a Repository? To which layer does it belong to? And how to implement it correctly?"
+    tags: DDD,OOP,Design Patterns,Programming
+  - title: "Domain Collections"
+    uri: domain-collections
+    createdAt: 2020-04-08
+    summary: "Collection, List and Set are terms very familiar to developers but hardly used by business experts. Therefore, they should not be part of the domain (API)."
+    tags: DDD,OOP,Design Patterns,Programming
+  - title: "Events vs. Commands in DDD"
+    uri: events-vs-commands-in-ddd
+    createdAt: 2020-03-25
+    summary: "There are situations where events and commands seem to be a good solution for a problem. Where to use events and where are commands the best fit?"
+    tags: DDD,Event-Driven,Design Patterns
+  - title: "Multitenancy and the Cloud"
+    uri: multitenancy-and-the-cloud
+    createdAt: 2020-03-15
+    summary: "Multitenancy was and still is a very popular and successful architectural pattern of the last decades. But, that is likely to change with the advent of cloud computing."
+    tags: Cloud,Software Architecture
+  - title: "Object-Oriented Design vs. Persistence"
+    uri: object-oriented-design-vs-persistence
+    createdAt: 2020-01-19
+    summary: "From time to time I attend discussions about OOP. Every time someone comes up with the argument of dealing with persistence. The typical question can be reduced to “should an object persist itself or rather be persisted?” I believe the question is fundamentally wrong."
+    tags: OOP,DDD,Design Patterns,Programming
+  - title: "SOLID Principles in Java by Example"
+    uri: solid-principles-in-java-by-example
+    createdAt: 2019-12-08
+    summary: "There are a lot of articles about the SOLID principles. But usually a different example for a particular principle is to be found. Instead, would it be nice to demonstrate all of them on a single code snippet?"
+    tags: Design Patterns,Programming,Java
+  - title: "How to Test Abstract Classes"
+    uri: how-to-test-abstract-classes
+    createdAt: 2019-12-06
+    summary: "Abstract classes typically offer one or more concrete methods. These must be tested as well. There are several ways how to do it, but which one to choose?"
+    tags: Testing,Programming
+  - title: "Treat Data as Data"
+    uri: treat-data-as-data
+    createdAt: 2019-12-01
+    summary: "Object-oriented approach is a mighty concept making software more maintainable, which means cheaper and easier to understand. Problems come at boundaries, where objects have to be passed on into a different layer or another system. There, the objects become just data and should be treated like that."
+    tags: OOP,Design Patterns
+  - title: "Keep Test Code inside the Test"
+    uri: keep-test-code-inside-the-test
+    createdAt: 2019-11-24
+    summary: "Noone wants to write one thing twice. Reducing duplicates makes code shorter and clearer. How much this applies for test code?"
+    tags: Testing,Programming
+  - title: "How I Do TDD"
+    uri: how-i-do-tdd
+    createdAt: 2019-11-17
+    summary: "I really like Test-Driven Development (TDD) and apply it almost always. The problem with TDD is that it focuses too much on working software."
+    tags: Testing
+  - title: "Domain-Driven Serverless Design"
+    uri: domain-driven-serverless-design
+    createdAt: 2019-09-14
+    summary: "One reason I really like the serverless architecture approach is being pretty selfish: one has to care only about what matters - the code."
+    tags: DDD,Cloud,Serverless,Software Architecture
+  - title: "Don't Share Data among Threads"
+    uri: do-not-share-data-among-threads
+    createdAt: 2019-09-02
+    summary: "How to proceed when shared data are needed?"
+    tags: Programming
+  - title: "No Binaries in the Codebase"
+    uri: no-binaries-in-the-codebase
+    createdAt: 2019-08-06
+    summary: "Binary data shouldn't be a part of the codebase. This is pretty well-known practice. But how to proceed when we do need binaries in our codebase, for instance as test data?"
+    tags: Testing,Programming
+  - title: "Double Testing"
+    uri: double-testing
+    createdAt: 2019-06-21
+    summary: "Write your tests once and run them twice - as both unit and integration tests - sounds like a good deal, let's take a look at this practice."
+    tags: Testing,Programming
+  - title: "Spring HTTP Message Converters Customizing"
+    uri: spring-http-message-converters-customizing
+    createdAt: 2019-05-05
+    summary: "A deep look at how Spring's HTTP Message Converters work."
+    tags: Programming,Java,Spring,Spring Boot
+  - title: "Glass-Box Testing Does Not Need Mocking"
+    uri: glass-box-testing-does-not-need-mocking
+    createdAt: 2019-03-22
+    summary: "Black-box testing is testing of a component via its API without any knowledge of its implementation details. As the opposite there is the white-box testing. And it about testing implementation, right? Well, no..."
+    tags: Testing,OOP,Programming
+  - title: "Product Releasing Pipeline in AWS"
+    uri: product-releasing-pipeline-in-aws
+    createdAt: 2019-02-21
+    summary: "Continuous delivery (CD) brings a lot of ideas essential for a modern software product deployment. In this article we discuss how to follow CD principles by building CD pipelines with an example in AWS."
+    tags: Cloud,AWS,Deployment
+  - title: "Dealing with an Exception Is One Thing"
+    uri: dealing-with-an-exception-is-one-thing
+    createdAt: 2019-02-09
+    summary: "Nothing new, but I keep seeing violating of this rule again and again. Let's explain why it is bad."
+    tags: Programming
+  - title: "How to Manage AWS CloudFormation Stack Dependencies"
+    uri: how-to-manage-aws-cloudformation-stack-dependencies
+    createdAt: 2019-02-06
+    summary: "Automated infrastructure (Infrastructure as Code) is essential to succeed (not only) in the cloud."
+    tags: Cloud,AWS,Deployment
+  - title: "Challenges for Serverless Blue-Green Deployment"
+    uri: challenges-for-serverless-blue-green-deployment
+    createdAt: 2019-02-04
+    summary: "Serverless blue-green deployment is a nice practice. However, it doesn't come without challenges."
+    tags: Cloud,Serverless,Deployment
+  - title: "Transducers Compose Top-to-Bottom"
+    uri: transducers-compose-top-to-bottom
+    createdAt: 2019-01-22
+    summary: "Let's code some transducers and take a deeper look at how they work under the hood to see differences from pipes."
+    tags: Programming,JavaScript
+  - title: "Package by Component with Clean Modules in Java"
+    uri: package-by-component-with-clean-modules-in-java
+    createdAt: 2019-01-01
+    summary: "Let's find the best combination of two good architectural approaches: Package by component and Clean architecture."
+    tags: Software Architecture,Java
+  - title: "JavaScript async/await in a Loop"
+    uri: javascript-async-await-in-a-loop
+    createdAt: 2018-11-03
+    summary: "Async/await syntax is a great technique how to deal with promises in modern JavaScript. Unfortunately it's not always easy to understand how it works which can lead to strange bugs. Let's investigate one of them."
+    tags: Programming,JavaScript
+  - title: "Use-Case-Driven Testing"
+    uri: use-case-driven-testing
+    createdAt: 2018-11-02
+    summary: "Why shouldn't we test the implementation? How to decouple our tests from the code? What is the reason to add a new test? Why is mocking a code smell? In this article I will try to find answers to those questions."
+    tags: Testing
+  - title: "Serverless Blue-Green Deployment"
+    uri: serverless-blue-green-deployment
+    createdAt: 2018-10-20
+    summary: "Blue-Green Deployment is a very good technique that has been successfully used for managing releases of cloud applications. Now it's time to rethink it a bit for serverless systems."
+    tags: Cloud,Serverless,Deployment
+  - title: "Rollback and Microservices"
+    uri: rollback-and-microservices
+    createdAt: 2018-10-07
+    summary: "Is it even possible to roll microservices back?"
+    tags: Microservices,Deployment
+  - title: "Function Separation in a Microservice"
+    uri: function-separation-in-a-microservice
+    createdAt: 2018-09-29
+    summary: "Talking about serverless microservices, functions are the basic building blocks of the service functionality. How to design them from the code and deployment perspektive?"
+    tags: Microservices,Cloud,Serverless,AWS
+  - title: "Testing Serverless Systems"
+    uri: testing-serverless-systems
+    createdAt: 2018-09-14
+    summary: "Testing serverless systems is hard. In this article, we will discuss some practices which work well for my project."
+    tags: Testing,Cloud,Serverless,AWS
+  - title: "Secure Communication between Services in Multitenant Systems"
+    uri: secure-communication-between-services-in-multitenant-systems
+    createdAt: 2018-07-01
+    summary: "Implementing a SaaS as a multitenant system brings a lot of benefits. As usual, there are some tradeoffs, too. For example security becomes more complex. Let's take a look at possible approaches when implementing security in a multitenant architectrure."
+    tags: Cloud,Serverless,Security
+  - title: "Multiple LDAP Servers Integration"
+    uri: multiple-ldap-servers-integration
+    createdAt: 2018-06-12
+    summary: "Let's integrate a few LDAP servers!"
+    tags: LDAP
+  - title: "Meaning of Queues and Topics in AWS"
+    uri: meaning-of-queues-and-topics-in-aws
+    createdAt: 2018-04-11
+    summary: "What's the difference between queues and topics in AWS? It's not as obvious as it seems to be..."
+    tags: Event-Driven,Cloud,AWS
+  - title: "Debugging jasmine-ts in IntelliJ IDE"
+    uri: debugging-jasmine-ts-in-intellij-ide
+    createdAt: 2018-03-28
+    summary: "TypeScript application wants tests to be written in TypeScript as well, right?"
+    tags: Programming,Debugging,JavaScript
+  - title: "Pitfalls of Processing a Stream from an External Program"
+    uri: pitfalls-of-processing-a-stream-from-an-external-program
+    createdAt: 2017-10-02
+    summary: "How to design a standalone program that produces a big amount of binary data, and what are the pitfalls of the approach?"
+    tags: Programming,Java
+  - title: "Synchronized Methods vs. Semaphore"
+    uri: synchronized-methods-vs-semaphore
+    createdAt: 2017-08-02
+    summary: "When one-thread-access for synchronized methods is too restrictive, semaphores come to mind."
+    tags: Programming,Java
+  - title: "Managing Asynchronous Tests"
+    uri: managing-asynchronous-tests
+    createdAt: 2017-07-19
+    summary: "It's recommended to avoid any asynchrony within the scope of the test. Unfortunately, this is not possible everywhere."
+    tags: Testing,Programming,Java
+  - title: "How to Effectively Protect Critical Section"
+    uri: how-to-effectively-protect-critical-section
+    createdAt: 2017-06-01
+    summary: "Not everywhere could be immutable objects used to ensure thread-safe code."
+    tags: Programming,Java
+  - title: "JSON Mock Data Generator"
+    uri: json-mock-data-generator
+    createdAt: 2017-04-25
+    summary: "A small program to generate JSON data."
+    tags: Java,Releases
+  - title: "Application Package Manager with Ant and Java"
+    uri: application-package-manager-with-ant-and-java
+    createdAt: 2017-01-10
+    summary: "Let's build a simple but powerful application package manager with Ant."
+    tags: Programming,Java,Ant
+  - title: "Ant Sequential Tasks"
+    uri: ant-sequential-tasks
+    createdAt: 2016-11-15
+    summary: "This article will show you how to implement an Ant task which consume a sequence of sub-task and call them with a parameter of the result from the execution."
+    tags: Programming,Java,Ant
+  - title: "Ant Script to Copy a Snippet of a XML to Another XML"
+    uri: ant-script-to-copy-a-snippet-of-a-xml-to-another-xml
+    createdAt: 2016-10-07
+    summary: "I know, Ant is not the most modern technology, but there are still Ant-based systems we have to maintenance."
+    tags: Programming,Ant
+  - title: "Resolving a Generic Type with Spring Framework"
+    uri: resolving-a-generic-type-with-the-spring-framework
+    createdAt: 2016-08-27
+    summary: "In the case of generic beans sometimes you need to get the generic type value for some specific reasons. A typical example could be parsing some data into the type."
+    tags: Programming,Java,Spring
+  - title: "Pre-processing Spring Beans of Prototype Scope"
+    uri: pre-processing-spring-beans-of-prototype-scope
+    createdAt: 2016-08-07
+    summary: "Sometimes you have a type of bean in the Spring framework which you want to create by every asking for it - in the scope prototype."
+    tags: Programming,Java,Spring
+  - title: "SQL NULL: tricky equality"
+    uri: sql-null-tricky-equality
+    createdAt: 2015-11-11
+    summary: "Don't get confused with NULL in SQL!"
+    tags: Database,SQL
+  - title: "XSLT: Multiple XML Inputs"
+    uri: xslt-multiple-xml-inputs
+    createdAt: 2015-06-17
+    summary: "How to create one result document from more sources? It's easy with XSLT!"
+    tags: XML,XSLT
+  - title: "Managing Non-Java Resources from Gradle"
+    uri: managing-non-java-resources-from-gradle
+    createdAt: 2015-02-17
+    summary: "There are really complex projects which consist of a lot of heterogeneous parts, modules, batch scripts, binaries..."
+    tags: Gradle
+  - title: "Gradle Build from an Ant Script"
+    uri: gradle-build-from-an-ant-script
+    createdAt: 2014-11-10
+    summary: "Currently I am working on a redesign of a pretty complex project based on Ant builds. The task is to move the whole concept into Gradle."
+    tags: Gradle,Ant
+  - title: "Synchronization with Modification of the Lock Reference"
+    uri: synchronization-with-modification-of-the-lock-reference
+    createdAt: 2014-03-25
+    summary: "...is very bad practice. Nevertheless, it is not so rare to meet it."
+    tags: Programming,Java
+  - title: "Principals from JAAS through CAS to Spring Security"
+    uri: principals-from-jaas-through-cas-to-spring-security
+    createdAt: 2014-03-05
+    summary: "This article is about a custom integration of Java Authentication and Authorization Service (JAAS), Central Authentication Service (CAS), and Spring Security."
+    tags: Programming,Java,JAAS,CAS
+  - title: "ActiveMQ, HornetQ and RabbitMQ Performance Comparison"
+    uri: activemq-hornetq-and-rabbitmq-performance-comparison
+    createdAt: 2014-02-24
+    summary: "Messaging could be a great solution for a lot of projects regarding an inter-systems (and components) communication. But which vendor to choose? Which one is the best?"
+    tags: Event-Driven,ActiveMQ,HornetQ,RabbitMQ
+  - title: "ActiveMQ + JAAS Custom Login Module"
+    uri: activemq-jaas-custom-login-module
+    createdAt: 2014-02-21
+    summary: "It is pretty easy to find how to run built-in JAAS plugin, but what shall you do when you want to your own JAAS LoginModule implementation for ActiveMQ broker authentication (for instance when you have the module already written)?"
+    tags: Programming,Java,JAAS,ActiveMQ

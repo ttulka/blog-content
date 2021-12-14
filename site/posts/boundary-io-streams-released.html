@@ -1,0 +1,48 @@
+<p>This library provides classes for processing multiple streams withing a single stream bounded by a specific boundary content.
+</p>
+<p>Let's take a deeper look at its functionality...</p>
+<p>First of all, put the Maven dependency into your <code>pom.xml</code>:</p>
+<pre class="brush: xml">&lt;dependency&gt;
+    &lt;groupId&gt;cz.net21.ttulka.io&lt;/groupId&gt;
+    &lt;artifactId&gt;boundary-io-streams&lt;/artifactId&gt;
+    &lt;version&gt;1.0.0&lt;/version&gt;
+&lt;/dependency&gt;&nbsp;</pre>
+<p> </p>
+<p> </p>
+<p>Consider a simple use-case: a files streaming service into the <code>stdout</code>.</p>
+<pre class="brush: java">public class FileStreamService {
+
+    public static void main(String[] args) throws IOException {
+        try (BoundaryOutputStream bos = new BoundaryOutputStream(System.out)) {
+
+            for (String filename : args) {
+                try (InputStream is = new FileInputStream(filename)) {
+
+                    org.apache.commons.io.IOUtils.copy(is, bos);  // see https://commons.apache.org/io
+                    bos.boundary();                               // separate the stream with the boundary
+                }
+            }
+        }
+    }
+}&nbsp;</pre>
+<p>When you run the service from the command line</p>
+<pre>java FileStreamService /data/text1.txt /data/text2.txt&nbsp;</pre>
+<p>You get something similar like:</p>
+<pre>Content of the text1.txt-----StreamBoundary-----Content of the text2.txt-----StreamBoundary-----&nbsp;</pre>
+<p>Notice that the class&nbsp;<code>BoundaryOutputStream</code> is nothing more than a convenient class, you don't need this class to create such a stream with standard Java I/O classes.</p>
+<h2>Reading a Multiple Stream&nbsp;</h2>
+<p>For reading a multiple stream you can use the class&nbsp;<code>BoundaryInputStream</code> direct or wrap it into a convenient iterable class <code>IterableBoundaryInputStream</code>. We show the second approach:</p>
+<pre class="brush: java">InputStream in = callFileStreamingService();
+
+try (BoundaryInputStream bis = new BoundaryInputStream(in)) {
+    IterableBoundaryInputStream ibis = new IterableBoundaryInputStream(bis);
+
+    for (InputStream is : ibis) {
+        // do something with the stream
+    }
+}</pre>
+<p>The method&nbsp;<code>callFileStreamingService</code> calls the service above and returns its stream as the input for the <code>BoundaryInputStream</code>.</p>
+<p>More details at&nbsp;<a href="https://github.com/ttulka/boundary-io-streams" target="_blank" title="ttulka/boundary-io-streams">https://github.com/ttulka/boundary-io-streams</a>.</p>
+<p>Happy streaming!</p>
+<p> </p>
+<p> </p>

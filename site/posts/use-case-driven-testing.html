@@ -1,0 +1,155 @@
+<p>In <a href="/testing-serverless-systems">my previous article</a> I opened the topic and defined some important terms and principles I find good to follow. Let me summarize some of them and continue in the theory how we should design our tests.</p>
+
+<h2>Contracts Testing vs. Implementation Testing</h2>
+<p>We can see a test as a friend of our application but never as its part (tests codebase is never a part of the production application). As a good friend <strong>a test must talk to the application via a contract</strong>. We can call that contract an API. Every well-defined component offers an API.</p>
+<p>If we couple our test with the implementation, we have to adapt the test everytime we refactor the application code, which is not only annoying and impractical but unnecessary and even rude (we don't snoop around in friend's wardrobe). After some time people get sick of double work and start to write fewer tests and/or ignore broken tests.</p>
+<p>Tests should <b>not</b> care <em>how</em> is a feature implemented, they <strong>should care only if the behavior is correct</strong>. When we implement a sorting function we should test if the sorting results are correct regardless which sorting algoritm is used.</p>
+<p>For example when we test if a record was saved we can use another service to retrieve the record, again via its API. When there is no API to retrieve a record there is no possibility to validate if the record was really save - but such a "black hole" system makes no sense.</p>
+
+<h2>Code-Drive Testing vs. Use-Case-Driven Testing</h2>
+<p>It's a very popular practice to have a test per class, in Java like following:</p>
+<pre>
+/src/main/java/Foo.java
+              /Bar.java
+/src/test/java/FooTest.java
+              /BarTest.java
+</pre>
+<p>This is a typical example of code-driven testing design. Here is a new class a reason to add a new test. But a class is just an implementation detail. Maybe after some time you find out the class is too big and should be refactored into two classes. Then you have to refactor your test as well although there is no functional change and the test validates always the same behavior. But if you didn't do it your test wouldn't propably compile. An unhappy situation. <strong>Code-driven testing design makes maintenance hard, expensive and boring.</strong></p>
+<p>It is much better to <strong>drive your tests by use-cases</strong>. With this strategy not a class or a method is a reason to add a new test but a new requirement is. The structure looks like following:</p>
+<pre>
+/src/main/java/Foo.java
+              /Bar.java
+/src/test/java/UseCase1Test.java
+              /UseCase2Test.java
+</pre>
+<p>When you decided to split a class into two or to remove one, the tests remain without any change:</p>
+<pre>
+/src/main/java/Foo1.java
+              /Foo2.java
+/src/test/java/UseCase1Test.java
+              /UseCase2Test.java
+</pre>
+<p>In fact, there are only two reasons for a test change: 1. the requirement has changed, 2. there was a bug in the test self.</p>
+<p>The design of the test has the following pattern:</p>
+<pre class="brush: java">
+class UseCaseTest {
+
+  @Test
+  public void requirementOneTest() {
+    assert(/* acceptance criterium 1 */);
+    assert(/* acceptance criterium 2 */);
+    ...
+  }
+
+  @Test
+  public void requirementTwoTest() {
+    assert(/* acceptance criterium 1 */);
+    assert(/* acceptance criterium 2 */);
+    ...
+  }
+  ...
+}
+</pre>
+<p>The API is defined by an inteface (each public method of a class should implement an interface) and the implementation should be initialized via a factory, for example:</p>
+<pre class="brush: java">
+/** src/main/java/MyUseCase.java */
+public interface MyUseCase {
+
+  int func1(String param);
+  String func2(int param);
+}
+
+/** src/main/java/Foo.java */
+class Foo implement MyUseCase {
+
+  private Bar bar = new Bar();
+
+  public int func1(String param) {
+    ...
+  }
+
+  public String func2(int param) {
+    ...
+    return bar.func();
+  }
+}
+
+/** src/main/java/Bar.java */
+class Bar {
+
+  String func(int param) {
+    ...
+  }
+}
+
+/** src/test/java/MyUseCaseTest.java */
+class MyUseCaseTest {
+
+  private MyUseCase myUseCase;
+
+  @Before
+  public void initialize() {
+    myUseCase = new MyDefaultUseCaseFactory().createMyUseCase();
+  }
+
+  @Test
+  public void func1Test() {
+    assertEquals(/* expected */, myUseCase.func1(...));
+    assertEquals(/* expected */, myUseCase.func1(...));
+    ...
+  }
+
+  @Test
+  public void func2Test() {
+    assertEquals(/* expected */, myUseCase.func2(...));
+    assertEquals(/* expected */, myUseCase.func2(...));
+    ...
+  }
+  ...
+}
+</pre>
+
+<h2>Code Coverage vs. Use-Case Coverage</h2>
+<p>Another popular practice is code coverage. In some companies there is a code coverage check as a part of the build pipeline and a commit is rejected if its code coverage is less than a particular percentage. <strong>Code coverage is a wrong metric</strong> - you can have 100% code coverage without actually to test anything.</p>
+<p>Much more important is <strong>use-case coverage</strong>, telling us how much of our requirements are covered with test. <strong>We should always try to achive 100% use-case coverage</strong>, because satisfaction of use-cases determine the product quality.</p>
+
+<h2>Test Categories</h2>
+<p>We distinguish several test categories based on the level of granularity the test operates on.</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/TestingGranularity.png" width="80%" /></p>
+
+<p>As showned in the picture, the <strong>unit testing</strong> operates on the level of functions, it can access the functionality of the smallest components via their APIs defined by public methods or exported function. <strong>Integration testing</strong> sees a service as a black box as well as <strong>system testing</strong>* has no idea about the services structure hidden behind the system's facade (gateway).</p>
+
+<h3>Unit Testing</h3>
+<p>Unit tests operate on the level of functions and <strong>should test only business functionality</strong>. If there is no business logic and a requirement is implemented only with composition of another resources (like saving into a database or calling another function/service) there's no reason for a unit test and the testing should be done as a part of integration testing (otherwise we write unit test as integrations test where all resources are mocked - such tests have no value).</p>
+<p>To make unit testing possible we should always follow the Single Responsibility Principle by writting our code. If more responsibilities are mixed into one component, for example when a function transforms the input and saves it into a database, there is no other way how to test the transformation function but to mock the database. <strong>If we need a mock an dependency to be able to test our business logic in separation, the code probably needs refactoring</strong>.</p>
+<p>Another thing which makes writting tests much easier is to avoid side-effects. A function with side-effects cannot be easily tested as a black box with inputs and outputs (both can be absent) and need a knowledge about its interns resp. implementation details. Use pure functions as much as possible.</p>
+
+<h3>Integration Testing</h3>
+<p>Integration Testing operates on the level of services, it means autonomous components, and tests their interactions.</p>
+<p>Integration tests must run in the system environment so all the needed resources are available (and we don't have to mock anything).</p>
+<p>Integration tests as well as unit tests belong to a service and should access only the service's API. If a test needs to access more services we call it a system test and it should run accross services (e.g. in a separate testing pipeline).</p>
+
+<h3>System Testing</h3>
+<p>System testing sees the entire system as a black box with a facase (gateway) API. Whole scenarios accross services are under the test.</p>
+
+<h2>Mocking is a Code Smell</h2>
+<p>If you follow the principles above you don't need to mock anything in your tests. If you can't test without mocking there must be something "smelly" in the design.</p>
+<p>Of course, there could be exceptions like when a resource is too expensive or slow, but we should avoid mocking as much as possible, because it always removes a value from the tests.</p>
+<p>Mocks are coupled to the implementation which makes them brittle. If you really have to mock out an expensive dependency, consider to use a fake object (simple implementations with business behavior) instead. Fake objects, in contrast to mocks, contain domain logic and are a part of the domain. Read more about <a href="https://blog.cleancoder.com/uncle-bob/2014/05/14/TheLittleMocker.html" target="_blank">test doubles</a> and <a href="https://martinfowler.com/articles/mocksArentStubs.html" target="_blank">mocks vs. stubs</a> to understand the difference.</p>
+
+<h2>Example: Money</h2>
+<p>Do you remember the Money example from Kent Beck's <a href="https://www.oreilly.com/library/view/test-driven-development/0321146530/" target="_blank">Test-Driven Development By Example</a>? Let's use it as a base for our simple Money microservices system implemented with <a href="https://aws.amazon.com" target="_blank">AWS</a>.</p>
+<p>The Money service offers an API for multiplication of money amounts and reduction into different currencies. The Exchange service provides information about the actual rate; we can implement it for example as pulling the data from the New York Stock Exchange via its API.</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/MoneyExampleMicroservices.png" width="80%" /></p>
+
+<p>The source code could be found on <a href="https://github.com/ttulka/blog-code-samples/tree/master/money" target="_blank">GitHub</a>. The implementation is far from perfect, but the idea is clear. Handlers (<code>index.js</code>) are separeted from the business (<code>money.js</code> and <code>exchange.js</code>), unit tests focus on the business, integration tests on handlers (which make APIs of the services) and system tests on the facade.</p>
+
+<p>Each tests have a different place in the build pipeline. Unit tests are executed for every function, integration tests for every service (a bunch of functions) and system tests for the entire system (a bunch of services).</p>
+<p>In our example there is only one function per service, but in a real-world scenario there would be much more. We can even think of a function per use-case. In such a case we would have two function in the Money service: <code>times</code> function and <code>reduce</code> function.</p>
+
+<p>Happy testing!</p>
+
+<hr />
+<p><strong>*</strong>) <em>System testing belongs together with GUI and manual testing into the group End-to-end testing which all operate on the same level of granularity. By system testing is in this article meant automatic testing of back-end functionality e.g. via system's REST API.</em></p>

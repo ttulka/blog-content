@@ -1,0 +1,153 @@
+<p>As I was finishing <a href="/monolithic-objects">my previous post</a> about defining service boundaries, I had a very strong feeling that there must be some abstract concept of what I was trying to explain using actual examples...</p>
+
+<p>Of course, there is! It is the concept of <em>cohesion</em> and <em>coupling</em> that I will discuss in this post.</p>
+
+<p>I will start with some definitions:</p>
+
+<div class="definition">
+<p><a href="https://en.wikipedia.org/wiki/Cohesion_(computer_science)" target="_blank"><em>Cohesion</em></a> is the degree to which the elements inside a module belong together.</p>
+<p><a href="https://en.wikipedia.org/wiki/Coupling_(computer_programming)" target="_blank"><em>Coupling</em></a> is the degree of interdependence between software modules.</p>
+</div>
+
+<p>High cohesion and loose coupling are the most important principles in software engineering. They manifest themselves everywhere from code to team organization.</p>
+
+<p>Cohesion and coupling are tightly related. Why are they so important? Both help us reduce complexity, the true fun killer of software development.</p>
+
+<p>To a lot of people, sadly, the concepts sound too academic and are therefore often poorly understood.</p>
+
+<h2>What is cohesion, anyway?</h2>
+
+<p>Tough question. The definition is pretty broad and there are several interpretations out there. Not all of them are necessarily wrong, the more valid question is: which one is most beneficial? I use the following definition as I believe it always leads to cohesive components with tight coupling inside and loose coupling outside, which is exactly what we want:</p>
+
+<div class="definition">
+<p><em>The degree of cohesion of a component by a particular key equals the number of elements cohesive by the key within the component divided by the sum of the total number of elements cohesive by the key in the whole system and the number of elements not cohesive by the key inside the component.</em></p>
+</div>
+
+<p>This long definition can be expressed as a simple formula:</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/cohesion-formula.png" /><br /><i class="caption">The cohesion formula</i></p>
+
+<p>Where <code>c</code> stands for the component, <code>k</code> stands for the key, and <code>N</code> stands for the number of elements. Obviously, the maximal cohesion of a component is equal to one. This is what we strive for.</p>
+
+<p>I want to emphasize that <strong>cohesion does not depend on the number of connections</strong> between elements, which is what coupling is all about. Cohesion is more about <em>belonging together</em>. However, cohesive components do tend to have a higher degree of coupling <em>within</em> the component, but that is just a symptom of high cohesion, not the cause.</p>
+
+<p>The definition above might look complicated, but it is actually quite easy. It can be illustrated by some examples. We measure the degree of cohesion by the <em>violet</em> key for the components bordered with a dashed line in the following systems:</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/cohesion-examples.png" /><br /><i class="caption">Example measurements of cohesion</i></p>
+
+<p>Functionality (business) is always the right key to use. Violet and blue can stand for sales and accounting, a product and an invoice, or user registration and ordering.</p>
+
+<p>My definition may be a bit oversimplified as the boundaries are not always as solid and obvious. This is why business experts must be involved.</p>
+
+<h2>Myth busted</h2>
+
+<p>Cohesion and coupling are almost always discussed together as they tightly correlate. The relation is sometimes a source of confusion as well, although its understanding is very useful to gain the utmost for the software system under development.</p>
+
+<p>A typical myth, I often hear people believe in, puts cohesion and coupling in opposition. Practically, they say that <em>“the higher the cohesion the tighter the coupling”</em>. I will show you how wrong this statement is.</p>
+
+<p>This is usually illustrated with an example: Consider the highest possible cohesion of the system where every module is represented by a single line of code (or a single function, an object with a single method, etc.). Such a degree of cohesion will inevitably increase the coupling between modules to the maximum.</p>
+
+<p>As the conclusion is true, there is a small problem in the prerequisite. To discover it, we must recall the definition of cohesion once again. It talks about <em>belonging together</em>, the strength of <em>relationship</em> of elements, and a <em>common purpose</em>.</p>
+
+<p>What does it mean in practice? In fact, splitting elements that belong together actually makes cohesion lower. So, in the example above, the system really does not have the highest possible cohesion, just the opposite: breaking modules into the smallest possible elements will separate related concepts and will lead to pretty low cohesion.</p>
+
+<p>The moral here is: <strong>Cohesion is not something you can create automatically</strong>. <strong>Cohesion is discovered in a particular context</strong>. That is why it is so hard for cohesion to be reliably measured. We will discuss this in detail later, stay tuned.</p>
+
+<h2>Cohesion and coupling</h2>
+
+<p>Let me show you some pictures. In each figure below, there are the very same elements with the very same dependencies. Those are further differently organized. Related domain concepts are represented with the same color:</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/cohesion-1.png" /><br /><i class="caption">Low cohesion, tight coupling</i></p>
+
+<p>Elements in the first picture have no explicit boundaries; they are an example of so-called coincidental cohesion. Such architecture is known as the Big Ball of Mud or the God Object (in OOP code).</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/cohesion-2.png" /><br /><i class="caption">High cohesion, tight coupling</i></p>
+
+<p>The second picture shows a system with three modules and a lot of dependencies between them. Although the modules are highly cohesive, they are cohesive by the <em>wrong key</em>. This happens when code is organized by other than a domain relationship. A typical example is a logical organization of code in the <a href="https://en.wikipedia.org/wiki/Multitier_architecture" href="_blank">Layered Architecture</a>: just imagine modules such as controllers, repositories, services, etc. Have you seen these already somewhere? Hell yeah!</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/cohesion-3.png" /><br /><i class="caption">High cohesion, loose coupling</i></p>
+
+<p>The system in the third picture shows the ideal scenario: correctly organized modules leading to high cohesion and loose coupling. The right key for organization is functionality, in other words, a business domain. <strong>The domain defines abstractions with a stable purpose the cohesion is driven upon</strong>. By the way, that is the main idea of the <a href="https://en.wikipedia.org/wiki/Domain-driven_design" href="_blank">Domain-Driven Design</a>.</p>
+
+<h3>Focus on cohesion, not coupling</h3>
+
+<p>We have exhausted all variants except one: a system with low cohesion and loose coupling. Is it even possible to have such architecture? Unfortunately, it is, and it is actually pretty common.</p>
+
+<p>Systems with low cohesion and loose coupling are the result of incorrect understanding of the domain and applying purely technical approaches to decouple the modules in an arbitrary way. <em>Interfaces everywhere</em> with no abstraction representing a domain purpose are typical for systems built in this way.</p>
+
+<p><a href="/too-many-interfaces" target="_blank">Misuse of interfaces</a> will not actually reduce coupling anyway, it just moves it into the runtime.</p>
+
+<p>Striving for loose coupling at any cost can (and will) harm cohesion. As <strong>loose coupling is driven by high cohesion</strong>, we should strive for high cohesion in the first place.</p>
+
+<h3>Level of abstraction</h3>
+
+<p>Yes, high cohesion does not only make the system easy to understand and change, it also <strong>reduces the level of coupling</strong>.</p>
+
+<p>How is this even possible? Common sense says that the dependencies do not disappear simply by reorganizing elements. While this is true for the overall system dependencies, high cohesion does reduce dependencies on a higher level of abstraction.</p>
+
+<p>That is, although the absolute amount of dependencies remains the same, the coupling is tackled on different levels of abstraction.</p>
+
+<blockquote class="quote">The whole is greater than the sum of the parts. ~ Aristotle</blockquote>
+
+<p>Indeed, we can ignore the interdependencies inside modules and thus get a simplified big picture with only three loosely coupled elements:</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/cohesion-4.png" /><br /><i class="caption">Coupling on the higher level of abstraction is dramatically reduced</i></p>
+
+<p>Neat. As we see, <strong>high cohesion actually results in loose coupling</strong>!</p>
+
+<h2>Talk to me in code!</h2>
+
+<p>Pictures are nice, but as software developers, we trust only code, don’t we? Alright, I have some code for you. Consider a simple class for a Book Store (in JavaScript, whatever):</p>
+
+<pre class="brush: javascript">
+class BookStore {
+  add(book) { … }
+  remove(book) { … }
+  sale(book) { … }
+  receiptFor(book) { … }
+}
+</pre>
+
+<p>This class does literally everything. Its cohesion is pretty low and all clients, whatever their needs are, will be coupled to it. It is an example of a God Object. We can do better:</p>
+
+<pre class="brush: javascript">
+class Inventory {
+  add(book) { … }
+  remove(book) { … }
+}
+
+class Sales {
+  sale(book) { … }
+  receiptFor(book) { … }
+}
+</pre>
+
+<p>The <code>Inventory</code> class looks fine, but what about <code>Sales</code>? Must sales and accounting really be so tightly related? Maybe it would be better to split the functionalities into more cohesive classes:</p>
+
+<pre class="brush: javascript">
+class Sales {
+  sale(book) { … }
+}
+
+class Accounting {
+  receiptFor(book) { … }
+}
+</pre>
+
+<p>But what if our Book Store is just a small family business with one clerk handling sales together with accounting on one old cash desk? We have just hit the nail on the head: we cannot really know what the right cohesion key is unless we know the domain really well. True <strong>cohesion is defined by the clients</strong>. High cohesion is achieved when there is no way to split the module any further while still satisfying the needs of the client. By the way, this is exactly what the <a href="https://en.wikipedia.org/wiki/Single-responsibility_principle" href="_blank">Single Responsibility Principle</a> teaches us.</p>
+
+<h2>Conclusion</h2>
+
+<p>High cohesion and loose coupling are the main design drivers towards simple system architecture, which is easy to understand, change, and maintain. High cohesion and loose coupling help us reduce accidental complexity and create modules with well-defined boundaries.</p>
+
+<ul>
+  <li>Coupling is about <em>connections</em>, cohesion is about <em>belonging together</em>.</li>
+  <li>Cohesion cannot be created automatically; instead it is <em>discovered in a context</em>.</li>
+  <li>Cohesion is defined by the <em>clients</em>.</li>
+  <li>True cohesion is <em>domain-driven</em>.</li>
+  <li>High cohesion results in <em>loose coupling</em>.</li>
+</ul>
+
+<p>High cohesion is to die for. It enables all others, loose coupling included.</p>
+
+<p>Happy coding!</p>

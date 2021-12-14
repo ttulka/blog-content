@@ -1,0 +1,78 @@
+<p>First, I have to mention I don't have the actual implementation of the Node.js AWS Lambda container executors, so all following is only a simple thought experiment. But it seems to be very likely and can definitely help with understanding <em>how are Node.js handler functions executed in AWS Lambda</em>.</p>
+
+<p>The problem as described in the question is following:</p>
+<p>A simple function with an asynchrony inside is not correctly executed when the handler function is declared as <code>async</code>.</p>
+<pre class="brush: javascript">
+exports.handler = async (event, context, callback) => {
+  setTimeout(() => callback(null, "resolved"), 100)
+}
+</pre>
+<p>The result of the execution of this Lambda is <code>null</code>.</p>
+<p>When the keyword <code>async</code> is removed from the handler everything works fine and the result is <code>resolved</code> as expected.</p>
+
+<p>So, what is the difference?</p>
+
+<p>According <a href="https://docs.aws.amazon.com/lambda" target="_blank">the documentation</a>, the asynchronous handlers are executed without using the callback function and the result of the <code>return</code> is used instead.</p>
+
+<p>I tried to simulate the executor code and came up with this:</p>
+
+<pre class="brush: javascript">
+var handler1 = async (event, context, callback) => {
+  setTimeout(() => callback(null, "resolved"), 100)
+}
+
+var handler2 = async (event, context, callback) => {
+  return "resolved"
+}
+
+var handler3 = (event, context, callback) => {
+    setTimeout(() => callback(null, "resolved"), 100)
+}
+
+// main thread function
+(async function main() {
+  var handler = handler1 || handler2 || handler3 // set the handler
+
+  var call = () => new Promise(async (resolve, reject) => {
+    var event = undefined
+    var context = undefined
+
+    if (isAsync(handler)) {
+      try {
+        // await the result
+        var res = await handler(event, context, (err, succ) => {})
+        resolve(res)
+      } catch (err) {
+        reject(err)
+      }
+    } else {
+      // use the callback to get the result
+      handler(event, context, function(err, succ) {
+        if (err) reject(err)
+        else resolve(succ)
+      })
+    }
+  })
+
+  var res = await call()
+  console.log('RESULT', res || null)
+
+})()
+
+function isAsync(fn) {
+   return fn.constructor.name === 'AsyncFunction'
+}
+</pre>
+
+<p>When the handler is set to <code>handler1</code> the result <code>null</code> is returned, when <code>handler2</code> is used the result value is <code>resolved</code> as well as with <code>handler3</code> - exactly the same as observed.</p>
+
+<h2>Final Thoughts</h2>
+<p>Well, the simulation above doesn't behave 100%, for example when there is no promising (like <code>setTimeout(...)</code>) in an <code>async</code> handler, the AWS Lambda executor will still take account of the callback function.</p>
+<p>And this is exactly what I find so confusing - it's easy to overlook that and be suprised of the very new (and very wrong) results...</p>
+<p>I wrote the simulation code to understand its behaviour as a rule of thumb - keep in mind:</p>
+<ul>
+  <li><code>async</code> &rArr; <code>return</code></li>
+  <li>no <code>async</code> &rArr; <code>callback</code></li>
+</ul>
+
+<p>Happy serverlessing!</p>

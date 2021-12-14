@@ -1,0 +1,105 @@
+<p>After several years of the <a href="https://netflixtechblog.com/tagged/microservices" target="_blank">microservice</a> hype, <a href="https://blog.christianposta.com/microservices/istio-as-an-example-of-when-not-to-do-microservices/" target="_blank">it</a> <a href="https://twitter.com/kelseyhightower/status/940259898331238402" target="_blank">now</a> <a href="https://www.infoq.com/news/2020/04/microservices-back-again/" target="_blank">seems</a> monoliths are cool again! Does this mean we have learned a lesson?</p>
+
+<p>I guess at least we accepted what Neal Ford stated in his book Building Evolutionary Architectures:</p>
+
+<blockquote class="quote">If you can’t build a monolith, what makes you think microservices are the answer?</blockquote>
+
+<p>The disturbing question is: Why is monolith synonymous with a bad design for some and yet the right thing to do for others?</p>
+
+<h2>Two Kinds of Monolith</h2>
+
+<p>The reason is, <strong>there are two different kinds of monolith</strong>: physical and logical. While one is mostly a good thing, the other is pure evil.</p>
+
+<h3>Physical Monolith</h3>
+
+<p>The first kind of monolith is what we usually picture under the word: a physical block of software, typically running as a single process.</p>
+
+<p>A <em>physically monolithic</em> system is developed and built as a single artifact, deployed all at once and falling down in its entirety. Resources such as a database are often shared, communication is local, interprocess.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/monolith/monolith.png" alt="Monolith" /><br /><i class="caption">Monolith</i></p>
+
+<p>The opposite is then a <em>distributed system</em> composed of multiple physically independent components each running in its own process. Each component owns its resources and communication is performed in a remote manner.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/monolith/distributed-system.png" alt="Distributed system" /><br /><i class="caption">Distributed system</i></p>
+
+<p>A <strong>physical monolith is no anti-pattern</strong>, it is a good thing to start with as it is easy to build, deploy, operate, and reason about.</p>
+
+<p>Physically monolithic applications are pretty performant as there are no additional overheads in communication. Cross-cutting aspects are much simpler because no special platform (such as a service mesh) is needed.</p>
+
+<p>As the system gets bigger, further partitioning is possible. A popular option is to apply “satellite” architecture where bottleneck services are separated from the monolithic base.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/monolith/monolith-with-satelites.png" alt="Monolith with satellites" /><br /><i class="caption">Monolith with satellites</i></p>
+
+<h3>Logical Monolith</h3>
+
+<p>The second kind is a <em>logically monolithic</em> system. Other names used are Big ball of mud, Spaghetti code, etc. Logically monolithic codebases lack boundaries (technologies are not service boundaries!), everything is coupled to everything and no visible architecture is to be found.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/monolith/logical-monolith.png" alt="Logical monolith" /><br /><i class="caption">Logical monolith</i></p>
+
+<p><strong>Logical monoliths are evil</strong> and dangerous constructs that cause high complexity and tight coupling of building blocks making development expensive and error-prone.</p>
+
+<p>Logically monolithic software is unmaintainable on a scale and exponentially corrodes.</p>
+
+<h2>Modular and Distributed Monoliths</h2>
+
+<p>By doing things right or very wrong, you will end up with one of two types of systems: modular or distributed monolith, respectively.</p>
+
+<h3>Modular Monolith (Modulith)</h3>
+
+<p>The opposite of a logical monolith is a <em>modular monolith</em> (or, if you like, <em>modulith</em>). In a modular codebase business capabilities are worked out by services with explicit logical (not necessarily physical) boundaries.</p>
+
+<p>A <strong>modular monolith is probably the best architectural approach</strong> for most applications. It is easy to extend, maintain, and reason about.</p>
+
+<p>That means, moduliths are really cool!</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/monolith/modulith.png" alt="Modulith" /><br /><i class="caption">Modular monolith (modulith)</i></p>
+
+<p>Although the logical and physical natures of monoliths are independent, they often go hand in hand. That is why people easily confuse them with each other.</p>
+
+<p>As the boundaries in monolithic codebases are typically not physical it is easy to cross them. A monolithic codebase, therefore, requires great discipline.</p>
+
+<h3>Distributed Monolith</h3>
+
+<p>A logically, but not physically, monolithic system is called a <em>distributed monolith</em>. Distributed monoliths have all the drawbacks of distributed systems with almost none of the benefits.</p>
+
+<p>While dealing with the Big ball of mud is a pain, <strong>distributed monoliths are a real disaster</strong>.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/monolith/distributed-monolith.png" alt="Distributed monolith" /><br /><i class="caption">Distributed monolith</i></p>
+
+<p>Systems often end up as distributed monoliths while adapting the <a href="https://twitter.com/tomas_tulka/status/1193911453595643906" target="_blank">microservices</a> approach incorrectly.</p>
+
+<h2>From Microservices to Monolith</h2>
+
+<p>In the last years the microservices movement promised us a lot. The catch is, <strong>microservices focus only on physical</strong> monoliths, not logical ones.</p>
+
+<p>To understand why we have to take a closer look at what microservices really attempt to solve.</p>
+
+<p>A <em>microservice</em> is a service with some technical additions (independent development cycle). It is important to note the word “technical” — as the logically monolithic design is obviously a logical, not technical, issue, there is nothing microservices could potentially do for us!</p>
+
+<p>Microservices propose a solution to tackle physical monoliths only. That is the reason so many attempts to build microservices failed badly, simply because the wrong issue was addressed and the true problem only got bigger (and, even worse, distributed).</p>
+
+<p>With the logically monolithic design, microservices do not come to the rescue, more the opposite.</p>
+
+<h2>Services First</h2>
+
+<p>We can think of microservices as a specific approach to Service-oriented architecture (SOA).</p>
+
+<p>There are several definitions of SOA, but we will focus mainly on the concept of a <em>service</em>, because it is the most significant. I use this modified service definition from <a href="http://udidahan.com/2010/11/15/the-known-unknowns-of-soa/" target="_blank">Udi Dahan</a>:</p>
+
+<p class="definition">A service is the autonomous unit of logic for a specific business capability.</p>
+
+<p>Now, it is obvious why microservices as such cannot really help us with the logically monolithic design: monolithically designed microservices are no services at all, they are mere physical components!</p>
+
+<p>Business alone has the key to <a href="/colored-services" target="_blank">defining our services</a> correctly. <strong>Only well-designed services can tackle logical monoliths</strong> and profit from the microservices approach.</p>
+
+<p>It is a hard task, but Domain-driven design can help us a lot!</p>
+
+<h2>Conclusion</h2>
+
+<p>If you struggle with your monolithic system, the problem may likely lie in its logically monolithic design.</p>
+
+<p>The physical nature of the monolith is usually a secondary problem, easy to solve after the proper service-oriented design has been applied.</p>
+
+<p>Once the logical monolith is resolved, microservices architecture is just one step further...</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/monolith/types-of-systems.png" alt="Types of systems by physical and logical architecture" /><br /><i class="caption">Types of systems by physical and logical architecture</i></p>

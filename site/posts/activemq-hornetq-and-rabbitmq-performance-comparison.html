@@ -1,0 +1,141 @@
+
+<p>There is no proper answer for this question, because each and every provider has some pros and cons. Please read the first description of all of them and figure out only those matching your requirements. </p>
+<p>If your results include <strong>ActiveMQ</strong>, <strong>HornetQ </strong>and <strong>RabbitMQ</strong>, you are propably interested in performace and some practical observations now. And that is what is this article all about.</p>
+<h2>What is tested</h2>
+<p>We leave all the brokers in the default setting, no additional tuning was done yet. If you have some special requirement, you should probably look deeply at the features of the brokers and count in the final results.</p>
+<p>We run the same performance test for several scenarios:<br /></p>
+<ol>
+<li>One broker, one producer, one consumer on the only one server.</li>
+<li>One broker running on the server one, one producer, one consumer running on the server 2.</li>
+<li>Two brokers running on <strong>different </strong>servers (forwarding messages / bridging), one producer&nbsp; running on the server 1, one consumer running on the server 2.</li>
+</ol>
+<p>
+<table cellspacing="0" cellpadding="0" border="0">
+<tbody>
+<tr>
+<td><img alt="scenarios" src="/storage/ActiveMQ_HornetQ_and_RabbitMQ_Performance_Comparison_2.png" /></td>
+</tr>
+<tr>
+<td style="text-align: center; padding-top: 3px;"><em>Image 1:</em> Scenario 1, 2 and 3 architecture</td>
+</tr>
+</tbody>
+</table>
+</p>
+We also run the test with different setting of clients:<br />
+<ol>
+<li>queues, topics</li>
+<li>non-persistent, persistent massages</li>
+<li>one or ten threads for a queue/topic (one or ten message producers and consumers in parallel) </li>
+</ol>Because <strong>proportion of the results</strong> for the different scenarios is almost <strong>the same</strong>, we can focus only on the first scenario to invest the results and do the comparison. <br />
+<h2>Results</h2>Parameters for the run:<br />
+<ul>
+<li>non-persistent messages</li>
+<li>non-transacted</li>
+<li>sending messages in asynchronous mode</li>
+<li>receiving messages in asynchronous mode (AUTO_ACKNOWLEDGE)</li>
+<li>not encrypted</li>
+</ul>
+<p>Running on Linux system in virtual machine with 2 cores and 8 GB RAM.</p>
+<p>
+<table cellspacing="0" cellpadding="3" border="1" class="resultsTable" style="width: 701px;"> <caption>Results table</caption>
+<tbody>
+<tr>
+<td> queues<br /></td>
+<td> 1<br /></td>
+<td> 1<br /></td>
+<td> 1<br /></td>
+<td> 1<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+</tr>
+<tr>
+<td> consumers (per queue)<br /></td>
+<td> 1<br /></td>
+<td> 1<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 1<br /></td>
+<td> 1<br /></td>
+</tr>
+<tr>
+<td>  producers (per queue)</td>
+<td> 1<br /></td>
+<td> 1<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+<td> 10<br /></td>
+</tr>
+<tr>
+<td>message body size (bytes)<br /></td>
+<td> 128<br /></td>
+<td> 2048<br /></td>
+<td>  128</td>
+<td>  2048</td>
+<td>  128</td>
+<td>  2048</td>
+<td>  128</td>
+<td>  2048</td>
+</tr>
+<tr>
+<td><strong> ActiveMQ</strong> (msg/sec)</td>
+<td><em> 14590</em></td>
+<td><em> 14565</em></td>
+<td><em> 15700</em></td>
+<td><em> 15640</em></td>
+<td><em> 17920</em></td>
+<td><em> 17995</em></td>
+<td><em>  18180</em></td>
+<td><em>19220</em></td>
+</tr>
+<tr>
+<td><strong>HornetQ</strong> (msg/sec)</td>
+<td><em> 46605</em></td>
+<td><em> 47830</em></td>
+<td><em> 10140</em></td>
+<td><em> 10802</em></td>
+<td><em> 16165</em></td>
+<td><em> 18885</em></td>
+<td><em> 19852</em></td>
+<td><em> 19905</em></td>
+</tr>
+<tr>
+<td><strong>RabbitMQ</strong> (msg/sec)</td>
+<td><em> 20550</em></td>
+<td><em> 14680</em></td>
+<td><em> 14422</em></td>
+<td><em> 13065</em></td>
+<td><em> 13770</em></td>
+<td><em> 12150</em></td>
+<td><em>  13800</em></td>
+<td><em> 11930</em></td>
+</tr>
+</tbody>
+</table>
+</p>
+<p>
+<table cellspacing="0" cellpadding="0" border="0">
+<tbody>
+<tr>
+<td><img alt="results" src="/storage/ActiveMQ_HornetQ_and_RabbitMQ_Performance_Comparison_1.png" /></td>
+</tr>
+<tr>
+<td style="text-align: center; padding-top: 3px;"><em>Image 2:</em> Results chart</td>
+</tr>
+</tbody>
+</table>
+</p>
+<h2>My point of view</h2>
+<p><strong>ActiveMQ </strong>is very good tool with lot of documentation, examples, support and a huge community. Is it not the best regarding the performance, but it is announced to be rapidly improved by the version 6 using Appolo module. We will see...<br /> <br /></p>
+<p><strong>HornetQ </strong>really shines in the performance and it is pretty useful with a good support as well, but a lot of features (for instance the management console) is tightly&nbsp; bound with running as a JBoss module. Running in a stand-alone mode (as I did) has several disadvantages and I would not recomment it. But if you are using (or going to use) the JBoss Application Server for running you web application, HornetQ could the right option for you. </p>
+<p>There is a bit mess in versioning of libraries, especially if you want to work with different vendors of components involved in the integration (Netty, Spring JMS, ...).</p>
+<p>Queues and topics must be declared in hornetq-jms.xml before and cannot be created and deleted dynamically using JMS API. <br /> <br /></p>
+<p><strong>RabbitMQ</strong> does not have a good performance and it is not very human-friendly (all the setting are written in Erlang, which makes longer configurations very unclear for a programmer). </p>
+<p>There is only a commercial implementation of JMS. You can use pure RabbitMQ libraries or the Spring AMQP, but it is a different approach from JMS and has several limitations, for instance AMQP 0-9-1 protocol used as native doesn't support durable subscribers.</p>
+<p> <br /></p>

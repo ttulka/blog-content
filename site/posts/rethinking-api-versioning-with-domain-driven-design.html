@@ -1,0 +1,147 @@
+<p>Change is inevitable. According to the <a href="https://agilemanifesto.org/principles.html" target="_blank">Agile manifesto</a>, we should welcome change. Is this also true for your API?</p>
+
+<p>Dealing with changes in APIs can be hard and there is no bullet-proof way of managing it. Whether you use URL path, parameter, or HTTP header versioning — all cause pretty much the same pain — the change still needs to be communicated back to the consumers. There is no technical solution for that. It is really a people problem.</p>
+
+<p>Another difficulty is the need to maintain multiple versions potentially forever.</p>
+
+<p>Is <i>such</i> a change really welcomed by developers? I doubt it.</p>
+
+<p>There are already attempts to make things better, like <a href="https://en.wikipedia.org/wiki/HATEOAS" target="_blank">HATEOAS</a>, but most of them are too impractical and/or difficult to develop.</p>
+
+
+<p>Although a shiny new approach by <a href="https://graphql.org" target="_blank">GraphQL</a> has been gaining popularity in the last few years, I believe that the simple plain REST will never die out.</p>
+
+<p>In this text, we will concentrate on endpoints such as:</p>
+
+<pre>
+GET /product/123
+{
+  "name": "My Product",
+  "description": "Lorem ipsum...",
+  "price": 14.5
+}
+</pre>
+
+<h2>What Is Wrong with APIs</h2>
+
+<p>Most Restful traditionally built APIs align a <em>resource</em> with a <em>data entity</em>.</p>
+
+<p>In the system that provides the <code>/product</code> resource from the example above, one can surely find a Restful controller <code>ProductController</code>, a data-transfer object <code>ProductDto</code>, a domain object <code>Product</code>, and of course, a database table <code>PRODUCTS</code>.</p>
+
+<p>This entity-driven system design practically means just exposing naked data to the client. In the worst case, even the raw database structure just as it is.</p>
+
+<p>This is unfortunate because data is usually very volatile. By exposing raw data to the client you basically let implementation details leak into the API.</p>
+
+<p>If the API is coupled to volatile details, the system becomes hard to change. Changes that are difficult to carry out are usually not very welcome.</p>
+
+<p>Instead of the data-driven approach, your <strong>API design should be behavior-driven</strong>. Don’t think about resources as mere data structures with particular CRUD operations. Rather, think about resources as the behavior of the system within particular use-cases.</p>
+
+<p>A rule of thumb would be the number of operations the client has to invoke to achieve a single goal being not greater than one.</p>
+
+<p>As Gregor Hohpe states in his Cloud Strategy: <i>“Don't build elaborate APIs that mimic the back-end system's design. Instead, build consumer-driven APIs that provide the service in a format that the front-ends prefer.”</i></p>
+
+<p>This is a piece of good advice. Not following it often leads to another big problem: <em>accidental coupling</em> between use-cases. Let me show you some example:</p>
+
+<pre>
+GET /product/123
+{
+  "name": "My Product",
+  "description": "Lorem ipsum...",
+  "price": 14.5,
+  "availability": "soldout",
+  "delivery": ["PPL", "FedEx"]
+}
+</pre>
+
+<p>In the data-driven API design, the producer must make assumptions about what to do in order to satisfy <i>all</i> consumers at once. In this particular case, the attributes <code>name</code>, <code>description</code>, and <code>price</code> are required by the Catalog page, while <code>availability</code> and <code>delivery</code> are needed only by the Checkout page.</p>
+
+<p>This approach not only forces clients to consume unneeded data and unnecessarily increase traffic. It also couples use-cases tightly to each other. Every change performed in order to satisfy the needs of one consumer will somehow impact all the others. If a consumer is not <a href="https://en.wikipedia.org/wiki/Robustness_principle" target="_blank">liberal</a> enough any minor unintentional change can break it.</p>
+
+<p class="note">Postel’s law of conservative producers and liberal consumers also has its trade-offs. It makes the system more robust, but less precise and more complex (it breaks the separation of concerns).</p>
+
+<p>We can resolve the problem by adding a domain context (remember microservices?):</p>
+
+<pre>
+GET /catalog/product/123
+{
+  "name": "My Product",
+  "description": "Lorem ipsum...",
+  "price": 14.5
+}
+
+GET /checkout/product/123
+{
+  "availability": "soldout",
+  "delivery": ["PPL", "FedEx"]
+}
+</pre>
+
+<p>Now, as both use-cases are decoupled, each resource can be treated individually.</p>
+
+<p class="warning">It is still wise to make changes with caution as existing users often use the system beyond its original design.</p>
+
+<h2>Evolutionary API Versioning</h2>
+
+<p>Roy Fielding, the author of REST, already gave us an <a href="https://www.infoq.com/articles/roy-fielding-on-versioning/" target="_blank">answer</a> to the question of how we can version our APIs: <i>“Don’t.”</i></p>
+
+<p>He explains: <i>“Versioning is used in ways that are informative rather than contractual.”</i> And further: <i>“REST is designed primarily to improve evolvability, the ability to change over time without starting over.”</i></p>
+
+<p>This makes sense, but the devil is always in the detail. How can we make our API <em>evolutionary</em>?</p>
+
+<p>Applying the Domain-driven design would be the first step. Moving away from data-centric APIs would mean considering endpoints such as:</p>
+
+<pre>
+GET /GetAllProducts
+GET /GetProductDetail/123
+GET /SearchProducts?name=...
+...
+</pre>
+
+<p>Say what you do, do what you say.</p>
+
+<p>How can it help us with managing breaking changes? When we are honest about our endpoints we can <strong>make the change explicit</strong>.</p>
+
+<p>Well, there is always some business motivation behind every change. If we communicate this motivation to the clients, they will gain better understanding of why the change was done and what it will bring them if they switch.</p>
+
+<pre>
+GET /GetProductsAtDiscount
+GET /GetPromoProducts
+...
+</pre>
+
+<p>Understanding the benefits will make the clients <i>want</i> to switch. Consider these two possibilities:</p>
+
+<pre>
+/v1/ponies => /v2/ponies
+</pre>
+
+<p>or</p>
+
+<pre>
+/ponies => /unicorns
+</pre>
+
+<p>Which one would be most tempting for users to switch to? I guess you get the point &#x1F984;</p>
+
+<p>Now, you can finally get rid of version IDs for good. Being nice to your clients pays off!</p>
+
+<p>One more thing. Breaking changes are sometimes inevitable; however, it should be a last resort.</p>
+
+<p>If you have to introduce breaking changes every time you release a new feature then you probably have a bigger problem to fix: <em>wrong abstraction</em>.</p>
+
+<p>A good API reflects its <em>purpose</em> well. Purpose tends to be stable and as such it is the best foundation for designing stable APIs.</p>
+
+<h2>Summary</h2>
+
+<p>There is no simple technical solution for API versioning. Instead of looking for one, we can apply the same principles of well-structured, decoupled, and maintainable software architectures:</p>
+
+<ul>
+  <li>A good API reflects its purpose.</li>
+  <li>Apply the Domain-driven design to your APIs.</li>
+  <li>Say what you do, do what you say.</li>
+  <li>Make the change explicit.</li>
+  <li>Don’t break your API, evolve it.</li>
+</ul>
+
+<p>Happy resting!</p>
+

@@ -1,0 +1,146 @@
+<p>A typical REST endpoint implemented using the Spring framework looks as follows:</p>
+
+<pre class="brush: java">
+@RestController
+public class SampleController {
+
+  @GetMapping(path = "/data", produces = {
+      MediaType.APPLICATION_JSON_VALUE,
+      MediaType.APPLICATION_XML_VALUE})
+  public SampleData sampleData() {
+    return new SampleData(
+        new String[]{"sample1", "sample2"});
+  }
+}
+</pre>
+
+<p>Internally, Spring converts the <code>SampleData</code> object using a <code>HttpMessageConverter</code>.</p>
+
+<p>Spring brings a set of default converters and you can customize your own one. For instance, when the <code>SampleData</code> looks like this:</p>
+
+<pre class="brush: java">
+@Data
+@AllArgsConstructor
+public class SampleData {
+
+  private String[] data;
+}
+</pre>
+
+Then, the default XML conversion ends up with the following structure:
+
+<pre class="brush: xml">
+&lt;SampleData&gt;
+  &lt;data&gt;
+    &lt;data&gt;sample1&lt;/data&gt;
+    &lt;data&gt;sample2&lt;/data&gt;
+  &lt;/data&gt;
+&lt;/SampleData&gt;
+</pre>
+
+But you may prefer a different structure:
+
+<pre class="brush: xml">
+&lt;SampleData&gt;
+  &lt;data&gt;sample1&lt;/data&gt;
+  &lt;data&gt;sample2&lt;/data&gt;
+&lt;/SampleData&gt;
+</pre>
+
+<p>To achieve this with Spring Boot (you need <code>spring-boot-starter-web</code> dependency and <code>@EnableAutoConfiguration</code> annotation on your application configuration), you have just to register a converter bean:</p>
+
+<pre class="brush: java">
+@Bean
+public MappingJackson2XmlHttpMessageConverter
+      mappingJackson2XmlHttpMessageConverter() {
+  return new MappingJackson2XmlHttpMessageConverter(
+      new Jackson2ObjectMapperBuilder()
+          .defaultUseWrapper(false)
+          .createXmlMapper(true)
+          .build()
+  );
+}
+</pre>
+
+<p>We could end here as things are so easy with Spring Boot — the converter is registered and used in the needed order automatically.</p>
+
+<p>As a note, it is worth mentioning another option to customize message converters with Spring Boot — a <code>WebMvcConfigurer</code> configuration. The interface comes actually from Spring MVC, but its usage from within a Spring Boot application has some specifics:</p>
+
+<pre class="brush: java">
+@Configuration
+class Config implements WebMvcConfigurer {
+
+  @Override
+  public void configureMessageConverters(
+        List&lt;HttpMessageConverter&lt;?&gt;&gt; converters) {
+    converters.add(0, new MappingJackson2XmlHttpMessageConverter(
+        new Jackson2ObjectMapperBuilder()
+            .defaultUseWrapper(false)
+            .createXmlMapper(true)
+            .build()
+    ));
+  }
+}
+</pre>
+
+<p>Spring Boot web auto-configuration (concretely <code>WebMvcAutoConfiguration</code>) brings a default configurer which means we can register as many custom configurers we want to without danger to overwrite the default configuration.</p>
+
+<p>That's why we can overwrite the <code>configureMessageConvertersmethod</code> without losing the default message converters, but we have to put it at the beginning of the list to take over from the already included defaults (by converting the first applicable converter will be used).</p>
+
+<h2>Spring Boot Aside</h2>
+
+<p>If we can't use Spring Boot and must stick with Spring framework only, just registering a converter bean is no more enough.</p>
+
+<p>One option is to use your own <code>WebMvcConfigurer</code> as we already seen above. But the situation without Spring Boot is slightly different.</p>
+
+<p>Spring Web MVC default web configuration (enabled by annotating a configuration with <code>@EnableWebMvc</code>) collects instances of <code>WebMvcConfigurer</code> into a composite where all the converters live in a list.</p>
+
+<p>That means, overwriting the <code>configureMessageConverters</code>method would remove the default converters as well which is, usually, undesirable.</p>
+
+<p>In this case, the method override will do the job. Again, you have to put the custom converter at the beginning of the list:</p>
+
+<pre class="brush: java">
+@EnableWebMvc
+@Configuration
+class MessageConvertersConfig implements WebMvcConfigurer {
+
+  @Override
+  public void extendMessageConverters(
+        List&lt;HttpMessageConverter&lt;?&gt;&gt; converters) {
+    converters.add(0, new MappingJackson2XmlHttpMessageConverter(
+        new Jackson2ObjectMapperBuilder()
+            .defaultUseWrapper(false)
+            .createXmlMapper(true)
+            .build()
+    ));
+  }
+}
+</pre>
+
+<p>Another way is to overwrite the entire configuration. This assumes removing <code>@EnableWebMvc</code> from your codebase. The code is similar to the previous one:</p>
+
+<pre class="brush: java">
+@Configuration
+class WebConfig extends WebMvcConfigurationSupport {
+
+  @Override
+  protected void extendMessageConverters(
+        List&lt;HttpMessageConverter&lt;?&gt;&gt; converters) {
+    converters.add(0, new MappingJackson2XmlHttpMessageConverter(
+         new Jackson2ObjectMapperBuilder()
+            .defaultUseWrapper(false)
+            .createXmlMapper(true)
+            .build()
+    ));
+  }
+}
+</pre>
+
+<p>As you can see, there is more to be aware of when working without the convenience of using Spring Boot, but it’s still pretty straightforward.</p>
+
+<p>And that’s it. I hope this helped a bit.</p>
+
+<p>You can find working examples on <a href="https://github.com/ttulka/spring-boot-samples/tree/master/message-converters" target="_blank">my GitHub</a>.</p>
+
+<p>Happy converting!</p>
+

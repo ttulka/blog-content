@@ -6,7 +6,7 @@ Content (articles and comments) of my blog at https://blog.ttulka.com
 
 You can add a new comment by opening a pull request upon the particular file in the `/comments` directory.
 
-It is a JSON file with the same name as the article's URI (`article-uri.json`) with the following structure:
+It is a JSON file with the same name as the article's URI (e.g. `article-uri.json`) with the following structure:
 
 ```json
 {

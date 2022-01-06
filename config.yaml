@@ -70,9 +70,9 @@ posts:
     createdAt: 2021-05-27
     summary: "Testing temporal events in Spring Boot Java applications with JUnit 5 and Spring Boot Test."
     tags: Testing,Spring Boot,Java,Programming
-  - title: "OOP Is Still Cool in 2021"
+  - title: "OOP Is Still Cool in 2022"
     uri: oop-is-still-cool
-    createdAt: 2021-05-21
+    createdAt: 2022-01-06
     summary: "Object-oriented programming might not be perfect but it is still the best we have."
     tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
     highlight: true

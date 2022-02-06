@@ -13,6 +13,11 @@ pages:
   - about
 
 posts:
+  - title: "Transactional Events Made Easy with Spring"
+    uri: transactional-events-made-easy-with-spring
+    createdAt: 2022-02-06
+    summary: "How to publish events transactionally with RabbitMQ and Spring’s ApplicationEventPublisher."
+    tags: Event-Driven,Design Patterns,Spring
   - title: "Containers under the Hood"
     uri: containers-under-the-hood
     createdAt: 2021-10-06

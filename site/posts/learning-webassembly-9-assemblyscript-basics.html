@@ -1,5 +1,7 @@
 <p>We already met AssemblyScript in the <a href="/learning-webassembly-8-compiling-into-wasm">previous part</a> of this <a href="/learning-webassembly-series">series</a>. We created a simple program and got an impression of what programming in AssemblyScript feels like. In this part, we will go deeper into the concepts and basics of the language.</p>
 
+<p>You can find the example source code on <a href="https://github.com/ttulka/assemblyscript-samples/tree/main/hello-20" target="_blank">GitHub</a>.</p> 
+
 <h2>Getting Started</h2>
 
 <p><a href="https://www.assemblyscript.org" target="_blank">AssemblyScript</a> compiles a strict variant of <a href="https://www.typescriptlang.org" target="_blank">TypeScript</a> to WebAssembly using <a href="https://github.com/WebAssembly/binaryen" target="_blank">Binaryen</a> compiler and toolchain infrastructure library.</p>
@@ -157,7 +159,7 @@ var pto = __pin(hello(pti));
 var SIZE_OFFSET = -4;
 var olength = new Uint32Array(memory.buffer)[pto + SIZE_OFFSET &gt;&gt;&gt; 2];
 
-// load string from memory ()
+// load string from memory 
 var obytes = new Uint16Array(
     memory.buffer, 
     pto, 

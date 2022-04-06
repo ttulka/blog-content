@@ -108,12 +108,12 @@ posts:
     tags: WebAssembly,AssemblyScript,Programming
   - title: "Learning WebAssembly #9: AssemblyScript Basics"
     uri: learning-webassembly-9-assemblyscript-basics
-    createdAt: 2021-01-24
+    createdAt: 2022-04-06
     summary: "AssemblyScript is a free and open source TypeScript-like language that gives developers low-level control over Wasm features."
     tags: AssemblyScript,WebAssembly,Programming
   - title: "Learning WebAssembly #8: Compiling into Wasm"
     uri: learning-webassembly-8-compiling-into-wasm
-    createdAt: 2021-01-17
+    createdAt: 2022-04-05
     summary: "There are plenty of languages Wasm can be compiled from. C, Kotlin, and AssemblyScript are only a few of them."
     tags: WebAssembly,Programming
   - title: "Learning WebAssembly #7: Introducing WASI"

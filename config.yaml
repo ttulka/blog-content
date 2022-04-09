@@ -13,6 +13,11 @@ pages:
   - about
 
 posts:
+  - title: "Data Model vs. Domain Model"
+    uri: data-model-vs-domain-model
+    createdAt: 2022-04-08
+    summary: "ORM is a good servant but a bad master. The object-relational impedance mismatch is still there and as dangerous as ever."
+    tags: OOP,DDD,Architecture,Spring,Java
   - title: "Transactional Events Made Easy with Spring"
     uri: transactional-events-made-easy-with-spring
     createdAt: 2022-02-06

@@ -13,6 +13,11 @@ pages:
   - about
 
 posts:
+  - title: "OOP Is Not For Everyone"
+    uri: oop-is-not-for-everyone
+    createdAt: 2022-05-24
+    summary: "Object-oriented programming has been around for decades and has done a great deal for software development. So why do people keep complaining about it?"
+    tags: OOP,Programming,Design Patterns,Software Architecture
   - title: "Data Model vs. Domain Model"
     uri: data-model-vs-domain-model
     createdAt: 2022-04-08

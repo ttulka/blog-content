@@ -13,6 +13,12 @@ pages:
   - about
 
 posts:
+  - title: "Spring Boot Custom Components"
+    uri: spring-boot-custom-components
+    createdAt: 2022-06-10
+    summary: "Let's build domain-oriented custom components with Spring Boot starters, auto-configuration and configuration properties. Updated to Spring Boot 2.7.0!"
+    tags: Spring Boot,Spring,Software Architecture
+    highlight: true
   - title: "OOP Is Not For Everyone"
     uri: oop-is-not-for-everyone
     createdAt: 2022-05-24
@@ -28,6 +34,12 @@ posts:
     createdAt: 2022-02-06
     summary: "How to publish events transactionally with RabbitMQ and Spring’s ApplicationEventPublisher."
     tags: Event-Driven,Design Patterns,Spring
+  - title: "OOP Is Still Cool in 2022"
+    uri: oop-is-still-cool
+    createdAt: 2022-01-06
+    summary: "Object-oriented programming might not be perfect but it is still the best we have."
+    tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
+    highlight: true
   - title: "Containers under the Hood"
     uri: containers-under-the-hood
     createdAt: 2021-10-06
@@ -74,23 +86,11 @@ posts:
     createdAt: 2021-06-13
     summary: "Practical guidelines for meaningful use of the modifying HTTP methods with examples."
     tags: API Design,REST
-  - title: "Spring Boot Custom Components"
-    uri: spring-boot-custom-components
-    createdAt: 2021-06-04
-    summary: "Let's build domain-oriented custom components with Spring Boot starters, auto-configuration and configuration properties."
-    tags: Spring Boot,Spring,Software Architecture
-    highlight: true
   - title: "How to Test Date and Time in Spring Boot"
     uri: how-to-test-date-and-time-in-spring-boot
     createdAt: 2021-05-27
     summary: "Testing temporal events in Spring Boot Java applications with JUnit 5 and Spring Boot Test."
     tags: Testing,Spring Boot,Java,Programming
-  - title: "OOP Is Still Cool in 2022"
-    uri: oop-is-still-cool
-    createdAt: 2022-01-06
-    summary: "Object-oriented programming might not be perfect but it is still the best we have."
-    tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
-    highlight: true
   - title: "My Favorite Esolangs"
     uri: my-favorite-esolangs
     createdAt: 2021-04-25

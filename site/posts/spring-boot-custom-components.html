@@ -24,7 +24,7 @@
 
 <pre class="brush: groovy">
 plugins {
-  id 'org.springframework.boot' version '2.5.0'
+  id 'org.springframework.boot' version '2.7.0'
   id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 }
 </pre>
@@ -38,7 +38,7 @@ plugins {
 
 dependencyManagement {
   dependencies {
-    dependency 'org.springframework:spring-core:5.3.0'
+    dependency 'org.springframework:spring-core:5.3.20'
   }
 }
 </pre>
@@ -51,7 +51,7 @@ dependencyManagement {
 &lt;parent&gt;
   &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
   &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
-  &lt;version&gt;2.5.0&lt;/version&gt;
+  &lt;version&gt;2.7.0&lt;/version&gt;
 &lt;/parent&gt;
 </pre>
 
@@ -65,7 +65,7 @@ dependencyManagement {
     &lt;dependency&gt;
       &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
       &lt;artifactId&gt;spring-boot-dependencies&lt;/artifactId&gt;
-      &lt;version&gt;2.5.0&lt;/version&gt;
+      &lt;version&gt;2.7.0&lt;/version&gt;
       &lt;type&gt;pom&lt;/type&gt;
       &lt;scope&gt;import&lt;/scope&gt;
     &lt;/dependency&gt;
@@ -280,19 +280,19 @@ org.example.myshop:delivery-spring-boot-starter
 </pre>
 
 <h4>Auto-Configurations</h4>
-<p>The entry point to a Spring Boot starter is the <code>META-INF/spring.factories</code> file. Spring Boot checks for the presence of the file within your published JAR. The file should list component auto-configuration classes under the <code>EnableAutoConfiguration</code> key:</p>
+<p>The entry point to a Spring Boot starter is the <code>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</code> file. Spring Boot checks for the presence of the file within your published JAR. The file should list component auto-configuration classes:</p>
 
 <pre>
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  org.example.myshop.delivery.DeliveryConfiguration
+org.example.myshop.delivery.DeliveryConfiguration
+...
 </pre>
 
 <p class="defintion">Auto-configurations must be loaded that way only. Make sure that they are defined in a specific package space and that they are never the target of component scanning.</p>
 
-<p>Under the hood, auto-configuration is implemented with standard <code>@Configuration</code> classes. Multiple configuration classes could be composed via the <code>@Import</code> annotation:</p>
+<p>Under the hood, auto-configuration is implemented with standard configuration classes annotated with <code>@AutoConfiguration</code> which supports ordering via attributes such as <code>after</code>, <code>before</code> and similar. Multiple configuration classes could be composed via the <code>@Import</code> annotation:</p>
 
 <pre class="brush: java">
-@Configuration
+@AutoConfiguration
 @Import(JdbcDeliveryConfiguration.class)
 class DeliveryConfiguration {
   ...
@@ -333,8 +333,7 @@ implementation 'org.example.myshop:order-spring-boot-starter'
 <p class="definition">Spring Boot provides an alternative method of working with properties that lets strongly typed beans govern and validate the configuration of your application.</p>
 
 <pre class="brush: java">
-@ConfigurationProperties(
-    prefix = "myshop.delivery")
+@ConfigurationProperties(prefix = "myshop.delivery")
 @Setter
 @Getter
 class DeliveryProperties {
@@ -347,9 +346,8 @@ class DeliveryProperties {
 <p>Configuration properties are meant to be a convenient way for initializing auto-configuration:</p>
 
 <pre class="brush: java">
-@Configuration
-@EnableConfigurationProperties(
-    DeliveryProperties.class)
+@EnableConfigurationProperties(DeliveryProperties.class)
+@AuthConfiguration
 class DeliveryConfiguration {
 
   @Bean

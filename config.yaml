@@ -13,6 +13,11 @@ pages:
   - about
 
 posts:
+  - title: "LoRa Spreading Factor Explained"
+    uri: lora-spreading-factor-explained
+    createdAt: 2022-07-22
+    summary: "Understanding LoRa/LoRaWAN data rates and spreading factors without a degree in electrical engineering."
+    tags: IoT,LoRa,LoRaWAN
   - title: "Spring Boot Custom Components"
     uri: spring-boot-custom-components
     createdAt: 2022-06-10

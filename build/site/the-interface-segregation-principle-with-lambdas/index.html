@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>The Interface Segregation Principle with Lambdas</title>
+    <meta name="description" content="How to implement the ISP using simple functions to reduce coupling and complexity at the same time.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="The Interface Segregation Principle with Lambdas by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/the-interface-segregation-principle-with-lambdas" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="The Interface Segregation Principle with Lambdas by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">The Interface Segregation Principle with Lambdas</h1>
+    <p class="blog-post__meta">2020-10-07 by Tomas Tulka</p>
+    <p>How to implement the ISP using simple functions to reduce coupling and complexity at the same time.</p>
+    <hr>
+    <p>The <a href="https://en.wikipedia.org/wiki/Interface_segregation_principle" target="_blank">Interface Segregation Principle</a> (ISP) is the “I” in the <a href="/solid-principles-in-java-by-example" target="_blank">SOLID</a> acronym and states that clients should not be forced to depend on methods they don’t use.</p>
+
+<p>It attempts to decouple clients from unnecessary details.</p>
+
+<h2>The Problem</h2>
+
+<p>Consider a typical violation of the ISP (in Java):</p>
+
+<pre class="brush: java">
+class UserService {
+
+  User register(String username) { … }
+
+  User find(String username) { … }
+
+  void lock(User user) { … }
+}
+
+class UserRegistrationClient {
+
+  private UserService userService;
+
+  /* constructor */
+
+  void registerUser() {
+    String username = …
+
+    User user = userService
+      .register(username);
+    …
+  }
+}
+</pre>
+
+<p>The <code>UserRegistrationClient</code> class doesn’t need anything else than the <code>register</code> method from the <code>UserService</code>, but it does depend on the whole API.</p>
+
+<p>A solution according the ISP would be to create an explicit contract only for the needs of the particular client:</p>
+
+<pre class="brush: java">
+interface RegisterUser {
+
+  User register(String username);
+}
+
+class UserService implements RegisterUser {
+
+  /* as above */
+}
+
+class UserRegistrationClient {
+
+  private RegisterUser registerUser;
+
+  /* constructor */
+
+  void registerUser() {
+    String username = …
+
+    User user = registerUser
+      .register(username);
+    …
+  }
+}
+</pre>
+
+<p>This already looks much better. The benefits are pretty obvious: the client code is decoupled from unnecessary details and an explicit contract between the service provider and client is established. This is a great way for the client to express her needs and to ensure it is implemented by the provider.</p>
+
+<p>However, there are drawbacks, too. <strong>Any new interface brings certain complexity</strong> and following the approach strictly ends up <strong>writing more code</strong>, in extreme cases it could lead to an explosion of interfaces. Another problem appears when we don’t have the provider’s code in the hand.</p>
+
+<h2>The Solution</h2>
+
+<p>A solution would be to use lambdas (anonymous functions):</p>
+
+<pre class="brush: java">
+class UserService {
+
+  /* as above */
+}
+
+class UserRegistrationClient {
+
+  private Function&lt;String,User&gt; registerUser;
+
+  /* constructor */
+
+  void registerUser() {
+    String username = …
+
+    User user = registerUser
+      .apply(username);
+    …
+  }
+}
+</pre>
+
+<p>The functionality is injected into the client using the provider:</p>
+
+<pre class="brush: java">
+new UserRegistrationClient(
+    userService::register
+);
+</pre>
+
+<p>Again, this solution doesn’t come without drawbacks: we have lost the explicit and named contract and the code is less type-safety. On the other hand, we have much <strong>less code to maintain </strong>and gained a great <strong>flexibility</strong> as any function can be injected to implement the client’s needs, not just derivations of <code class="jg kz la lb kv b">RegisterUser</code>. And of course, <strong>third-parties are no problem</strong> anymore.</p>
+
+<p>The technique can be used even in languages without interfaces, such as JavaScript:</p>
+
+<pre class="brush: javascript">
+class UserRegistrationClient {
+
+  constructor(registerUser) {
+    this._registerUser = registerUser;
+  }
+
+  registerUser() {
+    let username = …
+    this._registerUser(username);
+    …
+  }
+}
+</pre>
+
+<p>Rather than:</p>
+
+<pre class="brush: javascript">
+class UserRegistrationClient {
+
+  constructor(userService) {
+    this._userService = userService;
+  }
+
+  registerUser() {
+    let username = …
+    this._userService.register(username);
+    …
+  }
+}
+</pre>
+
+<h2>Conclusion</h2>
+
+<p>Using lambdas to decouple the client code according to the ISP works pretty well depending on the specific context, but it doesn’t come without drawbacks.</p>
+
+<p>Moreover, the technique is not very common in languages where lambdas were introduced later than interfaces, such as Java or C#.</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Design Patterns" class="tag">Design Patterns</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/the-interface-segregation-principle-with-lambdas.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

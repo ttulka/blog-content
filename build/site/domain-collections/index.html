@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Domain Collections</title>
+    <meta name="description" content="Collection, List and Set are terms very familiar to developers but hardly used by business experts. Therefore, they should not be part of the domain (API).">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Domain Collections by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/domain-collections" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Domain Collections by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Domain Collections</h1>
+    <p class="blog-post__meta">2020-04-08 by Tomas Tulka</p>
+    <p>Collection, List and Set are terms very familiar to developers but hardly used by business experts. Therefore, they should not be part of the domain (API).</p>
+    <hr>
+    <h2>Standard Collections Don’t Speak Language of the Domain</h2>
+
+<p><strong>Domain (API) must speak the domain language</strong>. Listen to the business experts. They’re probably talking just about <em>products</em> rather than <em>a collection</em> or <em>a list</em> of products. Even when a “list” is used, its meaning differs from the List class which appears as standard in programming languages like Java (<code>java.util.List</code>) or .NET (<code>System.Collections.Generic.List</code>).</p>
+
+<p>Consider a typical incorrect API (in Java):</p>
+<pre class="brush: java">
+interface FindProducts {
+
+  List&lt;Product&gt; cheaperThan(Money money);
+}
+</pre>
+<p>What is the corresponding requirement?</p>
+<ul><li><em>As a user I want to find products cheaper than X amount of money.</em></li></ul>
+
+<p>Well, the requirement talks about <em>products</em>, not <em>a list of products</em>. It means we have a mismatch between the domain and the code that models it. The flaw is not huge, but there are other problems connected.</p>
+
+<h2>Standard Collections Have Meaningless Operations</h2>
+
+<p>Let’s inspect the interface once again. What can a client do with it:</p>
+<pre class="brush: java">
+for (Product product : findProducts
+    .cheaperThan(fiveDollars))
+  System.out.println(product);
+
+findProducts.cheaperThan(fiveDollars)
+    .stream()
+    .mapToDouble(Product::price)
+    .sum();
+</pre>
+<p>That is okay. And this?:</p>
+
+<pre class="brush: java">
+findProducts.cheaperThan(
+    fiveDollars).size();
+
+findProducts.cheaperThan(
+    fiveDollars).get(1).price();
+</pre>
+<p>Does it make sense? Yeah, it could, depends on the use-case.</p>
+
+<p>What about these?:</p>
+<pre class="brush: java">
+findProducts.cheaperThan(
+    fiveDollars).remove(1);
+
+findProducts.cheaperThan(
+    fiveDollars).clear();
+</pre>
+<p>Nah, those are very likely nonsense. The point is, even when those operations make no sense in the context of the use-case, they are still offered by the use-case API and nothing prevents the client from trying them out.</p>
+
+<p>Of course, the internal collections are probably not mutable and an exception will be thrown in runtime when the client does so, but this is just too late. Better would be not to provide such methods at all. It would make the client code safe right in compilation time.</p>
+
+<p>Not only are many methods meaningless, but even when they make sense, for example when we do want to provide the remove operation upon products, calling the method <code>List.remove()</code> will not bring the expected result - a product is maybe removed from the list, but it will still be found in the system.</p>
+
+<h2>Domain Collections to Rescue</h2>
+<p>We can fix this by introducing a new domain object Products:</p>
+<pre class="brush: java">
+interface FindProducts {
+
+  Products cheaperThan(Money money);
+}
+</pre>
+
+<p>What methods are in the Products signature? Everything which makes sense in the context of the domain. For example, we can sort the products:</p>
+<pre class="brush: java">
+interface Products {
+
+  Products sorted(SortBy by);
+}
+</pre>
+
+<p>Sure, in the end we probably have to provide a way to receive the Product entities from the collection. We have several options:</p>
+<pre class="brush: java">
+interface Products
+    extends Iterable&lt;Product&gt; {
+}
+</pre>
+<pre class="brush: java">
+interface Products {
+
+  List&lt;Product&gt; asList();
+}
+</pre>
+
+<p>The meaningless methods like <code>clear()</code> and <code>remove()</code> are still included on the standard List interface, but now the client knows he works with a list of products and not with the products themselves. The operations are called on the list and not on the original Domain Collection. It means, even when the client erases the list, the found products remain the same.</p>
+
+<p>We can go a bit further and use <code>java.util.stream.Stream&lt;T&gt;</code> which is immutable and more natural to what the result actually represents:</p>
+<pre class="brush: java">
+interface Products {
+
+  Stream&lt;Product&gt; asStream();
+}
+</pre>
+
+<p>Similarly, in reactive systems we can use reactive types:</p>
+<pre class="brush: java">
+interface Products {
+
+  Flux&lt;Product&gt; asPublisher();
+}
+</pre>
+
+<h3>Better Performance</h3>
+<p>Domain Collections help us not only to improve the API, but can have several technical benefits, too.</p>
+
+<p>For example, lazy loading can be applied as the data is not required until the collection “collapses”. This can save a lot of throughput in case the collection is loaded from a database or some external resource. Such optimization would be not possible with Standard Collections. Consider a usage:</p>
+<pre class="brush: java">
+findProducts
+    .cheaperThan(fiveDollars)       // not queried yet
+    .sorted(Products.SortBy.PRICE)  // not queried yet
+    .asStream()                     // function “collapse” -> data queried
+</pre>
+
+<p>A sample JDBC implementation follows:</p>
+<pre class="brush: java">
+class ProductsCheaperThan implements Products {
+
+  private final Money cheaperThan;
+  private final SortBy sortBy;
+
+  private final JdbcTemplate jdbcTemplate;
+
+  // constructor ...
+
+  @Override
+  public Products sorted(SortBy by) {
+    return new ProductsCheaperThan(cheaperThan, by, jdbcTemplate);
+  }
+
+  @Override
+  public Stream&lt;Product&gt; asStream() {
+    return jdbcTemplate.queryForList(String.format(
+        "SELECT code, title, price FROM products " +
+        "WHERE price &lt; ? ORDER BY %s", sortBy), cheaperThan.amount())
+        .stream()
+        .map(this::toProduct);
+  }
+
+  // private methods ...
+}
+</pre>
+<p>The full source code can be found on <a href="https://github.com/ttulka/blog-code-samples/tree/master/domain-collections" target="_blank">my Github</a>.</p>
+
+<h2>Summary</h2>
+<p><strong>Domain Collections</strong> encapsulate domain entities in the domain API and provide domain-meaningful operations upon them.</p>
+
+<p>Using Domain Collections over Standard Collections brings several benefits:</p>
+<ul>
+  <li>Model speaks domain language,</li>
+  <li>safety of operations can be ensured via static typing,</li>
+  <li>potential of performance optimization.</li>
+</ul>
+<p>Happy collecting!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/DDD" class="tag">DDD</a>
+    
+    <a href="/tag/OOP" class="tag">OOP</a>
+    
+    <a href="/tag/Design Patterns" class="tag">Design Patterns</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/domain-collections.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

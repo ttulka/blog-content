@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Learning WebAssembly #9: AssemblyScript Basics</title>
+    <meta name="description" content="AssemblyScript is a free and open source TypeScript-like language that gives developers low-level control over Wasm features.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Learning WebAssembly #9: AssemblyScript Basics by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/learning-webassembly-9-assemblyscript-basics" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Learning WebAssembly #9: AssemblyScript Basics by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Learning WebAssembly #9: AssemblyScript Basics</h1>
+    <p class="blog-post__meta">2022-04-06 by Tomas Tulka</p>
+    <p>AssemblyScript is a free and open source TypeScript-like language that gives developers low-level control over Wasm features.</p>
+    <hr>
+    <p>We already met AssemblyScript in the <a href="/learning-webassembly-8-compiling-into-wasm">previous part</a> of this <a href="/learning-webassembly-series">series</a>. We created a simple program and got an impression of what programming in AssemblyScript feels like. In this part, we will go deeper into the concepts and basics of the language.</p>
+
+<p>You can find the example source code on <a href="https://github.com/ttulka/assemblyscript-samples/tree/main/hello-20" target="_blank">GitHub</a>.</p> 
+
+<h2>Getting Started</h2>
+
+<p><a href="https://www.assemblyscript.org" target="_blank">AssemblyScript</a> compiles a strict variant of <a href="https://www.typescriptlang.org" target="_blank">TypeScript</a> to WebAssembly using <a href="https://github.com/WebAssembly/binaryen" target="_blank">Binaryen</a> compiler and toolchain infrastructure library.</p>
+
+<p>We will use <a href="https://www.npmjs.com" target="_blank">npm</a> to initialize our first AssemblyScript project:</p>
+
+<pre>
+$ npm init -y
+</pre>
+
+<p>To compile AssemblyScript into Wasm we need to install the <code>asc</code> <a href="https://www.assemblyscript.org/compiler.html" target="_blank">compiler</a> as a dev dependency:</p>
+
+<pre>
+$ npm install --save-dev assemblyscript
+</pre>
+
+<p>Once installed, the compiler provides a handy scaffolding utility to quickly set up a new project:</p>
+
+<pre>
+$ npx asinit .
+</pre>
+
+<p>We will be modifying two files from the generated project:</p>
+
+<dl>
+  <dt><em>index.html</em></dt>
+  <dd>The main file for loading and working with Wasm modules.</dd>
+  <dt><em>assembly/index.ts</em></dt>
+  <dd>AssemblyScript source file to be compiled into Wasm.</dd>
+  <dt><em>tests/index.js</em></dt>
+  <dd>Test suite for the main file.</dd>
+</dl>
+
+<h2>Exports and Imports</h2>
+
+<p>Let us create our first AssemblyScript function in <em>assembly/index.ts</em>:</p>
+
+<pre class="brush: javascript">
+export function main(): void {
+  print(42);
+}
+</pre>
+
+<p>Unfortunately, we don’t get the function <code>print</code> for free. Leaving <a href="/learning-webassembly-7-introducing-wasi">WASI</a> aside, interactions between Wasm modules and operating system must be provided by the glue code, JavaScript in our case. We must declare the function signature first and tell the compiler what function should be imported from the environment (<code>console.log</code> in this case):</p>
+
+<pre class="brush: javascript">
+@external(&quot;env&quot;, &quot;console.log&quot;)
+declare function print(n: i32): void;
+</pre>
+
+<p>Before we can run this code, first, we must compile our Wasm module:</p>
+
+<pre>
+$ npm run asbuild
+</pre>
+
+<p>This convenient script runs the asc compiler and generates untouched debug and optimized release Wasm files into the <em>build</em> directory.</p>
+
+<p>Also the glue code is automatically generated by the compiler in <code>build/debug.js</code> and <code>build/release.js</code>.</p>
+
+<p>We run the generated <code>index.html</code> in a web browser, or we can run this simple JavaScript file in Node.js:</p>
+
+<pre class="brush: javascript">
+// index.js
+import { main } from &quot;./build/release.js&quot;;
+main();
+</pre>
+
+<pre>
+$ node index.js
+42
+</pre>
+
+<p>Eureka, we have just created our first working Wasm program in AssemblyScript!</p>
+
+<h2>Strings, Strings, Strings!</h2>
+
+<p>Don’t get too excited, but there is one thing I must share with you: AssemblyScript extends the set of Wasm standard data types for <em><a href="https://www.assemblyscript.org/stdlib/string.html" target="_blank">strings</a></em>.</p>
+
+<pre class="brush: javascript">
+export function hello(name: string): string {
+  return &quot;Hello, &quot; + name + &quot;!&quot;;
+}
+</pre>
+
+<p>We can import and export strings from and into JavaScript with a little help from the compiler. We have to instruct the compiler to export helper runtime functions by setting the <code>exportRuntime</code> to true in <code>asconfig.json</code>:</p>
+
+<pre class="brush: json">
+{
+  ...
+  &quot;options&quot;: {
+    ...
+    &quot;exportRuntime&quot;: true
+  }
+}
+</pre>
+
+<p>Amazingly enough, that's all we need to do to call the <code>hello</code> function:
+
+<pre class="brush: javascript">
+import { hello } from &quot;./build/release.js&quot;;
+var greeting = hello(&quot;Joe&quot;);  // &quot;Hello, Joe!&quot;
+</pre>
+
+<h2>Memory</h2>
+
+<p>Wasm uses linear memory stored in a specific memory offset isolated from other programs.</p>
+
+<p><a href="https://www.assemblyscript.org/memory.html" target="_blank">In AssemblyScript</a>, there is static memory for static data known at the compilation time and dynamic memory (heap) managed by the runtime. Programs access chunks of memory via pointers. Dynamic memory is tracked by the runtime’s garbage collector and reused when not needed by the program anymore.</p>
+
+<p>We have already seen allocating memory when working with strings. It was done by the glue code generated by the compiler. Now, let's do at the heavy lifting by ourselves to see what's going on under the hood.</p>
+
+<p>First, we have to load the Wasm module to import its runtime functions and memory itself:</p>
+
+<pre class="brush: javascript">
+var url = &quot;./build/release.wasm&quot;;
+var module = await (
+  typeof globalThis.fetch === &quot;function&quot;
+    ? WebAssembly.compileStreaming(globalThis.fetch(url))
+    : WebAssembly.compile((await import(&quot;node:fs&quot;)).readFileSync(url))
+)
+var imports = {
+  env: {
+    abort: m =&gt; { /* ... */ }
+  }
+}
+const { exports: {
+    hello, memory,
+    __new, __pin, __unpin
+}} = await WebAssembly.instantiate(module, imports);
+</pre>
+
+<p>Function <code>__pin</code> pins the object externally so it does not become <a href="https://www.assemblyscript.org/runtime.html" target="_blank">garbage collected</a> until unpinned again via <code>__unpin</code>. Function <code>__new</code> allocates a new object by its class ID and length. Let's see them in action:</p>
+
+<pre class="brush: javascript">
+// strings in AS are UTF-16 encoded
+var input = &quot;&Ucy;&kcy;&rcy;&acy;&yicy;&ncy;&acy;&#x1F499;&#x1F49B;&quot;;
+var length = input.length;
+
+// allocate memory (usize, string [class id=1])
+var pt = __new(length &lt;&lt; 1, 1);
+
+// load bytes into memory (chars in AS are 16-bit)
+var ibytes = new Uint16Array(memory.buffer);
+for (let i = 0, p = pt &gt;&gt;&gt; 1; i &lt; length; ++i) 
+ibytes[p + i] = input.charCodeAt(i);
+
+// pin object 
+var pti = __pin(pt);
+
+// call wasm
+var pto = __pin(hello(pti));
+
+// retrieve string lenght in bytes (uint is 32-bit)
+var SIZE_OFFSET = -4;
+var olength = new Uint32Array(memory.buffer)[pto + SIZE_OFFSET &gt;&gt;&gt; 2];
+
+// load string from memory 
+var obytes = new Uint16Array(
+    memory.buffer, 
+    pto, 
+    olength &gt;&gt;&gt; 1  // 8-bit length to 16-bit length
+);
+var str = utf16_to_string(obytes);
+
+// unpin objects for GC
+__unpin(pti);
+__unpin(pto);
+
+console.log(str);
+</pre>
+
+<p>As we can see, strings in AssemblyScript are nothing more than arrays of 16-bit unsigned integers stored in memory. The language brings some convenient syntax and utilities, however, internally, it does work with the <a href="/learning-webassembly-4-wasm-memory-and-working-with-strings" target="_blank">same old</a> Wasm mechanism.</p>
+
+<p>The result should be no surprise:</p>
+
+<pre>
+$ node index.js
+Hello, &Ucy;&kcy;&rcy;&acy;&yicy;&ncy;&acy;&#x1F499;&#x1F49B;!
+</pre>
+
+<h2>Arrays</h2>
+
+<p>AssemblyScript provides convenient functions not only for strings, but we can also work with all kinds of <em><a href="https://www.assemblyscript.org/stdlib/array.html" target="_blank">arrays</a></em>.</p>
+
+<p>As an example, consider a function that takes an array of 32-bit integers and returns a new array where all elements are multiplied by a scalar. In AssemblyScript, it would look like this:</p>
+
+<pre class="brush: javascript">
+export function multiply(
+    matrix: Int32Array, x: i32): Int32Array {
+
+  var arr = new Int32Array(matrix.length);
+  for (var i = 0; i &lt; matrix.length; i++) {
+    arr[i] = matrix[i] * x;
+  }
+  return arr;
+}
+</pre>
+
+<p>Working with arrays is as easy as working with string thanks to the generated glue code:</p>
+
+<pre class="brush: javascript">
+import { multiply } from &quot;./build/release.js&quot;;
+
+var result = multiply([1, 2, 3], 2)
+
+// Int32Array(3) [ 2, 4, 6 ]
+console.log(result);
+</pre>
+
+<h2>Testing AssemblyScript</h2>
+
+<p>After initializing a new AssemblyScript project, you can find a basic test in <em>test/index.js</em>. Basically, we can test everything which we export from the Wasm file:</p>
+
+<pre class="brush: javascript">
+// test/index.js
+
+import assert from &quot;assert&quot;;
+
+import { hello } from &quot;../build/debug.js&quot;;
+
+assert.strictEqual(hello(&quot;Joe&quot;), &quot;Hello, Joe!&quot;);
+
+console.log(&quot;ok&quot;);
+</pre>
+
+<p>Run it simply with npm:</p>
+
+<pre>
+$ npm test
+</pre>
+
+<h2>Further Steps</h2>
+
+<p>We have learned the basics of programming in AssemblyScript, including utilities for working with memory, strings and arrays, and we have written our first unit test.</p>
+
+<p>In the <a href="/learning-webassembly-10-image-processing-in-assemblyscript">next part</a> of this <a href="/learning-webassembly-series">series</a> we will go deeper into programming in AssemblyScript and learn how to generate some graphics.</p>
+
+<p>Stay tuned!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/AssemblyScript" class="tag">AssemblyScript</a>
+    
+    <a href="/tag/WebAssembly" class="tag">WebAssembly</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/learning-webassembly-9-assemblyscript-basics.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

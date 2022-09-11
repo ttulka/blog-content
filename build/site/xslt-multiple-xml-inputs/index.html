@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>XSLT: Multiple XML Inputs</title>
+    <meta name="description" content="How to create one result document from more sources? It's easy with XSLT!">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="XSLT: Multiple XML Inputs by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/xslt-multiple-xml-inputs" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="XSLT: Multiple XML Inputs by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">XSLT: Multiple XML Inputs</h1>
+    <p class="blog-post__meta">2015-06-17 by Tomas Tulka</p>
+    <p>How to create one result document from more sources? It's easy with XSLT!</p>
+    <hr>
+    <p>Let's imagine, that we have two (or more) XML documents as the data sources. In our example we will use a list of products as the first document and a list of attributes (colors, in this case) as the second document. Each product as a ID of a color as its attribute, the name of the color is in the list of colors. We would like to show all the products with their color names in a nice HTML table.</p>
+<h2>Data sources </h2>
+<p><em><strong>products.xml</strong></em></p>
+<pre class="brush: xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;products&gt;
+&nbsp; &lt;product id="1001" color="A1"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Strawberry&lt;/name&gt;
+&nbsp; &lt;/product&gt;
+&nbsp; &lt;product id="1002" color="A2"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Blueberry&lt;/name&gt;
+&nbsp; &lt;/product&gt;
+&nbsp; &lt;product id="1003" color="A2"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Plum&lt;/name&gt;
+&nbsp; &lt;/product&gt;
+&nbsp; &lt;product id="1004" color="A3"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Green Apple&lt;/name&gt;
+&nbsp; &lt;/product&gt;
+&lt;/products&gt;</pre>
+<p><em><strong>colors.xml</strong></em></p>
+<pre class="brush: xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;colors&gt;
+&nbsp; &lt;color id="A1"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Red&lt;/name&gt;
+&nbsp; &lt;/color&gt;
+&nbsp; &lt;color id="A2"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Blue&lt;/name&gt;
+&nbsp; &lt;/color&gt;
+&nbsp; &lt;color id="A3"&gt;
+&nbsp;&nbsp;&nbsp; &lt;name&gt;Green&lt;/name&gt;
+&nbsp; &lt;/color&gt;
+&lt;/colors&gt;</pre>
+<h2>XSLT Transformation</h2>
+<p><em><strong>transformation.xsl</strong></em></p>
+<pre class="brush: xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" exclude-result-prefixes="xsl"&gt;&nbsp;
+
+&nbsp; &lt;xsl:param name="colorsFile"/&gt;
+&nbsp; &lt;xsl:variable name="colorsDoc" select="document($colorsFile)"/&gt;
+
+&nbsp; &lt;xsl:template match="/"&gt;
+&nbsp;&nbsp;&nbsp; &lt;html&gt;
+&nbsp;&nbsp;&nbsp; &lt;body&gt;
+&nbsp;&nbsp;&nbsp; &lt;table border="1" cellpadding="10"&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;tr bgcolor="#accfff"&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;th&gt;Name&lt;/th&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;th&gt;Color&lt;/th&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/tr&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;xsl:for-each select="products"&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;xsl:apply-templates select="product"/&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/xsl:for-each&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; &lt;/table&gt;
+&nbsp;&nbsp;&nbsp; &lt;/body&gt;
+&nbsp;&nbsp;&nbsp; &lt;/html&gt;
+&nbsp; &lt;/xsl:template&gt;
+
+&nbsp; &lt;xsl:template match="product"&gt;
+&nbsp;&nbsp;&nbsp; &lt;tr&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;td&gt;&lt;xsl:value-of select="name"/&gt;&lt;/td&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;td&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;xsl:variable name="colorId" select="@color"/&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;xsl:value-of select="$colorsDoc/colors/color[@id=$colorId]/name"/&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/td&gt;
+&nbsp;&nbsp;&nbsp; &lt;/tr&gt;
+&nbsp; &lt;/xsl:template&gt;
+
+&lt;/xsl:stylesheet&gt;</pre>
+<p>The parameter <code>colorsFile </code>takes its value from the processor (below), could be set to a file path like:</p>
+<pre class="brush: xml">&lt;xsl:param name="colorsFile" select="'../input/colors.xml'" /&gt;</pre>
+<h2>Java processor</h2>
+<p>In this article we're using a Java processor, the solution can be but very easily converted to the pure XSLT solution and another processor (for instance an internet browser) can be used.</p>
+<p>All the classes are from the sub-packages of the package <code>javax.xml</code>. </p>
+<pre class="brush: java">final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+
+final DocumentBuilder builder = factory.newDocumentBuilder();
+final Document document = builder.parse("products.xml");
+
+final TransformerFactory tFactory = TransformerFactory.newInstance();
+final Transformer transformer = tFactory.newTransformer(new StreamSource("transformation.xsl"));
+
+transformer.setParameter("colorsFile", "colors.xml");
+
+transformer.transform(new DOMSource(document), new StreamResult("output.html"));</pre>
+<p>And that's exactly what we wanted!</p>
+<p><strong><em>output.html</em></strong></p>
+<p>
+<table cellpadding="3" border="1">
+<tbody>
+<tr bgcolor="#accfff">
+<th>Name</th>
+<th>Color</th>
+</tr>
+<tr>
+<td>Strawberry</td>
+<td>Red</td>
+</tr>
+<tr>
+<td>Blueberry</td>
+<td>Blue</td>
+</tr>
+<tr>
+<td>Plum</td>
+<td>Blue</td>
+</tr>
+<tr>
+<td>Green Apple</td>
+<td>Green</td>
+</tr>
+</tbody>
+</table>
+</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/XML" class="tag">XML</a>
+    
+    <a href="/tag/XSLT" class="tag">XSLT</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/xslt-multiple-xml-inputs.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

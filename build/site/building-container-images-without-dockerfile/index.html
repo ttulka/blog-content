@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Building Container Images without a Dockerfile</title>
+    <meta name="description" content="Container images are just tarballs with a bit of configuration. Dockerfiles are just one option to create them.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Building Container Images without a Dockerfile by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/building-container-images-without-dockerfile" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Building Container Images without a Dockerfile by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Building Container Images without a Dockerfile</h1>
+    <p class="blog-post__meta">2021-09-30 by Tomas Tulka</p>
+    <p>Container images are just tarballs with a bit of configuration. Dockerfiles are just one option to create them.</p>
+    <hr>
+    <p>When I added the creation of container images for our services into the build process, my colleagues asked me in the review: <i>"Where are all Dockerfiles?"</i> There were none. I didn't really need them.</p>
+
+<p>In this post, we will see (and demystify) what an image is, how it is created, and which alternatives to Dockerfiles we have.</p>
+
+<p>Let’s start with some definitions.</p>
+
+<h2>Container Image</h2>
+
+<p>An <em>image</em> is a way of packaging an application in order to run as a container.</p>
+
+<p>There are several image formats for different container runtimes. In this text, we will talk exclusively about the <a href="https://github.com/opencontainers/image-spec" target="_blank">OCI Image Format</a> which is standardized and supported by Docker.</p>
+
+<p>An image consists of <em>layers</em> (tarballs that contain a filesystem bundle), <em>manifest</em>, and <em>configuration</em>. Optionally, an <em>image index</em> can be included for one or more platforms.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/oci-image.png"></p>
+
+<h2>Container Runtime</h2>
+
+<p>A container is a way of executing processes with isolation provided by three Linux technologies: <em>chroot</em>, <em>namespaces</em>, and <em>control groups (cgroups)</em>.</p>
+
+<p class="note">Note, that there are Windows containers, too. However, this text focuses exclusively on Linux containers.</p>
+
+<p>Chroot can change the root directory <code>/</code> for the process, namespaces group resources together so the processes in a namespace can see only resources in that namespace, and finally cgroups can set CPU and memory limits for processes.</p>
+
+<p><a href="https://opencontainers.org" target="_blank">OCI</a> provides a <a href="https://github.com/opencontainers/runtime-spec" target="_blank">runtime specification</a> that is supported by Docker. However, there are different container runtimes such as <a href="https://github.com/lxc/lxc" target="_blank">LXC</a> or <a href="https://github.com/kata-containers/kata-containers" target="_blank">Kata Containers</a>.</p>
+
+<p class="note">OCI reference implementation is <a href="https://github.com/opencontainers/runc" target="_blank">runc</a>. It is a low-level runtime that actually creates and executes containers. Runc is a component of <a href="https://github.com/containerd/containerd" target="_blank">containerd</a> which is a daemon that manages the lifecycle of containers. Containerd saves and downloads images, manages memory and networking. It is used by Docker and Kubernetes (via the Container Runtime Interface).</p>
+
+<h2>An Image from Scratch</h2>
+
+<p>To demonstrate how containers work under the hood, we will create a super simple “distroless” image from scratch and run it by hand.</p>
+
+<p><em>Distroless</em> means no operating system specific binaries like package managers or shells are included. Instead, we will create our own simple shell in Go.</p>
+
+<h3>Penguin Shell</h3>
+
+<p>To make the container a bit useful and easy to recognize we will include a small shell written in Go with commands <code>ls</code>, <code>cd</code>, and <code>echo</code>.</p>
+
+<p>The program is a simple loop that reads the user input, parses commands and executes:</p>
+
+<pre class="brush: go">
+func main() {
+  reader := bufio.NewReader(os.Stdin)
+  for {
+     fmt.Print("&#x1F427; ")
+
+     // read the keyboard input
+     input, err := reader.ReadString('\n')
+     if err != nil {
+        fmt.Fprintln(os.Stderr, err)
+     }
+     // handle the execution of the cmd
+     if err = execCmd(input); err != nil {
+        fmt.Fprintln(os.Stderr, err)
+     }
+  }
+}
+</pre>
+
+<p>The whole implementation can be found on <a href="https://github.com/ttulka/blog-code-samples/blob/master/image-from-scratch/penguinshell.go" target="_blank">my GitHub</a>.</p>
+
+<p>It is important that all dependencies are dynamically linked because the program is supposed to run inside the minimalist container with no libraries installed:</p>
+
+<pre>
+$ go build penguinshell.go
+$ ldd penguinshell
+        not a dynamic executable
+</pre>
+
+<h3>Filesystem Bundle</h3>
+
+<p>As our shell program has no dependencies we need only the bare minimum on the root: <code>bin</code> (where the shell binary will be placed into), <code>dev</code> (devices), <code>etc</code> (settings), <code>proc</code> (processes), and <code>sys</code> (cgroups, besides others):</p>
+
+<pre>
+$ mkdir -p image/layer && cd image/layer
+$ mkdir bin dev etc proc sys
+$ cd ../..
+$ cp penguinshell image/layer/bin
+</pre>
+
+<p>Now, we can run our shell in the filesystem bundle with chroot:</p>
+
+<pre>
+$ sudo chroot image/layer /bin/penguinshell
+&#x1F427; ls /
+bin dev etc proc sys
+&#x1F427; exit
+$
+</pre>
+
+<p>Namespaces and cgroups are out of the score of this text, you can read more details in this excellent <a href="https://ericchiang.github.io/post/containers-from-scratch/" target="_blank">article by Eric Chiang</a>.</p>
+
+<h3>Image Tarball</h3>
+
+<p>In order to create an image from our filesystem bundle we pack the bundle into a tarball:</p>
+
+<pre>
+$ cd image/layer
+$ tar -cvf ../layer.tar *
+</pre>
+
+<p>Now, we can simply import the tarball to our local Docker instance to create a new filesystem image:</p>
+
+<pre>
+$ cat layer.tar | docker import - penguinshell
+sha256:cada8d0aacf0...
+$ docker image ls | grep penguinshell
+penguinshell  latest  cada8d0aacf0  ...
+</pre>
+
+<p>We can run the image right away:</p>
+
+<pre>
+$ docker run --rm -it penguinshell -- /bin/penguinshell
+&#x1F427; ls /
+bin dev etc proc sys
+&#x1F427; exit
+$
+</pre>
+
+<p>This is great, we have just created a local container running only our application with no other dependencies!</p>
+
+<h3>OCI Image</h3>
+
+<p>In the previous section, Docker created an image from a tarball for us. We can do the same without Docker. First, we gzip the filesystem layer:</p>
+
+<pre>
+$ cd image/layer
+$ tar -czvf ../layer.tar.gz *
+</pre>
+
+<p>Then, we obtain the SHA256 digest for it, its diff ID, and size in bytes:</p>
+
+<pre>
+$ sha256sum &lt; layer.tar.gz
+&lt;layer-digest&gt;
+$ gunzip &lt; layer.tar.gz | sha256sum
+&lt;diff-id-digest&gt;
+$ stat -c%s layer.tar.gz
+1303821
+</pre>
+
+<p>Next, we create a config.json:</p>
+
+<pre class="brush: json">
+{
+ &quot;architecture&quot;: &quot;amd64&quot;,
+ &quot;os&quot;: &quot;linux&quot;,
+ &quot;config&quot;: {
+   &quot;Env&quot;: [&quot;PATH=/bin&quot;],
+   &quot;Entrypoint&quot;: [&quot;penguinshell&quot;]
+ },
+ &quot;rootfs&quot;: {
+   &quot;type&quot;: &quot;layers&quot;,
+   &quot;diff_ids&quot;: [&quot;sha256:&lt;diff-id-digest&gt;&quot;]
+ }
+}
+</pre>
+
+<p>And obtain its digest and size in bytes:</p>
+
+<pre>
+$ sha256sum &lt; config.json
+&lt;config-digest&gt;
+$ stat -c%s config.json
+261
+</pre>
+
+<p>The last puzzle piece is the manifest.json file:</p>
+
+<pre class="brush: json">
+{
+  &quot;schemaVersion&quot;: 2,
+  &quot;mediaType&quot;: &quot;application/vnd.docker.distribution.manifest.v2+json&quot;,
+  &quot;config&quot;: {
+    &quot;mediaType&quot;: &quot;application/vnd.docker.container.image.v1+json&quot;,
+    &quot;size&quot;: 261,
+    &quot;digest&quot;: &quot;sha256:&lt;config-digest&gt;&quot;
+  },
+  &quot;layers&quot;: [
+    {
+      &quot;mediaType&quot;: &quot;application/vnd.docker.image.rootfs.diff.tar.gzip&quot;,
+      &quot;size&quot;: 1303821,
+      &quot;digest&quot;: &quot;sha256:&lt;layer-digest&gt;&quot;
+    }
+  ]
+}
+</pre>
+
+<h3>Pushing the Image</h3>
+
+<p>When we have our image in the OCI format, nothing prevents us from pushing it into a Docker registry, <a href="https://hub.docker.com" target="_blank">Docker Hub</a> in our case.</p>
+
+<p>The process has three phases:</p>
+
+<ol>
+	<li>Get the access token</li>
+	<li>Push the image layer</li>
+	<li>Push the config</li>
+	<li>Push the manifest</li>
+</ol>
+
+<p>Phases 2. and 3. each consists of three steps:</p>
+
+<ol>
+	<li>Initialize a new upload and get an upload location</li>
+	<li>Send binary data to the location</li>
+	<li>Commit the upload with the digest</li>
+</ol>
+
+<p>For the sake of brevity, we will show only the pushing of the image layer.</p>
+
+<p>First, we need to get an access token for the rest operations:</p>
+
+<pre>
+$ USERNAME=ttulka
+$ curl -v -u &quot;$USERNAME&quot; \
+  &quot;https://auth.docker.io/token?service=registry.docker.io&amp;scope=repository:$USERNAME/penguinshell:pull,push&quot;
+</pre>
+
+<p>After typing a correct password for the USERNAME, we got an access token as part of the response:</p>
+
+<pre>
+$ TOKEN=&lt;token-from-respose&gt;
+</pre>
+
+<p>With a valid token, we initialize the upload and get the upload location in the response:</p>
+
+<pre>
+$ curl -v -d &#39;&#39; -H &quot;Authorization: Bearer $TOKEN&quot; \
+&quot;https://registry.hub.docker.com/v2/$USERNAME/penguinshell/blobs/uploads/&quot;
+</pre>
+
+<p>Next, we send the content to the location:</p>
+
+<pre>
+$ LOCATION=&lt;location-from-response&gt;
+$ curl -v -H &quot;Authorization: Bearer $TOKEN&quot; \
+  -X PATCH $LOCATION \
+  -H &quot;Content-Type: application/octet-stream&quot; \
+  --data-binary @layer.tar.gz
+</pre>
+
+<p>At last, we have to commit the upload with the digest:</p>
+
+<pre>
+$ LOCATION=&lt;location-from-response&gt;
+$ curl -v -H &quot;Authorization: Bearer $TOKEN&quot; \
+  -X PUT &quot;$LOCATION&amp;digest=sha256:&lt;layer-digest&gt;&quot;
+</pre>
+
+<p>Repeat steps for config.json. After that, we push our image manifest:</p>
+
+<pre>
+$ curl https://registry.hub.docker.com/v2/$USERNAME/penguinshell/manifests/latest \
+  -v -X PUT \
+  -H &quot;Authorization: Bearer $TOKEN&quot; \
+  -H &quot;Content-Type: application/vnd.docker.distribution.manifest.v2+json&quot; \
+  --data-binary @manifest.json
+</pre>
+
+<p>After pushing the manifest successfully, we can pull and run our image from everywhere:</p>
+
+<pre>
+$ docker run --rm -it ttulka/penguinshell
+Unable to find image &#39;ttulka/penguinshell:latest&#39; locally
+latest: Pulling from ttulka/penguinshell
+&lt;layer-digest&gt;: Pull complete
+Digest: sha256:&lt;manifest-digest&gt;
+Status: Downloaded newer image for ttulka/penguinshell:latest
+&#x1F427; ls /
+bin dev etc proc sys
+&#x1F427; exit
+$
+</pre>
+
+<p>Congratulations, we have just created a new Docker image from scratch without using Docker whatsoever!</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/docker-hun-penguinshell.png">
+<br><i class="caption">Penguin shell on Docker Hub</i></p>
+
+<p>For more details, you can read how to <a href="https://containers.gitbook.io/build-containers-the-hard-way" target="_blank">build containers the hard way</a>.</p>
+
+<h2>Building Tools</h2>
+
+<p>We have seen that an image is just a bundle of files. In extreme cases, it could be even crafted by hand. However, there are more convenient ways to create an image.</p>
+
+<p>Dockerfile, albeit quite low-level, is one of them. We can create the same image from above with the following Dockerfile:</p>
+
+<pre>
+FROM scratch
+COPY penguinshell /bin/
+ENTRYPOINT [&quot;/bin/penguinshell&quot;]
+</pre>
+
+<p>A Dockerfile is a bunch of instructions for Docker to build an image:</p>
+
+<pre>
+$ docker build -t penguinshell:dockerfile .
+Sending build context to Docker daemon  8.141MB
+Step 1/3 : FROM scratch
+---&gt;
+Step 2/3 : COPY penguinshell /bin/
+---&gt; e1528c3ae6d7
+Step 3/3 : ENTRYPOINT [&quot;/bin/penguinshell&quot;]
+---&gt; Running in 80669d36fef0
+Removing intermediate container 80669d36fef0
+---&gt; 359870e7b0a8
+Successfully built 359870e7b0a8
+Successfully tagged penguinshell:dockerfile
+
+$ docker run --rm -it penguinshell:dockerfile
+&#x1F427; ls /
+bin dev etc proc sys
+&#x1F427; exit
+$
+</pre>
+
+<p>This works fine for simple images like this one. For more complex images we would like to free ourselves from this low-level code.</p>
+
+<p>Let us explore a popular tool for creating images without Dockerfiles: <a href="https://buildpacks.io/" target="_blank">Cloud Native Buildpacks</a> (Buildpacks for short) from the CNCF ecosystem.</p>
+
+<h3>Buildpacks</h3>
+
+<p>Buildpack’s job is to create an image from the application source code with a minimal setup and all necessary dependencies without any user interaction.</p>
+
+<p>Buildpacks use two different images: a builder image and a base image. The former is used to build the application from source code and the latter is used to run it.</p>
+
+<p>There are a lot of pre-configured buildpack builders to choose from. They are easy to integrate into the build process. Buildpack detects automatically which builder to use for a particular application being built.</p>
+
+<p>For our sample application from above, we can simply run this Buildpack CLI command:</p>
+
+<pre>
+$ pack build penguinshell:buildpack \
+  --builder gcr.io/buildpacks/builder:v1
+v1: Pulling from buildpacks/builder
+...
+===&gt; DETECTING
+4 of 6 buildpacks participating
+google.go.runtime  0.9.1
+google.go.gopath   0.9.0
+google.go.build    0.9.0
+google.utils.label 0.0.1
+===&gt; ANALYZING
+Previous image with name &quot;penguinshell:buildpack&quot; not found
+===&gt; RESTORING
+===&gt; BUILDING
+=== Go - Runtime (google.go.runtime@0.9.1) ===
+...
+===&gt; EXPORTING
+...
+Saving penguinshell:buildpack...
+*** Images (e868002da2ce):
+     penguinshell:buildpack
+...
+Successfully built image
+</pre>
+
+<p>As you can see from the log, Buildpack recognized our Go source code, built it, and pushed a new image:</p>
+
+<pre>
+$ docker run --rm -it penguinshell:buildpack
+&#x1F427; ls /
+bin boot cnb dev etc home layers lib lib64 media mnt opt proc root run sbin srv sys tmp usr var workspace
+&#x1F427; exit
+$
+</pre>
+
+<p>The base image is obviously different. It contains multiple layers and more files than the image we created from scratch.</p>
+
+<p>In general, unnecessary functionality is a potential risk. In most cases, we can live with this risk as Buildpack base images are quite minimal. In the rest cases, we can build our <a href="https://buildpacks.io/docs/buildpack-author-guide/create-buildpack/" target="_blank">own buildpack</a> specific to our needs.</p>
+
+<p class="note">Note that for some kinds of applications we don’t even need the Buildpack CLI to be installed. For example, <a href="https://spring.io/guides/gs/spring-boot-docker/" target="_blank">Spring Boot</a> integrates Buildpack in its Gradle and Maven plugins.</p>
+
+<p>Buildpacks are not the only tool for building images without Dockerfiles. Some of them, like <a href="https://github.com/GoogleContainerTools/jib" target="_blank">Jib</a>, do not even need a Docker engine to work.</p>
+
+<p>You may also take a look at <a href="https://github.com/GoogleContainerTools/jib" target="_blank">Jib</a>, <a href="https://github.com/containers/buildah" target="_blank">buildah</a>, <a href="https://github.com/alibaba/pouch" target="_blank">PouchContainer</a>, and <a href="https://github.com/GoogleContainerTools/kaniko" target="_blank">kaniko</a>.</p>
+
+<h2>Conclusion</h2>
+
+<p>In this post, we have demystified container images by creating one from scratch by hand.</p>
+
+<p>Also, we have shown other convenient ways to build images without a Dockerfile.</p>
+
+<p>Now, you have a good starting point to build perfect images for your applications. The world of containers is extensive and possibilities are almost unlimited.</p>
+
+<p>Happy containerizing!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Docker" class="tag">Docker</a>
+    
+    <a href="/tag/Containers" class="tag">Containers</a>
+    
+    <a href="/tag/DevOps" class="tag">DevOps</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/building-container-images-without-dockerfile.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

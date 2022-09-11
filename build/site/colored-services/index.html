@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Colored Services</title>
+    <meta name="description" content="Defining service boundaries is hard. Let's bring some colors and make it fun!">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Colored Services by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/colored-services" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Colored Services by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Colored Services</h1>
+    <p class="blog-post__meta">2020-05-04 by Tomas Tulka</p>
+    <p>Defining service boundaries is hard. Let's bring some colors and make it fun!</p>
+    <hr>
+    <p>Trying to define services first and partition their functionality later is often a misleading approach ending up in the <a href="https://www.michaelnygard.com/blog/2017/12/the-entity-service-antipattern/" target="_blank">Entity Services</a> antipattern. <strong>One can't really know what the right boundary is up-front, it is a process of discovery</strong>. Better is to  group use-cases that belong together, the services will emerge by themselves. Purely for differentiation we can use colors, numbers or vegetable. Don't try to find right names until the process is finished and every use-case has its home.</p>
+
+<p class="note">I’ve heard about this technique for the first time from <a href="http://udidahan.com/" target="_blank">Udi Dahan</a>, but unfortunately it seems no paper is to be found on the topic. This is my humble attempt.</p>
+
+<p>First, let's define the requirements.</p>
+<ul>
+    <li>User finds products</li>
+    <ul>
+        <li>Title, description, price and in stock availability is shown</li>
+    </ul>
+    <li>User finds products by category</li>
+    <li>User adds a product into cart</li>
+    <ul>
+        <li>User can add a product into the cart multiple times which increases the quantity</li>
+        <li>A product already added into cart must not change during the session</li>
+        <ul>
+            <li>All attributes remain the same, price included</li>
+        </ul>
+    </ul>
+    <li>User removes a single product from the cart</li>
+    <li>User empties the entire cart</li>
+    <li>User places an order from the cart</li>
+    <ul>
+        <li>An order can contain additional charges</li>
+    </ul>
+    <li>User requests a delivery by filling in his name and shipping address</li>
+    <li>Payment is requested after the order was placed</li>
+    <li>Goods are fetched after the order was placed</li>
+    <li>Delivery is accepted after the order was placed</li>
+    <li>Delivery is dispatched after was accepted, payment collected and goods fetched</li>
+</ul>
+
+<p>Now, we can analyze those and scratch the first services.</p>
+<ul>
+    <li><b>Find products</b></li>
+    <ul>
+        <li>Product ID</li>
+    	<li>Title</li>
+    	<li>Description</li>
+    	<li>Price</li>
+    </ul>
+</ul>
+
+<p>That's pretty obvious. The service needs to have the product title, description and price.</p>
+
+<ul>
+    <li><b>Find products by category</b></li>
+</ul>
+
+<p>In order to provide this, a list of categories must be shown first:</p>
+<ul>
+    <li><b>List categories</b></li>
+    <ul>
+        <li>Category ID</li>
+        <li>Title</li>
+        <li>URI</li>
+    </ul>
+</ul>
+
+<p>For categories, we probably want some nice looking URIs in our e-shop like <i>/toys</i> or <i>/books</i>. The URI will be used for searching. As we neither want to have URI duplicated in products nor to do two hops to get the Category ID first, we put the <i>List categories</i> use-case into the same service as both <i>Find products</i> use-cases. Let's call it <span style="color:#1155cc">“Blue“:</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/colored-services/blue-service.png" alt="Blue service"/></p>
+
+<p>Next is the product availability. We want to show how many is left in stock. This information is not necessary for sale. A customer can order a product even when there are no items left in stock. This can just delay delivery or, alternatively, another product can be offered. No items in stock must not prevent the customer from placing an order - this is a business decision. This means we can model the stock information in a separate service, let's call it <span style="color:#38761d">“Green“</span>:</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/colored-services/green-service.png" alt="Green service"/></p>
+
+<p>There are two important rules for the shopping cart. First says that a product can be added multiple times. This means we need to hold a quantity with each cart item. Second say that the product in cart must not change. This means the cart items are kinda snapshots of the products at the time of adding. That's why putting the cart functionality into the blue service wouldn't be the best idea: we need a new representation of product - a cart item. Besides, cart items are fully independent on products and categories. Let’s put it into a new <span style="color:#990000">“Red”</span> service:</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/colored-services/red-service.png" alt="Red service"/></p>
+
+<p>Order items have similar rules like cart items, both are immutable snapshots of products at some particular time, except we don't need all information about the product in the order. The life cycle differs: while cart items can be added and removed, the order is typically immutable. The order total amount is not only sum of item prices but can include additions like shipping fees, taxes, discounts etc. That's why we need to model the total amount separately. As we agreed the order didn't belong to the same service as shopping cart, we have to put it into a new service, called <span style="color:#bf9000">“Yellow“</span>:</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/colored-services/yellow-service.png" alt="Yellow service"/></p>
+
+<p>Although the customer fills up shipping information as a part of the order process, the order process is fully independent on it. An order can be placed even without shipping information - consider an online delivery of an e-book etc. We put it into a new service, let's call it <span style="color:#351c75">“Violet“</span>:</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/colored-services/violet-service.png" alt="Violet service"/></p>
+
+<p>Similar with payment. Here the amount to pay is needed, because the payment doesn't necessarily have to be for the order as whole. Finishing the order process can contain several other payments like additional fees or discounts. A payment is not necessarily connected to an order as it could be used for different purposes like loyalty program, membership fees etc later. Let's call the new service <span style="color:#b45f06">“Orange“</span>:</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/colored-services/orange-service.png" alt="Orange service"/></p>
+
+<p>Fetching goods should have an obvious impact: the amount in stock decreases. We put this use-case into the <span style="color:#38761d">Green</span> service:</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/colored-services/green-service-2.png" alt="Green service"/></p>
+
+<p>When all the use-cases are partitioned into services, it’s pretty straightforward to give them appropriate names.</p>
+
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/colored-services/services-named.png" alt="Colored services"/></p>
+
+<p>You can see this idea in action on <a href="https://github.com/ttulka/ddd-example-ecommerce" target="_blank">my GitHub</a>.</p>
+
+<p>Happy coloring!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/SOA" class="tag">SOA</a>
+    
+    <a href="/tag/Microservices" class="tag">Microservices</a>
+    
+    <a href="/tag/Software Architecture" class="tag">Software Architecture</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/colored-services.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

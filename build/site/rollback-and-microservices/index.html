@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Rollback and Microservices</title>
+    <meta name="description" content="Is it even possible to roll microservices back?">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Rollback and Microservices by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/rollback-and-microservices" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Rollback and Microservices by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Rollback and Microservices</h1>
+    <p class="blog-post__meta">2018-10-07 by Tomas Tulka</p>
+    <p>Is it even possible to roll microservices back?</p>
+    <hr>
+    <p>When thinking about a deployment strategy for microservices-based systems, it is natural to consider a <em>rollback</em>. Before looking for a technical solution, let's discuss this idea conceptually.</p>
+
+<h2>Microservices</h2>
+<p>One of a plenty definitions of a microservice is an <strong>independently deployable</strong> component. This says actually a pretty lot. To understand this definition we have to go back to the very first motivation for the microservices design pattern: <em>We want to deliver our product as soon as possible</em>. A microservice could be in hands of one team and have a completely different and unsynchronous delivery process. A team developing service A doesn't want to be bothered by waiting for the next release of a service B if it doen't need its new functionality. Service A could be deployed into the production once a day and the service B once a month.</p>
+<p>For all this to be possible we have to follow a few basic principles, especially the most important one in our context: <strong>No Breaking Changes</strong>. We may find the same principle under different names like <a href="https://www.allthingsdistributed.com/2016/03/10-lessons-from-10-years-of-aws.html" target="_blank">"APIs are forever"</a> etc., but the idea is the same.</p>
+
+<h2>No Breaking Changes</h2>
+<p>How does this principle makes the microservices deployment independent? Let's consider two services, A and B. B is calling A via A's API. In the time of development of a version v1 of the service B, there is a released API of service A in the version v1. So the service B v1 makes its call against the service A v1:</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/rollback-1.png" width="70%" alt="Service Bv1 calls Av1" /></p>
+
+<p>During the development of service B v1 a new version of service A - v2 - was released. An additional endpoint was added, but it's okay for the service B because A's API was not broken (in other words, A v2 is compatible with A v1). Actually, so far there are no breaking changes the service B doesn't care which newly realeased version of the service A is talking to:</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/rollback-2.png" width="70%" alt="Service Bv1 calls Av2" /></p>
+
+<h2>What about Rollbacks?</h2>
+<p>Now consider that the service B in some future version (let's say v2) is using an endpoint of the service A added in its release v2:</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/rollback-3.png" width="70%" alt="Service Bv2 calls Av2" /></p>
+
+<p>After some time the developers of service A find an error in the v2. They decide to rollback to the previous version (v1). What happens to the system? Service B stops working because it keeps calling the endpoint of service A v2 which doesn't exist anymore. The <strong>rollback to a previous version is a potential breaking change</strong>:</p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/rollback-4.png" width="70%" alt="Service Bv2 calls Av1" /></p>
+
+<p>Because it can introduce a breaking change as the rest of the system depends on the current API a <strong>rollback should be avoided in microservices-based systems</strong>.</p>
+
+<h2>Conclusion</h2>
+<p>As long as we can't rollback microservices, we have to find a confident way how to deploy them into production. There are a lot of good practices like separated deployment stages (development, testing, QA, ...), testing in a production-like environment, blue-green and canary deployment, and so on.</p>
+<p>It's also very important to resist the temptation of hot fixing a bug directly in the production environment. We alywas have to adapt the continuous-delivery principles: Every change, bug-fixes included, must be properly built and tested thru the standard deployment process (delivery pipeline).</p>
+<p>Microservices are living organisms and should be treated like that.</p>
+
+<p>Happy deploying!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Microservices" class="tag">Microservices</a>
+    
+    <a href="/tag/Deployment" class="tag">Deployment</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/rollback-and-microservices.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

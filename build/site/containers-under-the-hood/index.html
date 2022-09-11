@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Containers under the Hood</title>
+    <meta name="description" content="Let’s talk about the underlying technology that enables containers under Linux, and build a container from scratch!">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Containers under the Hood by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/containers-under-the-hood" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Containers under the Hood by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Containers under the Hood</h1>
+    <p class="blog-post__meta">2021-10-06 by Tomas Tulka</p>
+    <p>Let’s talk about the underlying technology that enables containers under Linux, and build a container from scratch!</p>
+    <hr>
+    <p>Containers are literally everywhere. If you are a developer, you probably deploy your applications as containers on the server and use their disposability to test and experiment locally on your laptop.</p>
+
+<p>In the preceding years, containers became not only ubiquitous but, sadly, kind of magical. They are everywhere, everyone uses them, but how many people actually know how containers work?</p>
+
+<p>In this text, we will delve deeper into the technology that makes containers possible. We will demystify containers by creating one from scratch and running it by hand with no convenient tools like Docker.</p>
+
+<p>That will help us to understand what containers really are and that there is no actual magic involved.</p>
+
+<h2>What the heck are containers?</h2>
+
+<p>You probably work with containers every day but do you actually know what they <i>are</i>? Think about it for a second or two. Take your time. No cheating! Now, compare your definition with this one:</p>
+
+<p class="definition">Containers are a way of executing processes with isolation.</p>
+
+<p>With containers, we can run a process and its subprocesses in isolation from the underlying system and all other containers. Each container has its own view on the operating system, its own filesystem, and access to an individual subset of resources (such as memory and CPU).</p>
+
+<p class="warn">Although sufficient for most applications, container isolation is not perfect. Containers are therefore recommended to run only trusted code. If you need to run potentially unsafe and malicious code, virtual machines should be used instead.</p>
+
+<h2>Docker equals containers, not</h2>
+
+<p>Allow me to make an observation about Docker as it became practically a synonym for containers, and with some justification.</p>
+
+<p>Docker is the first tool that introduced the idea of containers to a broad audience. It is still very popular nowadays (although alternatives exist) as it provides a convenient and abstract way how to deal with the whole container lifecycle and solves hard problems such as communication between containers and networking.</p>
+
+<p>So, what the heck is Docker?</p>
+
+<p>The term Docker has several meanings. The most practical of these states that Docker is a set of tools for containerization counting Docker Desktop, Docker Compose, Docker Swarm, etc. Furthermore, Docker is the company (Docker, Inc.) behind these tools.</p>
+
+<p>Docker is also one of the founders of the Open Container Initiative (OCI), an open governance structure for creating open industry standards around container formats and runtimes. OCI standards are mostly based on the former Docker specifications.</p>
+
+<p>Today, Docker supports the OCI specifications and uses OCI components such as <a href="https://containerd.io" target="_blank">containerd</a> and <a href="https://github.com/opencontainers/runc" target="_blank">runc</a> under the hood:</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/docker-structure.png"></p>
+
+<p>Runc is a production-ready OCI reference implementation. It is a low-level runtime that actually creates and executes containers. Runc is a component of containerd which is a daemon that manages the lifecycle of containers. Containerd saves and downloads images, manages memory and networking. Besides Docker, it is used by Kubernetes (via the Container Runtime Interface) and others. Runc and containerd can be used as separate tools as well.</p>
+
+<p>OCI is not the only standard around. There are, for example, LXC (originally used by Docker), Kata containers, and others.</p>
+
+<p class="note">In this text, we talk about Linux-based containers exclusively. Windows containers are definitely a thing, however, far not as popular as their Linux relatives.</p>
+
+<h2>How to run processes in isolation</h2>
+
+<p>Running processes in isolation is possible via three Linux technologies: changing the root filesystem (chroot), namespaces (unshare), and finally control groups (cgroups).</p>
+
+<p>By changing the root we can isolate the process filesystem and protect the system filesystem from unwanted changes.</p>
+
+<p>Namespaces create a sliced view on the system resources such as process IDs, mount points, networks, users, etc.</p>
+
+<p>Control groups can restrict various computer resources such as memory, CPU, or network traffic.</p>
+
+<p>These three technologies are all we need to run containers under Linux. Let’s take a closer look at all of them one by one.</p>
+
+<h3>Change root</h3>
+
+<p>It is easy to change the apparent root directory for a process (and its children). We can achieve that with just one call of the <code>chroot</code> operation:</p>
+
+<pre>
+$ chroot rootfs /bin/sh
+</pre>
+
+<p>The first argument is a path to the new root, the second one is a command to be executed.</p>
+
+<p>Let’s see chroot in action:</p>
+
+<h4>1. Download BusyBox</h4>
+
+<p>BusyBox is a utility suite providing all basic Linux command-line tools in a single executable file. We will use BusyBox as a basis for our hand-made containers.</p>
+
+<p><a href="https://busybox.net/downloads/binaries/" target="_blank">Download a BusyBox binary</a> and make it executable:</p>
+
+<pre>
+$ cd ~/Downloads	 # location of binary
+$ mv busybox-x86_64 busybox
+$ chmod +x busybox
+$ ./busybox echo Hello from BusyBox!
+Hello from BusyBox!
+$
+</pre>
+
+<h4>2. Prepare a new container filesystem</h4>
+
+<p>Create a simple Linux-like directory structure and copy the BusyBox executable to the <code>bin</code> directory:</p>
+
+<pre>
+$ mkdir ~/container ; cd !$
+$ mkdir -p bin dev etc proc sys
+$ cp ~/Downloads/busybox bin
+</pre>
+
+<h4>3. Change the root directory</h4>
+
+<p>Change the root to the actual directory and execute the BusyBox’s shell:</p>
+
+<pre>
+$ sudo chroot . /bin/busybox sh
+/ #
+</pre>
+
+<p>Very cool, we can now execute some commands under the new containerized filesystem:</p>
+
+<pre>
+/ # busybox ls /
+bin   dev   etc   proc  sys
+/ # busybox ls /bin
+busybox
+/ # busybox ls /proc
+/ #
+/ # busybox ps -A
+PID   USER     TIME   COMMAND
+/ #
+</pre>
+
+<p>Well, there is not much here. To do something useful, we shall mount some system resources first.</p>
+
+<h4>4. Mount system processes and devices</h4>
+
+<p>Exit the container and mount the system <code>/proc</code> directory to our container filesystem:</p>
+
+<pre>
+/ # exit
+$ sudo mount -t proc /proc ./proc
+</pre>
+
+<p>Now, the <code>ps</code> command can see all processes:</p>
+
+<pre>
+$ sudo chroot . /bin/busybox sh
+/ # busybox ps -A
+PID  USER  TIME  COMMAND
+  1 0       0:01 {systemd} /sbin/init splash
+  2 0       0:00 [kthreadd]
+  3 0       0:00 [rcu_gp]
+... a lot of processes here
+/ #
+/ # busybox ls /proc
+1    1223    17    34    6
+... a lot of processes here
+</pre>
+
+<p>The obvious problem is that we can actually see <i>all</i> the host processes, not only the processes which run within the container. Chroot alone is not enough to run processes in isolation. We have to reach for another tool: namespaces.</p>
+
+<p>Read more about chroot on the <a href="https://man7.org/linux/man-pages/man2/chroot.2.html" target="_blank">manual page</a>.</p>
+
+<p class="note">Chroot is not a Linux-exclusive tool. Most UNIX operating systems (even MacOS) include the chroot operation in their basic equipment.</p>
+
+<h3>Namespaces</h3>
+
+<p>Namespaces are an isolation mechanism. Their main purpose is to isolate containers running on the same host so that these containers cannot access each other’s resources.</p>
+
+<p>Namespaces can be composed and nested — a process IDs namespace on the host machine is the parent namespace of other namespaces.</p>
+
+<p>Let’s fix our previous attempt by running the container in a PID namespace:</p>
+
+<pre>
+$ sudo unshare -f -p --mount-proc=$PWD/proc \
+  chroot . /bin/busybox sh
+/ # busybox ps -A
+PID  USER  TIME  COMMAND
+  1 0       0:01 /bin/busybox sh
+</pre>
+
+<p>Much better! We have isolated the container’s process into a separate namespace and other processes of the host became invisible inside the container.</p>
+
+<p>However, the process is still visible from the parent namespace (in a second terminal):</p>
+
+<pre>
+$ ps aux | grep /bin/busybox
+root    24163    ...    /bin/busybox
+</pre>
+
+<p>More details about namespaces can be found on the <a href="https://man7.org/linux/man-pages/man7/namespaces.7.html" target="_blank">manual page</a>.</p>
+
+<div class="note">
+<h4>Namespaces in Docker</h4>
+
+<p>You can simply check that processes running in a Docker container are indeed child processes of the PID namespace on the host machine:</p>
+
+<pre>
+$ docker run --rm -d busybox sleep 1234
+&lt;container-id&gt;
+$ ps aux | grep &quot;sleep 1234&quot;
+root    29046    ...    sleep 1234
+&lt;/container-id&gt;
+</div>
+
+<h3>Control groups</h3>
+
+<p>Control groups (cgroups) can restrict various computer resources for processes.</p>
+
+<p>Cgroups are organized into subsystems per resource type (CPU, memory, etc.). A collection of processes can be bound to a cgroup.</p>
+
+<p>Let’s use cgroups to restrict memory usage for our process:</p>
+
+<h4>1. Create a new cgroup</h4>
+
+<p>Cgroups are located in <code>/sys/fs/cgroup/&lt;subsystem&gt;</code>, in our case <code>/sys/fs/cgroup/memory</code>.</p>
+
+<p>We can create a new cgroup simply by making a new directory in the subsystem directory. The Linux system will take care of the initialization:</p>
+
+<pre>
+$ sudo su   # superusers only
+# mkdir /sys/fs/cgroup/memory/busybox
+# ls -1 /sys/fs/cgroup/memory/busybox
+...
+memory.limit_in_bytes
+...
+tasks
+#
+</pre>
+
+<p>As you can see, control files were created automatically for you. For our experiment, we will consider the above-listed two.</p>
+
+<h4>2. Setup the cgroup</h4>
+
+<p>To limit memory usage in the cgroup we can simply put the maximal memory size in bytes into <code>memory.limit_in_bytes</code> inside the cgroup directory (continue as a superuser):</p>
+
+<pre>
+# cd /sys/fs/cgroup/memory/busybox
+# echo 7340032 &gt; memory.limit_in_bytes
+# exit
+$
+</pre>
+
+<h4>3. Add a process into the cgroup</h4>
+
+<p>To add a process into a cgroup we must append the process ID into the <code>tasks</code> file:</p>
+
+<pre>
+$ sudo /bin/sh	# start a new shell
+# cd /sys/fs/cgroup/memory/busybox
+# echo $$ &gt;&gt; tasks
+</pre>
+
+<h4>4. Test it</h4>
+
+<p>Now, an attempt to load more than 7 MB of data into memory will fail:</p>
+
+<pre>
+# toomuch=$(head -c 7500000 /dev/urandom)
+Killed
+$
+</pre>
+
+<p>Our process was killed by the kernel as it ran out of memory limits defined in the cgroup.</p>
+
+<p>The process ID was removed from the cgroup automatically:</p>
+
+<pre>
+$ cat /sys/fs/cgroup/memory/busybox/tasks
+$
+</pre>
+
+<h4>5. Clean up</h4>
+
+<p>Afterwards, don’t forget to remove the cgroup we created:</p>
+
+<pre>
+$ sudo rmdir /sys/fs/cgroup/memory/busybox
+</pre>
+
+<p>For more information about cgroups see the <a href="https://man7.org/linux/man-pages/man7/cgroups.7.html" target="_blank">manual page</a>.</p>
+
+<div class="note">
+<h4>Cgroups in Docker</h4>
+
+<p>To see cgroups in action simply start a Docker container with limited memory of 7 MB:</p>
+
+<pre>
+$ docker run --memory=7m --rm -d busybox
+&lt;container-id&gt;
+</pre>
+
+<p>Now, the memory control group is limited to 7 MB (7340032 bytes) for the container:</p>
+
+<pre>
+$ cd /sys/fs/cgroup/memory/docker/
+$ cat &lt;container-id&gt;/memory.limit_in_bytes
+7340032
+</pre>
+</div>
+
+<p>Control groups are the final piece of the puzzle. Having seen it, we can put it all together to run full-featured containers on our own.</p>
+
+<h3>Putting it all together</h3>
+
+<p>Technically seen, containers are baked by chroot, namespaces, and control groups.</p>
+
+<p class="definition">Containers = chroot + namespaces + cgroups.</p>
+
+<p>Let’s put them together to run a BusyBox container via a simple shell script.</p>
+
+<p>First comes a hashbang and constant definition:</p>
+
+<pre>
+#!/bin/sh
+memoryLimit=7340032	# 7 MB
+</pre>
+
+<p>The ID of the wrapping process will be used to identify the container runtime:</p>
+
+<pre>
+pid=$$
+</pre>
+
+<p>The container will live in the <code>/tmp</code> directory:</p>
+
+<pre>
+mkdir -p /tmp/container/$pid
+cd /tmp/container/$pid
+</pre>
+
+<p>The container filesystem is of the simplest kind:</p>
+
+<pre>
+mkdir -p bin dev etc proc sys
+</pre>
+
+<p>BusyBox will provide all tools:</p>
+
+<pre>
+cp ~/Downloads/busybox bin
+chmod +x bin/busybox
+</pre>
+
+<p>Processes are mounted:</p>
+
+<pre>
+sudo mount -t proc /proc proc
+</pre>
+
+<p>Memory limits are set via control groups:</p>
+
+<pre>
+cgDir=/sys/fs/cgroup/memory/container$pid
+sudo mkdir $cgDir
+sudo su -c &quot;echo $pid &gt; $cgDir/tasks&quot;
+sudo su -c &quot;echo $memoryLimit &gt; $cgDir/memory.limit_in_bytes&quot;
+</pre>
+
+<p>To test the memory limit we can also mount <code>/dev/urandom</code> to read random data inside the container:</p>
+
+<pre>
+touch dev/urandom
+sudo mount --bind /dev/urandom dev/urandom
+</pre>
+
+<p>Let’s start the container with help from chroot and namespaces:</p>
+
+<pre>
+sudo unshare -f -p --mount-proc=$PWD/proc \
+    chroot . /bin/busybox sh
+</pre>
+
+<p>After this command is executed, the newly created process overtakes the control flow. The following lines are executed first when the container process finishes.</p>
+
+<p>To clean up control groups, we must add the process into the parent group first, and then we can remove the whole group directory:</p>
+
+<pre>
+sudo su -c &quot;echo $pid &gt; $cgDir/../tasks&quot;
+sudo rmdir $cgDir
+</pre>
+
+<p>Finally, we can unmount devices and delete the container for good:</p>
+
+<pre>
+sudo umount dev/urandom
+sudo umount proc
+rm -rf /tmp/container/$pid
+</pre>
+
+<p>You can find the whole source code for the shell script above on <a href="https://github.com/ttulka/blog-code-samples/tree/master/containers-under-the-hood" target="_blank">my GitHub</a>.</p>
+
+<p>By executing the script you can do something useful inside the container:</p>
+
+<pre>
+$ sudo ./container.sh
+/ #
+/ # busybox echo Hello from a container!
+Hello from a container!
+/ # busybox ls /
+bin   dev   etc   proc  sys
+/ # data=$(busybox head -c 7500000 /dev/urandom)
+Killed
+$
+</pre>
+
+<p>Congratulations, you have just killed your own full-featured container!</p>
+
+<p>Now, you can uninstall Docker from your laptop and start writing your own “Docker” in whatever language you like.</p>
+
+<h2>Container images</h2>
+
+<p>Creating containers manually is a simple yet exhausting process. That’s why we have container runtimes to do the heavy lifting for you. There are a few specifications of container runtimes out there; we have already talked about <a href="https://github.com/containerd/containerd" target="_blank">containerd</a> that implements the popular OCI specification.</p>
+
+<p>One great benefit of containers for application deployment is <em>reproducibility</em>. This means a container is always the same when created and destroyed again and again. We need some kind of description of the container to achieve reproducibility. We call these descriptions <em>container images</em> or just images for short.</p>
+
+<p>Images are blueprints for creating containers. Image format must be understood by the runtime so it can create reproducible containers by following instructions described in the image.</p>
+
+<p class="definition">An image is a way of packaging an application in order to run as a container.</p>
+
+<p>For example, OCI images are just tarballs with a bit of configuration. Simple as that. Pack a root filesystem directory structure into a TAR package and configure it with parameters such as entry point command in a short JSON file. Easy as that.</p>
+
+<p>We won’t delve deeper into images in this place as they exist on the higher level of abstraction behind the world of container primitives we focus on in this text.</p>
+
+<p>For more information about images, you can read my article on <a href="/building-container-images-without-dockerfile" target="_blank">building container images from scratch</a>.</p>
+
+<h2>Conclusion</h2>
+
+<p>Containers are an amazing and surprisingly simple piece of technology.</p>
+
+<p>Under the hood, they are made of three Linux primitives: chroot, namespaces, and cgroups. We have seen all of them in action in this text.</p>
+
+<p>Images are application packages that a container runtime understands. We have just talked about the OCI image format specification.</p>
+
+<p>Key takeaways are:</p>
+
+<ul>
+  <li>Containers are a way of executing processes in isolation.</li>
+  <li>Images are a way of packaging an application in order to run as a container.</li>
+</ul>
+
+<p>Thank you for joining me on the exciting journey into the heart of containers. I hope you have gained a deeper overview of what containers are and how they work.</p>
+
+<p>Happy containerizing!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Docker" class="tag">Docker</a>
+    
+    <a href="/tag/Containers" class="tag">Containers</a>
+    
+    <a href="/tag/DevOps" class="tag">DevOps</a>
+    
+    <a href="/tag/Linux" class="tag">Linux</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/containers-under-the-hood.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

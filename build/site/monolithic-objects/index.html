@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Monolithic Objects</title>
+    <meta name="description" content="Don't model the real world, model your business!">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Monolithic Objects by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/monolithic-objects" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Monolithic Objects by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Monolithic Objects</h1>
+    <p class="blog-post__meta">2020-09-28 by Tomas Tulka</p>
+    <p>Don't model the real world, model your business!</p>
+    <hr>
+    <p>Even the largest system starts as a small bunch of objects. The design of these objects are mirrored throughout the entire system. That is, it’s very important to model the system correctly from the beginning, from the very first object.</p>
+
+<p>In this post, we will use the <em>strategic domain-driven design</em> to develop a simple system. We will show typical mistakes and pitfalls to be avoided and improve it step by step on the way.</p>
+
+<p>We will demonstrate how easy it is to fall into the trap of monolithic thinking. We will see that even the smallest <em>monolithic object</em> has a great impact on the entire system, and that every <em>big ball of mud</em> starts as a small ball of a few muddy objects.</p>
+
+<h2>Domain, entities, repositories and services</h2>
+
+<p>Let’s design a simple booking system “Rent a&nbsp;car”. We typically begin with listing types of entities included in the system. We can think of <em>entities</em>:</p>
+<ul>
+  <li>Customers</li>
+  <li>Vehicles</li>
+  <li>Bookings</li>
+</ul>
+<p>The Customer entity has a first and last name, a customer ID, and maybe some contact information such as an e-mail address:</p>
+<pre class="brush: java">
+class Customer {
+
+  Long id;
+  String firstName;
+  String lastName;
+  String email;
+}
+</pre>
+
+<p>The Vehicle entity has an ID, a type, a color and an availability flag telling us if the Vehicle is for rent or not (under repair, discarded, etc.):</p>
+<pre class="brush: java">
+class Vehicle {
+
+  Long id;
+  String type;
+  String color;
+  Boolean available;
+}
+</pre>
+
+<p>Now, the Booking entity maps a Vehicle with a Customer for some time period:</p>
+<pre class="brush: java">
+class Booking {
+
+  Long id;
+  Date from;
+  Date until;
+  Vehicle vehicle;
+  Customer customer;
+}
+</pre>
+
+<p>Easy. Having the domain model, we can consider a <a href="/what-is-a-repository"><em>repository</em></a> to each entity:</p>
+<pre class="brush: java">
+interface CustomerRepository {
+
+  Customer findById(Long id);
+
+  Collection&lt;Customer&gt; findAll();
+
+  void save(Customer customer);
+}
+
+interface VehicleRepository {
+
+  Vehicle findById(Long id);
+
+  Collection&lt;Vehicle&gt; findAll();
+
+  void save(Vehicle vehicle);
+}
+
+interface BookingRepository {
+
+  Booking findById(Long id);
+
+  Collection&lt;Booking&gt; findAll();
+
+  void save(Booking booking);
+}
+</pre>
+
+<p>Straight-forward. <em>Services</em> and <em>controllers</em> pretty much copy functionality of the repositories.</p>
+
+<h2>Code organization</h2>
+
+<p>For the start, we chose a <em>layered</em> structure of our codebase:</p>
+<pre>
+controllers/
+    BookingController.java
+    CustomerController.java
+    VehicleController.java
+domain/
+    Booking.java
+    Customer.java
+    Vehicle.java
+repositories/
+    BookingRepository.java
+    CustomerRepository.java
+    VehicleRepository.java
+services/
+    BookingService.java
+    CustomerService.java
+    VehicleService.java
+</pre>
+
+<p>Layered architecture partitions code by technical concerns. It’s the easiest way of structuring code, working just fine for the start and for small codebases. Usually, it becomes suboptimal as the system grows.</p>
+
+<h2>Problem with boundaries</h2>
+
+<p>Things become interesting when we start thinking about the Booking service, especially about a method for creating a new Booking.</p>
+<pre class="brush: java">
+class BookingService {
+
+  private BookingRepository repo;
+
+  public Booking findById(Long id) {
+    return repo.findById(id);
+  }
+
+  Collection&lt;Booking&gt; findAll() {
+    return repo.findAll();
+  }
+
+  void create(???) {
+    ???
+  }
+}
+</pre>
+
+<p>Obviously, we need instances of the Customer and Vehicle the Booking is created for. How do we get them? There are several options on offer...</p>
+
+<h3>Mighty controller</h3>
+
+<p>The first option would be to load them from the controller and pass them as a parameter to the service:</p>
+<pre class="brush: java">
+@RestController
+class BookingController {
+
+  private BookingService bookingService;
+  private CustomerService customerService;
+  private VehicleService vehicleService;
+
+  @PostMapping
+  void createBooking(Long customerId, Long vehicleId) {
+    var customer = customerService.findById(customerId);
+    var vehicle = vehicleService.findById(vehicleId);
+    bookingService.create(customer, vehicle);
+  }
+  ...
+}
+</pre>
+
+<p>This will work, the service gets what it needs, everything’s fine. The problem with this approach is that it puts too much responsibility on the controller. A controller has a single job: processing user input (request) into output (response). Any orchestration is not a job for a controller and it should not be. Consider another controller of a command-line application, do we want to duplicate this behavior there? Probably not, because it is not a controller-specific job and has no place in the controller code, or at least the resulting fragmentation of domain logic is not ideal.</p>
+
+<h3>Broken encapsulation</h3>
+
+<p>Saying that, we can try the second side and use repositories from within the service:</p>
+<pre class="brush: java">
+class BookingService {
+
+  private BookingRepository bookingRepo;
+  private CustomerRepository customerRepo;
+  private VehicleRepository vehicleRepo;
+  ...
+
+  void create(Long customerId, Long vehicleId);
+    var customer = customerRepo.findById(customerId);
+    var vehicle = vehicleRepo.findById(vehicleId);
+    if (vehicle.available()) {
+        bookingRepo.save(new Booking(customer, vehicle));
+    }
+  }
+}
+</pre>
+
+<p>Well, this will work, too. The problem here is that a repository is a mere implementation detail of a particular service. Using a repository of another service means breaking the encapsulation of that service. What’s more, a service usually implements some business rule upon the data. Calling the repository directly we skip those rules entirely and can potentially break business invariants, which leads to working with invalid objects. This is definitely not what we want.</p>
+
+<h3>Coupled services</h3>
+
+<p>There is one more option: calling services from a service:</p>
+<pre class="brush: java">
+class BookingService {
+
+  private BookingRepository bookingRepo;
+
+  private CustomerService customerService;
+  private VehicleService vehicleService;
+  ...
+
+  void create(Long customerId, Long vehicleId);
+    var customer = customerService.findById(customerId);
+    var vehicle = vehicleService.findById(vehicleId);
+    if (vehicle.available()) {
+      bookingRepo.save(new Booking(customer, vehicle));
+    }
+  }
+}
+</pre>
+
+<p>We have fixed all the previous problems, this solution seems to be the best one. At least the best in the current settings. There is still one issue with this approach: it’s desperately <em>monolithic</em>.</p>
+
+<p><strong>Service should be autonomous</strong>, that is, a service must have all it needs to carry out a particular business capability. Unfortunately, this is not our case: the Booking service needs other services to create a new Booking. This is, due to an incorrect <em>cohesion</em>, the services are <em>tightly coupled</em> to each other, which is always a sign of a monolithic design. With a setting like that, we can’t talk about services anymore.</p>
+
+<p>You can raise an objection saying that the whole system is a service, but that’s just not true. Because a lot of modeled information is actually not necessary for the Booking. For instance, a customer's name or vehicle’s color are super redundant in the booking process, they do belong to the Customer service and Vehicle service, because the application we develop is a system of multiple services rather than a single service. The problem is that our objects are modeled in a logically monolithic way.</p>
+
+<h3>Are we there yet?</h3>
+
+<p>An obvious fix would be to remove redundant entities and replace them with mere references:</p>
+<pre class="brush: java">
+class Booking {
+  ...
+  Long vehicleId;
+  Long customerId;
+}
+</pre>
+
+<p>In a real development, using <em>domain primitives</em> such as <code>VehicleId</code> and <code>CustomerId</code> objects rather than Longs would create much more secure code. For sake of simplicity we stick with <code>Long</code> here.</p>
+
+<p>We have made the Booking entity independent, unfortunately, this doesn’t help us much further, because the Availability information from the Vehicle is still needed in the Booking service. We’re trapped and there is no way out!</p>
+<pre class="brush: java">
+void create(Long customerId, Long vehicleId);
+  var available = ???
+  if (available) {
+     bookingRepo.save(new Booking(customerId, vehicleId));
+  }
+}
+</pre>
+
+<h2>Truly domain-driven</h2>
+
+<p>The tricky part of designing a service is not to fall in the trap of modeling as the real world. <strong>Business is just a specialized and very concrete subset of the real world with special rules and different meanings</strong>.</p>
+
+<p>Let’s think about the concept of Availability. In the real world, it belongs naturally to the Vehicle entity. In our business domain, however, there is no meaning of Availability in the Vehicle service whatsoever. Availability has a meaning only in the Booking service, this is, it truly belongs to the Booking service:</p>
+<pre class="brush: java">
+class Availability {
+
+  Long vehicleId;
+  Boolean available;
+}
+</pre>
+
+<h2>Explicit boundaries</h2>
+
+<p>Now the Booking service has everything it needs to create a new Booking without asking another service for additional information. All services can be now developed and deployed independently. We can make their boundaries explicit by organizing code into domain specific packages:</p>
+<pre>
+booking/
+    controllers/
+        BookingController.java
+    domain/
+        Availability.java
+        Booking.java
+    repositories/
+        AvailabilityRepository.java
+        BookingRepository.java
+    services/
+        BookingService.java
+customer/
+    controllers/
+        CustomerController.java
+    domain/
+        Customer.java
+    repositories/
+        CustomerRepository.java
+    services/
+        CustomerService.java
+vehicle/
+    controllers/
+        VehicleController.java
+    domain/
+        Vehicle.java
+    repositories/
+        VehicleRepository.java
+    services/
+        VehicleService.java
+</pre>
+
+<p>Putting the same domain concepts together made our code much clearer. Technical packages seem to be no more necessary, we can get rid of them completely:</p>
+<pre>
+booking/
+    Availability.java
+    AvailabilityRepository.java
+    Booking.java
+    BookingController.java
+    BookingRepository.java
+    BookingService.java
+customer/
+    Customer.java
+    CustomerController.java
+    CustomerRepository.java
+    CustomerService.java
+vehicle/
+    Vehicle.java
+    VehicleController.java
+    VehicleRepository.java
+    VehicleService.java
+</pre>
+
+<h3>Exposed behavior</h3>
+
+<p>We have successfully broken our small monolith into decoupled services with explicit boundaries. We can go even further by exposing just specific behavior instead of a single monolithic service API.</p>
+
+<p>What is it good for? Consider a client interested in only listing actual Bookings. Why should such a client depend on the whole service? Better would be to cut the use-case off the still-pretty-monolithic service and expose it explicitly. Same for all other use-cases:</p>
+<pre>
+booking/
+    CreateBooking.java
+    FindAllBookings.java
+    FindBooking.java
+    ...
+</pre>
+
+<p>The use-case driven API can be implemented entirely by the Booking service class or by multiple independent classes. Clients are not forced to depend on things they don’t need. This concept is known as the <em>Interface segregation principle</em>.</p>
+
+<h2>Conclusion</h2>
+
+<p>Business usually differs from the real world. <strong>Business represents just a specific and very opinionated view of the real world</strong>. These differences must be understood and modeled in the code. This is the essence of domain-driven design.</p>
+
+<p>Typical mistake is to model a real world entirely and try to fit it into the business afterwards. Such an approach often leads to wrong boundaries and tightly coupled code.</p>
+
+<p>Business-oriented thinking must be applied from the very beginning, from the very first objects. Monolithic systems are made of monolithically designed objects. <strong>The overall system architecture reflects objects it is composed of</strong>.</p>
+
+<p><strong>Behavior-driven</strong> rather than entities-driven design is a good strategy to avoid typical pitfalls of monolithic objects. All in all, objects are about behavior, not about data.</p>
+
+<p>Happy objecting!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/OOP" class="tag">OOP</a>
+    
+    <a href="/tag/SOA" class="tag">SOA</a>
+    
+    <a href="/tag/Monolith" class="tag">Monolith</a>
+    
+    <a href="/tag/Software Architecture" class="tag">Software Architecture</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/monolithic-objects.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

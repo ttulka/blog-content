@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>ActiveMQ + JAAS Custom Login Module</title>
+    <meta name="description" content="It is pretty easy to find how to run built-in JAAS plugin, but what shall you do when you want to your own JAAS LoginModule implementation for ActiveMQ broker authentication (for instance when you have the module already written)?">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="ActiveMQ + JAAS Custom Login Module by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/activemq-jaas-custom-login-module" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="ActiveMQ + JAAS Custom Login Module by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">ActiveMQ + JAAS Custom Login Module</h1>
+    <p class="blog-post__meta">2014-02-21 by Tomas Tulka</p>
+    <p>It is pretty easy to find how to run built-in JAAS plugin, but what shall you do when you want to your own JAAS LoginModule implementation for ActiveMQ broker authentication (for instance when you have the module already written)?</p>
+    <hr>
+    <h2>ActiveMQ + JAAS <br /></h2>
+<p>ActiveMQ messaging broker has several options how to deal with authentication and authorization. </p>
+<p>The easiest one is to use the <code>simpleAuthenticationPlugin</code>, but it is not very flexible.</p>
+<p>Another option is the <code>jaasAuthenticationPlugin </code>using
+ two property files (users and groups), quite effective solution but
+still very clumsy when you consider that all the information about users
+ and groups are stored into files.</p>
+<p>Following text will describe how to use customer-defined JAAS LoginModule as an ActiveMQ plugin.</p>
+<h2>JAAS Custom Login Module for ActiveMQ</h2>
+<h3>Authentication</h3>
+<p>Once we have developed a JAAS login module we can build it and pack as a JAR library. To use it in the broker we need to put the JAR on the classpath of a running ActiveMQ instance. There are two ways how to do it:</p>
+<ol>
+<li> Copy the JAR into lib folder of the broker -<code>ACTIVEMQ_HOME/lib/extra</code> or <code>ACTIVEMQ_HOME/lib/optional</code></li>
+<li>Put a path to the JAR to the java classpath of the broker - edit <code>ACTIVEMQ_HOME/bin/activemq</code> (Unix) or <code>ACTIVEMQ_HOME/bin/activemq.bat</code> (Win) and extend the <code>ACTIVEMQ_CLASSPATH</code> parameter:<br />
+<ul>
+<li><code>ACTIVEMQ_CLASSPATH=&quot;${ACTIVEMQ_CLASSPATH};/var/lib/auth-test.jar&quot;</code> (Unix)</li>
+<li><code>set ACTIVEMQ_CLASSPATH=%ACTIVEMQ_CONF%;%ACTIVEMQ_BASE%/conf;%ACTIVEMQ_HOME%/conf;%ACTIVEMQ_CLASSPATH%;c:/Develop/Java/lib/auth-test.jar</code> (Win)</li>
+</ul>
+<ul> </ul>
+</li>
+</ol>
+<h4>
+
+Broker Setting to use the Plugin
+</h4>
+<p>Edit the <code>ACTIVEMQ_HOME/conf/login.config</code> property file to use the plugin as following (consider the plugin class is <code>cz.net21.ActiveMqLoginModule</code>):</p>
+<p> </p>
+<pre class="brush: plain">MyLoginModule {
+  cz.net21.ActiveMqLoginModule&nbsp; required debug=true;
+};
+</pre>
+<p> </p>
+<p>Edit the <code>ACTIVEMQ_HOME/conf/activemq.xml</code> configuration file as following:</p>
+<p> </p>
+<pre class="brush: xml">&lt;broker … &gt;
+  …
+  &lt;plugins&gt;
+    &lt;jaasAuthenticationPlugin configuration="MyLoginModule" /&gt;
+  …
+  &lt;/plugins&gt;
+  …
+&lt;/broker&gt;
+</pre>
+<p> </p>
+<h4>Running the java code</h4>
+<p>Now we can run the java to see that the JAAS plugin is working:</p>
+<p> </p>
+<pre class="brush: java">ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("tcp://localhost:61616");
+Connection connection = connectionFactory.createConnection(username, password);
+connection.start();
+</pre>
+<p> </p>
+<p>If the method <code>login()</code> from the module class <code>cz.net21.ActiveMqLoginModule</code> returns <em>false </em>for added credentials, the code will return by en exception:</p>
+<pre class="brush: plain">java.lang.SecurityException: User name [testuser] or password is invalid.
+Caused by: javax.security.auth.login.LoginException: Login Failure: all modules ignored</pre>
+<h3>Authorization</h3>
+<p>In this part we will look at a simple way how to authorize an user for broker's resources (queues/topics).</p>
+<p>Via <code>authorizationPlugin </code>we can setup all the rights for queues/topics and users groups. <br /></p>
+<p> </p>
+<pre class="brush: xml">&lt;authorizationPlugin&gt;
+  &lt;map&gt;
+    &lt;authorizationMap&gt;
+      &lt;authorizationEntries&gt;
+        &lt;authorizationEntry queue="&gt;"
+          read="admins"&nbsp; write="admins"&nbsp; admin="admins" /&gt;
+  …
+</pre>
+<p> </p>
+<p> </p>
+<p>We can leave this settings and control the access via our custom JAAS module. All we need is to add an <code>UserPrincipal </code>object for the broker user and
+a <code>GroupPrincipals </code>object  for the broker groups.</p>
+<p>Let's extend our module to consume a file with groups used in the authorizationPlugin:</p>
+<p> </p>
+<pre class="brush: xml">MyLoginModule {
+  cz.net21.ActiveMqLoginModule required
+    debug=true
+    org.apache.activemq.jaas.properties.group="groups.properties";
+};</pre>
+<p> </p>
+<p>Here we use <code>org.apache.activemq.jaas.properties.group</code>  as a name of an option and <code>groups.properties</code> as a name of the property file with a list of groups. </p>
+<p> </p>
+<pre class="brush: java">public void initialize(Subject subject, CallbackHandler handler, Map&lt;String, ?&gt; state, Map&lt;String, ?&gt; options) {
+  this.subject = subject;
+  groupsFile = options.get("org.apache.activemq.jaas.properties.group") + "";
+  …
+</pre>
+<p> </p>
+<p>But we can use for instance <code>groupListFile </code>as the name and instead of the property file use a comma-separated file with just a list of group names.</p>
+<p>We will process the file and bind the logged user with one of the groups. </p>
+<pre class="brush: java">public boolean login() throws LoginException {
+  try {
+    File f = new File(baseDir, groupsFile);
+    groups.load(new java.io.FileInputStream(f));
+  } catch (IOException e) {
+    throw new LoginException("Unable to load group properties file " + groupsFile);
+  }
+  …
+</pre>
+<p>Then we need to put the <code>UserPrincipal </code>and <code>GroupPrincipals </code>objects into the subject's principals:</p>
+<pre class="brush: java">principals.add(new UserPrincipal(user));
+principals.add(new GroupPrincipal(groupName));
+subject.getPrincipals().addAll(principals);
+</pre>
+<p>If the <code>groupName</code> match the destination we will get the access, otherwise the code will return by en exception:</p>
+<p> </p>
+<pre class="brush: plain">java.lang.SecurityException: User guest is not authorized to read from: queue://TestQ
+</pre>
+<p> </p>
+<p> <br /></p>
+<p>Congratulation, we have a JAAS plugin for authentication and authorization of ActiveMQ broker!</p>
+<h2>Appendix <br /></h2>
+<p>I am working with Java 7, ActiveMQ 5.9.0</p>
+<p>Please see the discussed code <a href="/storage/ActiveMQ_JAAS_Custom_Login_Module.zip" title="The example code">in the attachment</a>. <br /></p>
+<p><br /></p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    <a href="/tag/Java" class="tag">Java</a>
+    
+    <a href="/tag/JAAS" class="tag">JAAS</a>
+    
+    <a href="/tag/ActiveMQ" class="tag">ActiveMQ</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/activemq-jaas-custom-login-module.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

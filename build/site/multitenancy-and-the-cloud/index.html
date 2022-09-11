@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Multitenancy and the Cloud</title>
+    <meta name="description" content="Multitenancy was and still is a very popular and successful architectural pattern of the last decades. But, that is likely to change with the advent of cloud computing.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Multitenancy and the Cloud by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/multitenancy-and-the-cloud" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Multitenancy and the Cloud by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Multitenancy and the Cloud</h1>
+    <p class="blog-post__meta">2020-03-15 by Tomas Tulka</p>
+    <p>Multitenancy was and still is a very popular and successful architectural pattern of the last decades. But, that is likely to change with the advent of cloud computing.</p>
+    <hr>
+    <p>I remember well the time when hardware was expensive and uneasy to get. Waiting for weeks or even months to receive a new server I necessarily needed yesterday. Bothersome paperwork, awkward negotiations, hard-to-get approvals, and high costs. It was true pain to be avoided if possible. Multitenancy as an architectural pattern comes exactly from these circumstances. </p>
+<p>The idea is pretty simple: deploy and operate a single system supporting multiple customers. The resources are shared, adding a new customer is quick and easy. But, of course, as everything in software architecture, multitenancy has several trade-offs. The biggest one is a lot of additional complexity. <strong>Tenant isolation must be ensured on every system level</strong> from configurations to data. This is not a simple task. The code must be aware of it on all layers, which makes even simple things pretty complicated with negative impact on performance. With increasing numbers of tenants <strong>scalability can easily become an issue</strong> as well.</p>
+<p>Cloud computing as the enabler of DevOps, infrastructure automatization and containerization changed the traditional hardware provisioning. Nowadays, it is possible to spin up a new server, create a new database, or set up a new service bus within a second or even less. No more request tickets to an IT department! <strong>Hardware provisioning in the cloud became quick and easy, providing a solution for the problem multitenancy originally addressed</strong>.</p>
+<h2>Multi- vs Single-Tenancy</h2>
+<p>Compare a single multi-tenant system with multiple single-tenant systems:</p>
+<p align="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/multi-vs-single-tenant-systems.png" alt="Multi- vs Single-Tenancy" /></p>
+<p>In his book <a href="https://leanpub.com/cloudstrategy" target="_blank">Cloud Strategy</a>, Gregor Hohpe compares these two approaches to <strong>an apartment building vs. single-family homes</strong>. Such a mental model helps us understand the differences in the approaches.</p>
+<h3>Development</h3>
+<p>It is definitely way simple to project a single-family house rather than a big apartment building. This is the main drawback of multi-tenant systems as multitenancy aspects leak deep into the structure and brings great complexity which slows development down and makes it more expensive and exhausting.</p>
+<h3>Building and Deployment</h3>
+<p>Having a construction plan and building material should mean no big difference in the building process. But, big apartment buildings tend to be unique and built ad hoc and unsystematic with project changes and adjustments during the construction work, while small family houses are uniform making them a perfect match for automatization of the building process. <strong>Automatization of everything</strong> is an important mindset-shift highly encouraged by the cloud services.</p>
+<h3>Maintenance</h3>
+<p>If you ever lived in an apartment house, you know how difficult and costly an accident can be. Old big buildings tend to resist change while small houses are easy to be rebuilt from the ground. Finding a bug, implementing a new feature, data migration, a design or functionality change, those activities are very hard in complex systems.</p>
+<h3>Efficiency and Scalability</h3>
+<p>While single-family houses can be built quickly and easily on demand, planning an apartment building must take into account the desired amount of tenants in advance: when the house is only half occupied it’s very inefficient to be run, the heating, elevator, lighting must still be taken care of and so on. Another trouble comes when the capacity is exceeded. <strong>Multi-tenant systems are based on vertical scaling</strong> with its well-known limitations. Even adopting horizontal scaling could be problematic with multi-tenant systems: Consider an extreme case where a feature is implemented as a serverless function (Function-as-a-Service). Because everything in a multi-tenant system is shared, <strong>constraints and limits are shared</strong> as well. A serverless function allows for example one thousand concurrent executions per second. With one hundred tenants accommodated in the system it makes theoretically only ten executions per second for a tenant, which could be just too little.</p>
+<h3>Operations and Management</h3>
+<p>It is probably easier to manage one building consisting one thousand apartments than to deal with one thousand small houses. To accommodate a tenant into an existing apartment will be always easier than to build a brand-new house for him. Depends on discipline and maturity of the automatization process. As the <strong>multiple single-tenant approach moves the multi-tenant complexity from development to operations</strong>, demands on the system administrators can grow. The key here is a good automatization of literally everything and adopting the DevOps mindset: divide the work among dev and ops people, bring them together and share the responsibility for the product within the team.</p>
+<h2>Conclusion</h2>
+<p>Cloud computing doesn’t mean the definite end of the multitenancy architectural pattern, but it does offer an alternative solution with a promise of reducing effort in development by shifting the complexity into operations. This is not thinkable without mature automatization and clean team responsibility.</p>
+<p>But, there are valid use-cases for multitenancy as well as there are valid use-cases for computing outside the cloud.</p>
+<p>Happy accommodating!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Cloud" class="tag">Cloud</a>
+    
+    <a href="/tag/Software Architecture" class="tag">Software Architecture</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/multitenancy-and-the-cloud.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

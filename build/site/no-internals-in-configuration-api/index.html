@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>No Internals in Configuration API</title>
+    <meta name="description" content="Configuration is part of the application API, so the same rules apply to it: no leak of implementation detail.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="No Internals in Configuration API by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/no-internals-in-configuration-api" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="No Internals in Configuration API by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">No Internals in Configuration API</h1>
+    <p class="blog-post__meta">2020-05-23 by Tomas Tulka</p>
+    <p>Configuration is part of the application API, so the same rules apply to it: no leak of implementation detail.</p>
+    <hr>
+    <p>Unfortunately, I see breaking this rule pretty often. I guess this is because the basic premise is not as obvious as it should be: <strong>configuration is an API</strong>.</p>
+
+<p>As an example, consider a Java application using an LDAP-based authentication implemented with Spring framework. Typically, one has to provide settings of the connection to the external LDAP server in the runtime environment:</p>
+
+<pre>
+spring.ldap.urls=ldap://myserver:1234
+spring.ldap.username=admin
+spring.ldap.password=secret
+</pre>
+
+<p>Because the LDAP server is not part of the application, the configuration is expected to be set by the user. This is where apparent internals become externals.<p>
+
+<p>If the user uses the same configuration properties the implementation details leak into the API. Technically, this will work fine, but the trouble comes later. Consider, for example, that the application gets rid of Spring completely and starts using a new fancy technology instead:</p>
+
+<pre>
+quarkus.security.ldap.dir-context.url=ldap://myserver:1234
+quarkus.security.ldap.dir-context.principal=admin
+quarkus.security.ldap.dir-context.password=secret
+</pre>
+
+<p>Now what? We could just use the new properties from now on, but this will break the old versions already installed. Breaking the contract is not very nice to the users, <strong>APIs should stay forever</strong>. Introducing a breaking change always requires good communication with customers, brings additional work and has a negative impact on user experience.</p>
+
+<p>We can implement a migration mechanism setting the new properties based on the old ones. But this will increase the complexity of the system and make the code maintenance more expensive. It’s always better to make things right from the beginning:</p>
+
+<pre>
+myapp.ldap.url=ldap://myserver:1234
+myapp.ldap.username=admin
+myapp.ldap.password=secret
+</pre>
+
+<p>Here, <strong>no implementation concerns are exposed to the configuration API</strong>, the user doesn’t know (and doesn’t care) what kind of technology or framework is used - those all are just implementation details and must never leak into the API.</p>
+
+<p>The application prefix <code>myapp</code> will further ensure no future collisions with other internal configurations.</p>
+
+<p>The internals can be then configured based on the application properties (e.g. with Spring):</p>
+
+<pre>
+spring.ldap.urls=${myapp.ldap.url}
+spring.ldap.username=${myapp.ldap.username}
+spring.ldap.password=${myapp.ldap.password}
+</pre>
+
+<p>This approach leads to a solid configuration API, with clarity of application-specific property names, cheap maintenance, no potential breaking changes and great user experience.</p>
+
+<p>Happy configuring!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/API Design" class="tag">API Design</a>
+    
+    <a href="/tag/Deployment" class="tag">Deployment</a>
+    
+    <a href="/tag/Software Architecture" class="tag">Software Architecture</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/no-internals-in-configuration-api.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

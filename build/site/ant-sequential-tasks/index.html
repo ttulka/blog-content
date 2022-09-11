@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Ant Sequential Tasks</title>
+    <meta name="description" content="This article will show you how to implement an Ant task which consume a sequence of sub-task and call them with a parameter of the result from the execution.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Ant Sequential Tasks by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/ant-sequential-tasks" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Ant Sequential Tasks by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Ant Sequential Tasks</h1>
+    <p class="blog-post__meta">2016-11-15 by Tomas Tulka</p>
+    <p>This article will show you how to implement an Ant task which consume a sequence of sub-task and call them with a parameter of the result from the execution.</p>
+    <hr>
+    <p>As an example we can consider a task <strong>taking a path to a directory</strong> as a parameter, <strong>fetching files</strong> in the directory and <strong>running a sequence of sub-task for each file</strong>.&nbsp;</p>
+<p>The task will be implemented as a <strong>Java library</strong>.</p>
+
+<p>Considering the example, we will have in our Ant script something like:</p>
+<pre>&lt;fetch-files path="/Windows" suffix=".exe"&gt;
+    &lt;sequential&gt;
+        &lt;echo&gt;My file print: @{file}&lt;/echo&gt;
+
+        &lt;antcall target="process-file"&gt;
+            &lt;param name="filename" value="@{file}" /&gt;
+        &lt;/antcall&gt;
+    &lt;/sequential&gt;
+&lt;/fetch-files&gt;
+</pre>
+<p>This should process all the <code>.exe</code> files in the <code>/Windows</code> directory and print the name of the file before processing.&nbsp;</p>
+<h2>Implementation in Java&nbsp;</h2>
+<p>Let's create a new Maven project, all we need is a dependency to the Ant API:</p>
+<pre class="brush: xml">&lt;dependency&gt;
+    &lt;groupId&gt;org.apache.ant&lt;/groupId&gt;
+    &lt;artifactId&gt;ant&lt;/artifactId&gt;
+    &lt;version&gt;1.9.7&lt;/version&gt;
+&lt;/dependency&gt;
+</pre>
+<h3>Sequential Task&nbsp;</h3>
+<p>First of all we will create an abstract class which allows us to put the <code>&lt;sequential&gt;</code> part into the task:</p>
+<pre class="brush: java">abstract class SequentialTask extends Task {
+
+    private MacroDef macroDef;
+    private Target owningTarget;
+
+    abstract String getAttributeName();
+
+    @Override
+    public void setOwningTarget(Target owningTarget) {
+        this.owningTarget = owningTarget;
+    }
+
+    public Object createSequential() {
+        macroDef = new MacroDef();
+        macroDef.setProject(getProject());
+
+        MacroDef.Attribute attribute = new MacroDef.Attribute();
+        attribute.setName(getAttributeName());
+        macroDef.addConfiguredAttribute(attribute);
+
+        return macroDef.createSequential();
+    }
+
+    void executeSequential(String attrValue) {
+        MacroInstance instance = new MacroInstance();
+        instance.setProject(getProject());
+        instance.setOwningTarget(owningTarget);
+        instance.setMacroDef(macroDef);
+        instance.setDynamicAttribute(getAttributeName(), attrValue);
+        instance.execute();
+    }
+}</pre>
+<p>All the task exending the class must define the declared <code>getAttributeName()</code> method which returns the name of the attribute (<code>&quot;file&quot;</code> in our example).</p>
+<p>Then we cann call the method <code>executeSequential(String attrValue)</code> for each item in the task result.</p>
+<h3>Fetching Files Task&nbsp;</h3>
+<p>Our concrete task implementation could look like:</p>
+<pre class="brush: java">public class FetchFilesTask extends SequentialTask {
+
+    private static final String ATTR_NAME = "file";
+
+    private String path;
+    private String suffix;
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+
+    public void setSuffix(String suffix) {
+        this.suffix = suffix;
+    }
+
+    @Override
+    String getAttributeName() {
+        return ATTR_NAME;
+    }
+
+    @Override
+    public void execute() {
+        if (path == null || path.trim().isEmpty()) {
+            throw new BuildException("Parameter 'path' must be specified.");
+        }
+
+        List&lt;String&gt; filesList = getFilesList(Paths.get(path), suffix);
+
+        for (String file : filesList) {
+            executeSequential(file.toString());
+        }
+    }
+
+    List&lt;String&gt; getFilesList(Path sourcePath, String suffix) {
+        final List&lt;String&gt; toReturn = new ArrayList&lt;&gt;();
+
+        try (DirectoryStream&lt;Path&gt; stream = Files.newDirectoryStream(sourcePath)) {
+            for (Path file: stream) {
+                if (Files.isRegularFile(file)) {
+                    if (suffix == null || file.toString().endsWith(suffix)) {
+                        toReturn.add(file.toString());
+                    }
+                }
+            }
+        }
+        catch (IOException | DirectoryIteratorException e) {
+            throw new BuildException("Error by reading '" + sourcePath + "'.", e);
+        }
+        return toReturn;
+    }
+}</pre>
+<p>The class extends the <code>SequentialTask</code>, defines its abstract method and use the <code>executeSequential</code> method. </p>
+<p>Additionaly defines the class two task parameter&nbsp;<code>path</code> and&nbsp;<code>suffix</code> by the defining the <em>getters </em>for them.&nbsp;</p>
+<h2>Using the task in an Ant script</h2>
+<p>To call the task in an Ant script as showned in the example we have to provide the JAR library and define the task by its class:</p>
+<pre class="brush: xml">&lt;taskdef name="fetch-files" classname="cz.net21.ttulka.ant.FetchFilesTask" classpath="AntTasks-1.0.jar" /&gt;</pre>
+<p> </p>
+<p>You can download the <a href="/storage/AntTasks-1.0.jar">compiled JAR library</a> or whole <a href="https://github.com/ttulka/ant-sequential-tasks">project sources</a>.</p>
+<p>Have fun!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    <a href="/tag/Java" class="tag">Java</a>
+    
+    <a href="/tag/Ant" class="tag">Ant</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/ant-sequential-tasks.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

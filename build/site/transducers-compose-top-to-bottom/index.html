@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Transducers Compose Top-to-Bottom</title>
+    <meta name="description" content="Let's code some transducers and take a deeper look at how they work under the hood to see differences from pipes.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Transducers Compose Top-to-Bottom by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/transducers-compose-top-to-bottom" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Transducers Compose Top-to-Bottom by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Transducers Compose Top-to-Bottom</h1>
+    <p class="blog-post__meta">2019-01-22 by Tomas Tulka</p>
+    <p>Let's code some transducers and take a deeper look at how they work under the hood to see differences from pipes.</p>
+    <hr>
+    <p>Transducers are composable reducers. A transducer takes a reducer and returns another reducer. Transducers compose via simple function composition. But, there is a tiny difference between function and transducer composition: functions compose bottom-to-top while transducers top-to-bottom.</p>
+
+<p class="note"><span class="title">Disclaimer:</span> This text presumes basic knowledge of <a href="https://medium.com/javascript-scene/transducers-efficient-data-processing-pipelines-in-javascript-7985330fe73d" target="_blank" title="Transducers">transducers</a> and <a href="https://medium.com/javascript-scene/curry-and-function-composition-2c208d774983" target="_blank" title="Function composition">function composition</a>.</p>
+
+<h2>Function Composition</h2>
+
+<p>First of all we discuss the basics: <em>function composition</em>.</p>
+<p>Function composition is the process of chaining the output of a function to the input of another function. In algebra, composition of functions <code>f</code> and <code>g</code> means <code>(f&nbsp;&sdot;&nbsp;g)(x)&nbsp;=&nbsp;f(g(x))</code>.</p>
+<p>In JavaScript we can write:</p>
+<pre class="brush: javascript">const inc = (x) =&gt; x + 1;
+const double = (x) =&gt; x * 2;
+
+const incAndDouble = (x) =&gt; double(inc(x)); // compound function
+
+incAndDouble(2); // 6
+</pre>
+<p>Of course, we can do better! Let's create a general function compose:</p>
+<pre class="brush: javascript">const compose = (...fns) =&gt; x =&gt; fns.reduceRight((y, f) =&gt; f(y), x);
+
+const incAndDouble2 = compose(double, inc);
+
+incAndDouble2(2); // 6
+</pre>
+<p>As you can see, the functions are applied from bottom-to-top as in the definition <code>(f&nbsp;&sdot;&nbsp;g)(x)&nbsp;=&nbsp;f(g(x))</code>. It means, first <code>g(x)</code> is applied and, then, the output is used as the input for <code>f()</code>. If we want a composition applying from top-to-bottom, we can do it: this kind of composition is called a <em>pipe</em>:</p>
+<pre class="brush: javascript">const pipe = (...fns) =&gt; x =&gt; fns.reduce((y, f) =&gt; f(y), x);
+
+const incAndDouble3 = pipe(inc, double);
+
+incAndDouble3(2); // 6
+</pre>
+
+<h2>Transducer Composition</h2>
+<p>Probably the most useful is the mapping transducer. Let's define it:</p>
+<pre class="brush: javascript">const map = f =&gt; step =&gt; (a, c) =&gt; step(a, f(c));
+</pre>
+<p>The <code>map</code> takes two curried parameters <code>f</code> and <code>step</code>. <code>f</code> is a mapping function and <code>step</code> is a reducer function to calculate (reduce) the result. We can peep at it with the following code:</p>
+<pre class="brush: javascript">const testReducer = map(double)((a, c)&nbsp;=&gt; console.log(c));
+[1,2,3].reduce(testReducer, 0); // prints 2, 4, 6 into the console
+</pre>
+<p>Now we can use the composite function from above:</p>
+<pre class="brush: javascript">const incAndDouble4 = compose(map(inc), map(double));
+
+const concat = (a, c) =&gt; a.concat([c]);
+
+const&nbsp;incAndDoubleReducer = incAndDouble4(concat);
+
+[1,2,3].reduce(incAndDoubleReducer, []); // 4, 6, 8
+</pre>
+<p>If you paid attention you maybe noticed one thing. Compare these two lines:</p>
+<pre class="brush: javascript">const incAndDouble2 = compose(double, inc);
+const incAndDouble4 = compose(map(inc), map(double));
+</pre>
+<p>We didn't redefine the compose function, the result remains the same, but the order of functions for the composition is the other way around. How is this possible? Let's analyse it...</p>
+<p>The composite function is pretty straight-forward: it takes a function from bottom-to-top, applies it (first to the init value <code>x</code>) and uses the output as the input for the next function. The difference between <code>double</code> and <code>map(double)</code> is, that <code>map(double)</code> returns a transducer function, not a scalar value as <code>double</code> does. This transducer function takes a parameter <code>step</code>, which is a reducer. It means, <code>f(y)</code> from the compose function is <code>transducer(reducer)</code>; after evaluating it we get a <code>step</code> reducer function, which is then used as a new input <code>y</code> for the next transducer. Well, it means those two lines above define different kinds of function:</p>
+<pre class="brush: javascript">const incAndDouble2 = compose(double, inc); &nbsp;// function (x) =&gt; x
+const incAndDouble4 = compose(map(inc), map(double)); &nbsp;// transducer (reducer) =&gt; reducer
+</pre>
+<p>Composition uses reducing in the bottom-to-top direction (<code>reduceRight</code>), the result of the composition is the top-most transducer function which contains the next (to-bottom direction) transducer's result reducer (in the <code>step</code> parameter). This next reducer is applied after the current reduction (mapping) is applied.</p>
+<p>We can write this particular composition function as:</p>
+<pre class="brush: javascript">const compose = (...reducers) =&gt; initReducer =&gt; reducers.reduceRight(
+&nbsp; &nbsp; (previousReducer, currectTransducer) =&gt; currectTransducer(previousReducer), initReducer);
+</pre>
+<p>Each reducer in the composition has a reference to the previous reducer (<code>step</code>). The final reduction starts with the top-most reducer which applies its functionality (mapping) and then executes the referenced reducer (<code>step(...)</code>). This brings the reducing in the opposite direction (top-to-bottom) from the transducers composition (bottom-to-top).</p>
+<p>We can break down our example execution as following:</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/Transducing.png" alt="Transducing" /></p>
+<p>As we can see, the result reducer applies functions in order: <code>inc</code>, then <code>double</code>, then <code>concat</code>. As expected.</p>
+<p>Neat.</p>
+<p>Happy transducing!</p>
+<p> </p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    <a href="/tag/JavaScript" class="tag">JavaScript</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/transducers-compose-top-to-bottom.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

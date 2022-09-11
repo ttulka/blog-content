@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Java Concurrency Made Easy</title>
+    <meta name="description" content="About motivation for the project Loom and some boring concurrent code as a bonus.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Java Concurrency Made Easy by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/java-concurrency-made-easy" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Java Concurrency Made Easy by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Java Concurrency Made Easy</h1>
+    <p class="blog-post__meta">2021-08-16 by Tomas Tulka</p>
+    <p>About motivation for the project Loom and some boring concurrent code as a bonus.</p>
+    <hr>
+    <p>If you ever wrote a concurrent application you would agree that <a href="https://jcip.net/" target="_blank">concurrency</a> is not a piece of cake in Java. Although there are multiple tools to solve the problem, none is quite convenient for programmers.</p>
+
+<p>This is about to change with the <a href="https://openjdk.java.net/projects/loom/" target="_blank">project Loom</a>! When integrated into JDK we can finally write simple, even boring code that deals with concurrency in a way optimized for programmers <i>convenience</i> as well as for machine <i>performance</i>.</p>
+
+<p>Simply put, Loom’s goal is to <strong>make it easier to write concurrent programs in the so-called synchronous style</strong> which is familiar and more comprehensible for humans than asynchronous programming.</p>
+
+<h2>Concurrency vs parallelism</h2>
+
+<p>Concurrency is about dealing with different tasks competing for resources while parallelism is about cooperating on a single task chopping it into pieces that can run in parallel.</p>
+
+<p>The project Loom focuses on concurrency.</p>
+
+<h2>The problem with threads</h2>
+
+<p>Currently, Java <em>threads</em> are mapped one-to-one to operating system threads (OS threads). If you have a thread per connection in your serving application, threads are limiting the level of concurrency. That has a negative effect on throughput. We say that the application does not scale well.</p>
+
+<p>Various techniques were invented to address this problem. You might be familiar with thread pools and <code>CompletableFuture</code>s, a Java construct enabling asynchronous programming.</p>
+
+<p>Unfortunately, the former approach has severe issues such as memory leaks of <code>ThreadLocal</code>s and problematic cancellation. The latter is inconvenient for programmers.</p>
+
+<p>Moreover, with thread pools, the number of threads can still be limiting when tasks are performing blocking operations (wait) because the thread is fully dedicated to the task and cannot be interrupted by the platform.</p>
+
+<p>Asynchronous programming removed threads as a limiting factor, however, it makes code much more complicated, hard to read and debug.</p>
+
+<h2>Virtual threads</h2>
+
+<p>Some languages solve this problem with the <a href="https://en.wikipedia.org/wiki/Async/await" target="_blank">async/await</a> pattern which makes it possible to write asynchronous code in the synchronous style (JavaScript):</p>
+
+<pre class="brush: javascript">
+function wget_1(url) {
+  fetch(url)
+    .then(response =&gt; response.json())
+    .then(data =&gt; console.log(data))
+}
+
+async function wget_2(url) {
+  let response = await fetch(url)
+  let data = await response.json()
+  console.log(data)
+}
+</pre>
+
+
+<p>Loom offers <em>virtual threads</em> that enable to structure concurrent code in a familiar and convenient way without actually having to learn any new concepts. With virtual threads, despite being synchronous, no thread is blocked. Virtual threads are <strong>preempted when they block</strong> on I/O or synchronization.</p>
+
+<p>When programming in <code>CompletableFuture</code>s you have to do all the <code>thenApply</code>, <code>thenCompose</code>, and <code>thenRun</code> just to avoid calling get. With virtual threads, you can simply call get as you do not have to deal with all the various stages of the <code>CompletableFuture</code>s. This makes programming much simpler.</p>
+
+<p>Virtual threads are multiplexed over a thread pool of a small number of OS threads. User code does not know anything about the scheduling that is happening under the hood.</p>
+
+<h3>Virtual threads vs user-mode threads vs fibers vs coroutines</h3>
+
+<p>All these terms mean basically the same thing: lightweight threads scheduled by the platform (JVM) rather than by the operating system. They are not mapped to the OS threads one-to-one which makes them cheap and performant.</p>
+
+<p>While a standard computer can work efficiently with a maximum of thousands of threads, millions of virtual threads can be created with no significant overhead.</p>
+
+<p>Different languages may use different names, but the idea is the same. In this text, we will stick with <em>virtual threads</em> as Loom calls them so.</p>
+
+<h2>Show me some code!</h2>
+
+<p>The best thing about the project Loom is that one does not actually have to learn (almost) anything new. In fact, it is more about unlearning stuff — several concurrency constructs will become obsolete although they are to work on in the same old way.</p>
+
+<p>Download Loom <a href="http://jdk.java.net/loom/" target="_blank">early access binaries</a> or build it from <a href="https://github.com/openjdk/loom" target="_blank">source code</a>.</p>
+
+<p>Both operating-system threads and virtual threads are <code>java.lang.Thread</code>. We can use our old friends <code>Executor</code>s:</p>
+
+<pre class="brush: java">
+try (var executor = Executors
+          .newVirtualThreadExecutor()) {
+
+  res = executor.submit(() -&gt; {
+    var v1 = blockingOp1();
+    var v2 = blockingOp2(v1);
+    var v3 = blockingOp3(v2);
+    return v3;
+  })
+  .get();
+}
+</pre>
+
+<p>That’s it! Except for the factory method <code>newVirtualThreadExecutor</code> the code is practically the same you would write when working with threads without Loom.</p>
+
+<p>Compare it with functionally equal code that uses <code>CompletableFuture</code>s:</p>
+
+<pre class="brush: java">
+try (var executor = Executors
+          .newCachedThreadPool()) {
+
+  res = CompletableFuture
+    .supplyAsync(::blockingOp1, executor)
+    .thenApply(::blockingOp2)
+    .thenApply(::blockingOp3)
+    .get();
+} catch (Exception e) {
+  // ...
+}
+</pre>
+
+<p>It is time to unlearn this exhausting kind of programming...</p>
+
+<h2>Limitations</h2>
+
+<p>At the time of writing, there are still some limitations for virtual threads:</p>
+
+<ul>
+  <li>They are blocking when holding a monitor (synchronized block). This could be avoided by replacing monitors with different forms of locks (like <code>ReentrantLock</code> or <code>StampedLock</code>).</li>
+  <li>They consume significantly more memory when using <code>ThreadLocal</code>.</li>
+  <li>Debugging tools are not fully updated yet.</li>
+</ul>
+
+<p>These restraints are to be fixed when Loom is ready to be released as part of JDK.</p>
+
+<h2>Conclusion</h2>
+
+<p>The project Loom is one of the most exciting JDK projects.</p>
+
+<p>Loom will remove a lot of the burden Java programmers have when dealing with concurrency. It will make it easy to program scalable concurrent applications in Java such as web or database servers.</p>
+
+<p>Try it today and see for yourself.</p>
+
+<p>Happy concurring!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Java" class="tag">Java</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/java-concurrency-made-easy.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

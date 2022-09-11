@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>2D Video Game in AssemblyScript Tutorial</title>
+    <meta name="description" content="How to build a web-based video game from scratch with HTML canvas and AssemblyScript.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="2D Video Game in AssemblyScript Tutorial by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/2d-video-game-in-assemblyscript-tutorial" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="2D Video Game in AssemblyScript Tutorial by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">2D Video Game in AssemblyScript Tutorial</h1>
+    <p class="blog-post__meta">2021-07-01 by Tomas Tulka</p>
+    <p>How to build a web-based video game from scratch with HTML canvas and AssemblyScript.</p>
+    <hr>
+    <h2>Why AssemblyScript?</h2>
+
+<p>When targeting the web, <a href="/learning-webassembly-series">WebAssembly</a> (Wasm for short) provides a <strong>performant and secure</strong> alternative to JavaScript for game development.</p>
+
+<p><a href="/learning-webassembly-9-assemblyscript-basics">AssemblyScript</a> is a new TypeScript-like programming language made for WebAssembly. It is a nice option for developers that are not familiar (and don’t want to be) with system languages like C/C++ or Rust.</p>
+
+<p>Programming in AssemblyScript feels like writing TypeScript code with some WebAssembly <a href="https://www.assemblyscript.org/types.html" target="_blank">specifics</a>.</p>
+
+<p>AssemblyScript is a <a href="https://www.assemblyscript.org/status.html" target="_blank">new kid</a> on the block and although it is production-ready it still lacks some features of more mature languages such as regular expression or closures. Those will come soon and it is worth keeping an eye on the <a href="https://github.com/AssemblyScript" target="_blank">project</a>.</p>
+
+<h2>Why web-based?</h2>
+
+<p>Here’s the thing: WebAssembly is a portable binary format that can easily be used outside of a web browser. However, this would require a Wasm runtime environment to be installed, which is not as simple as just opening a browser.</p>
+
+<p>Our Wasm program will generate RGBA (red-green-blue-alpha) image data that will be rendered on an <a href="https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API" target="_blank">HTML canvas</a> — a technology familiar to all web developers.</p>
+
+<p class="note">It is, however, fairly easy to implement the platform outside the web. You can check out an <a href="https://github.com/ttulka/2d-videogame-in-assemblyscript/tree/terminal-rendering" target="_blank">alternative branch</a> where the game is being rendered to a terminal with Node.js.</p>
+
+<h2>Create a new project</h2>
+
+<p>In a new directory initialize an NPM project:</p>
+
+<pre>
+$ npm init
+</pre>
+
+<p>Install AssemblyScript dependencies:</p>
+
+<pre>
+$ npm install --save @assemblyscript/loader
+$ npm install --save-dev assemblyscript
+</pre>
+
+<p>The AssemblyScript compiler provides a handy scaffolding utility to quickly set up a new project:</p>
+
+<pre>
+$ npx asinit .
+</pre>
+
+<p>Our AssemblyScript code will be located in the <code>assembly</code> directory.</p>
+
+<p>To compile the AssemblyScript code to WebAssembly run the following command:</p>
+
+<pre>
+$ npm run asbuild:optimized
+</pre>
+
+<p>The binary Wasm and text Wat files are then located in the <code>build</code> directory:</p>
+
+<pre>
+$ ls -1 ./build
+optimized.wasm
+optimized.wasm.map
+optimized.wat
+</pre>
+
+<h2>HTML canvas</h2>
+
+<p>In addition, we need an <code>index.html</code> file with the HTML canvas and some JavaScript glue code to load and execute our Wasm module:</p>
+
+<pre class="brush: html">
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;canvas id=&quot;canvas&quot;&gt;&lt;/canvas&gt;
+  &lt;script&gt;
+    // JS glue code comes here
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+<p>Since we want to achieve a pixelart effect for our video game we set pixelated image rendering together with the desired display size via CSS:</p>
+
+<pre class="brush: html">
+&lt;style&gt;
+  canvas {
+    width: 512px;
+    height: 512px;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+&lt;/style&gt;
+</pre>
+
+<h2>JavaScript glue code</h2>
+
+<p>We need a bit of glue code to load the Wasm module and render its output to the canvas.</p>
+
+<p>First, we get a reference to the canvas and initialize it to the expected size:</p>
+
+<pre class="brush: javascript">
+const WIDTH = 100, HEIGHT = 100;
+
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = WIDTH;
+canvas.height = HEIGHT;
+</pre>
+
+<p>Notice that the canvas size differs from the display size that we defined before via CSS. The display size is optional but the canvas size must match the size of the output image generated by the Wasm module.</p>
+
+<p>The following code loads the Wasm module located in the default build directory and provides an error callback to the runtime environment when the Wasm module exceptionally aborts its execution:</p>
+
+<pre class="brush: javascript">
+async function loadWasm() {
+  const wasm = await WebAssembly
+    .instantiateStreaming(fetch('./build/optimized.wasm'), {
+      env: {
+        abort: (_msg, _file, line, column) =>
+            console.error(`Abort at ${line}:${column}`)
+      }});
+    return wasm.instance.exports;
+}
+</pre>
+
+<p>Next, we will call a <code>start</code> function of the Wasm module and set regular calling of an <code>update</code> function in an interval:</p>
+
+<pre class="brush: javascript">
+async function start() {
+  const wasm = await loadWasm();
+  wasm.start();
+
+  const mem = new Uint32Array(wasm.memory.buffer);
+
+  const imageData = ctx.createImageData(WIDTH, HEIGHT);
+  const argb = new Uint32Array(imageData.data.buffer);
+
+  const updateCall = () => update(wasm, mem, imageData, argb);
+  setInterval(updateCall, 100);
+}
+</pre>
+
+<p>The <code>update</code> function calls update on the Wasm module and copies the bytes from the Wasm linear memory to the HTML canvas:</p>
+
+<pre class="brush: javascript">
+let control = 1; // 1=right, 2=left
+
+function update(wasm, mem, imageData, argb) {
+    wasm.update(control);
+
+    argb.set(mem.subarray(0, WIDTH * HEIGHT));
+    ctx.putImageData(imageData, 0, 0);
+}
+</pre>
+
+<p>The Wasm linear memory is a shared medium to exchange non-scalar data between the host and the Wasm module. In our example, the Wasm module writes the output image data to the memory and the host subsequently reads it.</p>
+
+<p class="note">Read my <a href="/animation-in-canvas-with-webassembly">note on animation in canvas</a> for further details.</p>
+
+<p>To interact with the game we add a key-down event listener for moving right or left:</p>
+
+<pre class="brush: javascript">
+const Controls = {
+  None: 0,
+  Right: 1,
+  Left: 2
+}
+
+document.addEventListener('keydown', event =&gt; {
+  switch (event.key) {
+    case 'ArrowLeft':
+      control = Controls.Left;
+      break;
+    case 'ArrowRight':
+      control = Controls.Right;
+      break;
+    default:
+      control = Controls.None;
+      break;
+  }
+});
+</pre>
+
+<p>As we can only pass scalar parameters to the Wasm module the meaning of the control values must be negotiated between JS and Wasm. In our case, <code>1</code> means right, <code>2</code> means left. Later, we will see a better option.</p>
+
+<p>This is all the JavaScript we need. Now, we can jump ahead to AssemblyScript!</p>
+
+<h2>Export functions</h2>
+
+<p>The main entry source code file is <code>assembly/index.ts</code>. At the beginning, we will write code directly into this file. Later, we will structure the code base in multiple files based on objects we will model our game with.</p>
+
+<p>The contract between the Wasm module and JS glue code defines two functions: <code>start</code> and <code>update</code>. To make those visible from outside the Wasm module we use the <code>export</code> keyword:</p>
+
+<pre class="brush: typescript">
+export function start(): void {
+  // start game
+}
+
+export function update(control: i32): void {
+  // update game
+}
+</pre>
+
+<h2>Input controls</h2>
+
+<p>With AssemblyScript we can use high-level programming at the boundaries. We will model the controls as an enumeration rather than just an integer. This makes our code more maintainable:</p>
+
+<pre class="brush: typescript">
+export enum Controls {
+  None,
+  Right,
+  Left
+}
+
+export function update(control: Controls): void {
+  // update game
+}
+</pre>
+
+<p>By exporting the <code>Controls</code> enumeration, the items will be visible by the full name in the module exports as global variables:</p>
+
+<pre class="brush: javascript">
+wasm['Controls.Right']  // WebAssembly.Global
+</pre>
+
+<p>We can use this in our JS glue code to fix our previous attempt:</p>
+
+<pre class="brush: javascript">
+const Controls = {
+  None: 'Controls.None',
+  Right: 'Controls.Right',
+  Left: 'Controls.Left'
+}
+
+// ...
+
+wasm.update(wasm[control]);
+</pre>
+
+<p>Furthermore, we don’t need to work with ugly and error-prone integers anymore.</p>
+
+<h2>Output data</h2>
+
+<p>With every game update we generate a new screen image based on the current game state. We save the image data in the Wasm linear memory as quadruples of RGBA bytes.</p>
+
+<p>To avoid conflicts with AssemblyScript internal structures that are also stored in the memory (so far WebAssembly supports only a single memory) we need to reserve a piece of memory only for our output.</p>
+
+<p>We can achieve this by giving the <a href="https://www.assemblyscript.org/compiler.html" target="_blank">compiler</a> a hint via the <code>--memoryBase</code> flag. As our game screen has size 100x100 pixels and each pixel has four bytes (RGBA) we need to reserve 100x100x4 = 40.000 bytes of memory:</p>
+
+<pre>
+$ npm run asbuild:optimized -- --memoryBase 40000
+</pre>
+
+<p>We will use the <code>store&lt;u8&gt;</code> <a href="https://www.assemblyscript.org/stdlib/builtins.html#memory" target="_blank">built-in instruction</a> to store a byte into a particular memory cell. For one pixel we call the instruction four times (RGBA):</p>
+
+<pre class="brush: typescript">
+store&lt;u8&gt;(ci,     data[di]);
+store&lt;u8&gt;(ci + 1, data[di + 1]);
+store&lt;u8&gt;(ci + 2, data[di + 2]);
+store&lt;u8&gt;(ci + 3, 255);  // always visible
+</pre>
+
+<h2>Image assets</h2>
+
+<p>We want to use image assets for our game. For our demo, we will use the <a href="https://kenney.nl/assets/pixel-platformer" target="_blank">Pixel Platformer</a>, a free image collection of building blocks and characters.</p>
+
+<p class="note">For the sake of clarity, the next section shows the mechanical processing of assets into AssemblyScript. In real-world scenarios, some kind of <a href="https://github.com/ttulka/as-inliner-image" target="_blank">ASC transform</a> would be handy.
+<br>Check out the <a href="https://github.com/ttulka/2d-videogame-in-assemblyscript/tree/inliner" target="_blank">alternative branch</a> to see it in action.</p>
+
+<p>Assets must be prepared in a form AssemblyScript can work with. We will align the image data with the memory structure. For this, we can use a simple script that generates an AssemblyScript <code>u8[]</code> array from an image with a little help from <a href="https://www.npmjs.com/package/pngjs" target="_blank">pngjs</a>:</p>
+
+<pre class="brush: javascript">
+// image2array.js
+const fs = require('fs');
+const PNG = require('pngjs').PNG;
+
+const filename = process.argv[2];
+
+const file = fs.readFileSync(filename);
+const png = PNG.sync.read(file);
+const data = png.data;
+
+const out = process.stdout;
+
+out.write('const image: u8[] = [');
+
+for (let i = 0; i < data.length; i += 4) {
+  const r = data[i];
+  const g = data[i + 1];
+  const b = data[i + 2];
+  const a = data[i + 3];
+
+  out.write(`${r},${g},${b},${a},`);
+}
+
+out.write('];\n');
+out.write('export default image;\n');
+</pre>
+
+<p>Executing this script with an image file as an argument will print the output to stdout:</p>
+
+<pre>
+$ node image2array.js assets/sky.png &gt; assembly/sky.ts
+$ less assembly/sky.ts
+const image: u8[] = [198, 233, 234, 255, ... ];
+export default image;
+</pre>
+
+<p>Although this looks quite ugly and tedious, the array will be at the end of the day compactly stored in the linear memory by the AssemblyScript compiler:</p>
+
+<pre>
+(data (i32.const 43468) "@\9c\00\00\c6\e9\ea\ff...
+</pre>
+
+<p>Now, we can work with the image data from AssemblyScript code:</p>
+
+<pre class="brush: typescript">
+import sky from &apos;./sky&apos;;
+
+// ...
+
+image: u8[] = sky;
+
+store&lt;u8&gt;(ci,     image[di]);
+store&lt;u8&gt;(ci + 1, image[di + 1]);
+store&lt;u8&gt;(ci + 2, image[di + 2]);
+store&lt;u8&gt;(ci + 3, 255);
+</pre>
+
+<h2>Parallax scrolling</h2>
+
+<p class="definition">Parallax scrolling is a technique in computer graphics where background images move past the camera more slowly than foreground images, creating an illusion of depth in a 2D scene of distance. ~ <a href="https://en.wikipedia.org/wiki/Parallax_scrolling" target="_blank">Wikipedia</a></p>
+
+<p>We will use three background images: <i>sky</i>, <i>forest</i>, and <i>ground</i>. The sky is static while the forest and the ground move at different speeds.</p>
+
+<p class="center">
+    <img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/as-video-game/parallax-layers.png">
+    <br><i class="caption">Background layers</i>
+</p>
+
+<p>In the update function, we draw layers with a different numeric speed constant:</p>
+
+<pre class="brush: typescript">
+drawLayer(sky);
+drawLayer(forest, position, 5);
+drawLayer(ground, position, 1);
+</pre>
+
+<p>The <code>position</code> variable holds respectively, the position of the camera and of the player.</p>
+
+<p>Based on this constant a relative x-axis offset is calculated for the particular layer. This difference results in different movements in the layers:</p>
+
+<pre class="brush: typescript">
+function drawLayer(
+    image: u8[], offset: i32 = 0, speed: i32 = 0): void {
+  const imageOffsetX = speed &gt; 0
+      ? offset / speed
+      : offset;
+
+  for (let y = 0; y &lt; HEIGHT; y++) {
+    for (let x = 0; x &lt; WIDTH; x++) {
+
+      // image data index
+      const di = arrayIndex(
+         (x + imageOffsetX) % WIDTH, y, WIDTH, HEIGHT
+      );
+
+      if (image[di + 3] &lt; 100) continue;  // not visible
+
+      // canvas index
+      const ci = arrayIndex(x, y, WIDTH, HEIGHT);
+
+      store&lt;u8&gt;(ci,     image[di]);
+      store&lt;u8&gt;(ci + 1, image[di + 1]);
+      store&lt;u8&gt;(ci + 2, image[di + 2]);
+      store&lt;u8&gt;(ci + 3, 255);
+    }
+  }
+}
+</pre>
+
+<p>The result looks like follows:</p>
+
+<p class="center">
+    <img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/as-video-game/parallax-200.gif">
+    <br><i class="caption">Parallax scrolling</i>
+</p>
+
+<p>You can find the source code for this parallax scrolling demo on <a href="https://github.com/ttulka/assemblyscript-samples/tree/main/parallax-scrolling" target="_blank">my GitHub</a>.</p>
+
+<h2>Local hero</h2>
+
+<p>The player is the entity that impacts the whole game. The player position is the position of the camera.</p>
+
+<p>Our hero is a little breadcrumb that got lost in the forest and we shall help it find its way home.</p>
+
+<p>We can move the breadcrumb to the right or to the left. Later, when we add obstacles and enemies, we will give the breadcrumb the ability to jump.</p>
+
+<p>At this point, we should switch to object-oriented programming so we can separate the responsibilities of the game elements and make the code more maintainable.</p>
+
+<p>Let’s start with the three main objects: Game, Player, and Scene.</p>
+
+<p>We will also move all logic for data rendering to a separate object Canvas. In our case, rendering is implemented by storing bytes to the memory.</p>
+
+<p>The responsibility of the Game is to update the Player based on the requested action (move, jump), calculate interactions with the environment and render the updated status:</p>
+
+<pre class="brush: typescript">
+export class Game {
+
+  private scene: Scene;
+  private player: Player;
+
+  constructor(canvas: Canvas) {
+    this.scene = new Scene(canvas);
+    this.player = new Player(canvas);
+  }
+
+  update(control: Controls): void {
+    this.updatePlayer(control);
+    this.drawGame();
+  }
+
+  private updatePlayer(control: Controls): void {
+    // ...
+  }
+
+  private drawGame(): void {
+    // ...
+  }
+}
+</pre>
+
+<p>We will update the Player according to the requested action:</p>
+
+<pre class="brush: typescript">
+private updatePlayer(control: Controls): void {
+  switch (control) {
+    case Controls.Right:
+      this.player.moveRight();
+      break;
+    case Controls.Left:
+      this.player.moveLeft();
+      break;
+    case Controls.Up:
+      this.player.jump();
+      break;
+    default:
+      this.player.idle();
+      break;
+  }
+  this.player.update();
+}
+</pre>
+
+<p>Rendering the Game means drawing all the game elements in a particular order:</p>
+
+<pre class="brush: typescript">
+private drawGame(): void {
+  this.scene.draw(this.player.position());
+  this.player.draw();
+}
+</pre>
+
+<p>We are using the <a href="https://en.wikipedia.org/wiki/Painter%27s_algorithm" target="_blank">Painter's algorithm</a> so that we draw each element starting with the farthest and finishing with the closest.</p>
+
+<p>The rendering is performed by each particular object. The idea behind this is that the object alone should know best how to draw itself. For instance, parallax scrolling is the full responsibility of the Scene:</p>
+
+<pre class="brush: typescript">
+export class Scene {
+
+  private canvas: Canvas;
+
+  constructor(canvas: Canvas) {
+    this.canvas = canvas;
+  }
+
+  draw(position: i32): void {
+    this.drawLayer(sky, 0, 0);
+    this.drawLayer(forest, position, 3);
+    this.drawLayer(soil, position, 1);
+  }
+
+  private drawLayer(
+      image: u8[], offset: i32, speed: i32): void {
+    const imageOffsetX = speed &gt; 0
+      ? offset / speed
+      : offset;
+    this.canvas.drawBackground(image, imageOffsetX);
+  }
+}
+</pre>
+
+<p>It is basically the same code we have already seen just encapsulated in an object class.</p>
+
+<p class="center">
+    <img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/as-video-game/player-200.gif">
+    <br><i class="caption">Lost breadcrumb</i>
+</p>
+
+<h2>Take your chance</h2>
+
+<p>When placing obstacles and monster enemies we want to make the game a bit more dynamic. A generator of random numbers would be really useful here.</p>
+
+<p>As WebAssembly has no access to system resources per se, we have to pass a seed to the <a href="https://www.assemblyscript.org/stdlib/math.html#variants" target="_blank">random generator</a> that is provided by the AssemblyScript language. The seed must be imported from the host; in our case, the web browser:</p>
+
+<pre class="brush: javascript">
+const wasm = await WebAssembly
+  .instantiateStreaming(fetch('../build/optimized.wasm'), {
+    env: {
+      abort: (_msg, _file, line, column) =>
+          console.error(`Abort at ${line}:${column}`),
+      seed: Date.now  // random seed
+    }});
+</pre>
+
+<p>Now, we can use randomness in AssemblyScript:</p>
+
+<pre>
+private releaseMonsters(): Monster[] {
+  const monsters: Monster[] = [];
+  const count = i32(
+      Math.random() * (MAX - MIN) + MIN);
+
+  for (let i = 0; i &lt; count; i++) {
+    monsters.push(new Monster(this.canvas));
+  }
+  return monsters;
+}
+</pre>
+
+<p>With changes (and monsters) the game becomes way more exciting:</p>
+
+<p class="center">
+    <img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/as-video-game/game-200.gif">
+    <br><i class="caption">Let's play!</i>
+</p>
+
+<p>And that’s all you need to <strong>create your own 2D video game from scratch</strong>!</p>
+
+<p>You can find the source code for this demo on <a href="https://github.com/ttulka/2d-videogame-in-assemblyscript" target="_blank">my GitHub</a> or you can play it online at <a href="https://ttulka.github.io/breadcrumblost/" target="_blank">https://ttulka.github.io/breadcrumblost/</a>.</p>
+
+<p>Happy gaming!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/AssemblyScript" class="tag">AssemblyScript</a>
+    
+    <a href="/tag/WebAssembly" class="tag">WebAssembly</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/2d-video-game-in-assemblyscript-tutorial.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

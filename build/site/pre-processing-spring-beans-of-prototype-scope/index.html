@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Pre-processing Spring Beans of Prototype Scope</title>
+    <meta name="description" content="Sometimes you have a type of bean in the Spring framework which you want to create by every asking for it - in the scope prototype.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Pre-processing Spring Beans of Prototype Scope by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/pre-processing-spring-beans-of-prototype-scope" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Pre-processing Spring Beans of Prototype Scope by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Pre-processing Spring Beans of Prototype Scope</h1>
+    <p class="blog-post__meta">2016-08-07 by Tomas Tulka</p>
+    <p>Sometimes you have a type of bean in the Spring framework which you want to create by every asking for it - in the scope prototype.</p>
+    <hr>
+    <p>Pre-processing of those <strong>prototypes</strong> only one and in the beginning &nbsp;could be tricky.</p>
+<p>Let's consider an annotation which tell you someting about the setting of the beans. For example which alternative names is your GUI box connected to. You want to create a proper bean based on its alternative name of course without featching all the beans every time and looking for the right one (of course you can do it by lazy caching, but that's still not the best solution). Or what if you want to get a list of all the alternative names of course <u>withou the need to create the beans</u> first?</p>
+<p>This short article will tell you how to do it.</p>
+<p>Consider the following annotations:</p>
+<pre class="brush: java">@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Component
+@Scope(value = SCOPE_PROTOTYPE)
+public @interface Box {
+}</pre>
+<pre class="brush: java">@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Component
+@Scope(value = SCOPE_PROTOTYPE)
+public @interface AlternativeNames {
+&nbsp; &nbsp; AlternativeName[] value();
+}</pre>
+<pre class="brush: java">@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Repeatable(AlternativeNames.class)
+@Documented
+public @interface AlternativeName {
+&nbsp; &nbsp; String value();
+}</pre>
+<p>Then you have defined the base annotation <code>@Box </code>which tell the Spring framework that this class is a bean, <code>@AlternativeNames</code> which allows you to put the <code>@AlternativeName</code> annotation more times (<em>Repeating Annotations</em>).</p>
+<p>Based on the definitions you can create a class like this:</p>
+<pre class="brush: java">@Box
+@AlternativeName("my-box")
+@AlternativeName("box-of-mine")
+public class MyBox {
+&nbsp; &nbsp; // ... some code goes here
+}</pre>
+<p>Now it's time for the pre-processor:</p>
+<pre class="brush: java">@Component
+public class BoxContextListener implements ApplicationListener&lt;ContextRefreshedEvent&gt; {
+
+&nbsp; &nbsp; private final ConfigurableListableBeanFactory factory;
+
+&nbsp; &nbsp; @Autowired
+&nbsp; &nbsp; public BoxContextListener(ConfigurableListableBeanFactory factory) {
+&nbsp; &nbsp; &nbsp; &nbsp; this.factory = factory;
+&nbsp; &nbsp; }
+
+&nbsp; &nbsp; @Override
+&nbsp; &nbsp; public void onApplicationEvent(ContextRefreshedEvent event) {
+&nbsp; &nbsp; &nbsp; &nbsp; String[] beanDefinitionNames = event.getApplicationContext().getBeanDefinitionNames();
+&nbsp; &nbsp; &nbsp; &nbsp; for (String beanDefinitionName : beanDefinitionNames) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; try {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; BeanDefinition beanDefinition = factory.getBeanDefinition(beanDefinitionName);
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; String originalClassName = beanDefinition.getBeanClassName();
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if (originalClassName != null &amp;&amp; !originalClassName.isEmpty()) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; try {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; final Class&lt;?&gt; originalClass = Class.forName(originalClassName);
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if (originalClass.isAnnotationPresent(Box.class)) {
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if (originalClass.isAnnotationPresent(AlternativeNames.class)
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; || originalClass.isAnnotationPresent(AlternativeName.class)) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; AlternativeName[] mappings = originalClass.getAnnotationsByType(AlternativeName.class);
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; for (AlternativeName alternativeMapping : mappings) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; String alternativeName = alternativeMapping.value();
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // do someting with the alternative name ...
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; } catch (ClassNotFoundException e) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // ...
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; } catch (BeansException e) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // ...
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; }
+}</pre>
+<p>That's the way how to get values from the annotation of the Spring prototype beans in the pre-processing.</p>
+<p>I hope it helped!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    <a href="/tag/Java" class="tag">Java</a>
+    
+    <a href="/tag/Spring" class="tag">Spring</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/pre-processing-spring-beans-of-prototype-scope.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

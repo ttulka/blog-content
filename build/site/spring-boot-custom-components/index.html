@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Spring Boot Custom Components</title>
+    <meta name="description" content="Let's build domain-oriented custom components with Spring Boot starters, auto-configuration and configuration properties. Updated to Spring Boot 2.7.0!">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Spring Boot Custom Components by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/spring-boot-custom-components" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Spring Boot Custom Components by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Spring Boot Custom Components</h1>
+    <p class="blog-post__meta">2022-06-10 by Tomas Tulka</p>
+    <p>Let's build domain-oriented custom components with Spring Boot starters, auto-configuration and configuration properties. Updated to Spring Boot 2.7.0!</p>
+    <hr>
+    <p>Spring Boot philosophy is to develop applications by composing <strong>independent, modular</strong> and <strong>highly configurable</strong> components. Spring Boot provides smart and simple mechanisms and conventions for building such components, that could be easily applied in custom projects.</p>
+
+<p>In this post, we will explore those ideas, and show how to create <strong>domain-oriented custom components</strong> the Spring Boot way.</p>
+
+<h2>What Is Spring Boot</h2>
+
+<p><a href="https://spring.io/projects/spring-boot" target="_blank">Spring Boot</a> takes an <strong>opinionated view</strong> of the <a href="https://spring.io">Spring platform</a> and third-party libraries. This means, all necessary dependencies are included and pre-configured, and there is none or very little additional configuration most Spring Boot applications need to add.</p>
+
+<p>Dependencies are consistent with each other and tested in integration.</p>
+
+<p>For web applications, embedded servers (Tomcat, Jetty, Undertow) are included. Even the traditional deployment into an application container is possible, Spring Boot is self-contained as default, everything is included in the final JAR and no additional infrastructure is needed (except JDK, obviously).</p>
+
+<p>In addition, Spring Boot comes with a lot of <a href="https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html" target="_blank">production ready features</a>, such as loggers, metrics, auditing, tracing, and monitoring.</p>
+
+<p>A simple application skeleton can be easily prototyped by <a href="https://start.spring.io">Spring Initializr</a>.</p>
+
+<h2>Build Systems</h2>
+
+<p>Spring Boot offers <a href="https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle/" target="_blank">Gradle</a> and <a href="https://docs.spring.io/spring-boot/docs/current/maven-plugin/reference/htmlsingle/" target="_blank">Maven</a> plugins for packaging and running Spring Boot applications. It is also possible to create and publish Docker images via the plugins.</p>
+
+<h3>Gradle</h3>
+
+<p>Spring Boot comes with <code>org.springframework.boot</code> and <code>io.spring.dependency-management</code> plugins:</p>
+
+<pre class="brush: groovy">
+plugins {
+  id 'org.springframework.boot' version '2.7.0'
+  id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+}
+</pre>
+
+<p>Alternatively, only the dependency management could be used in isolation:</p>
+
+<pre class="brush: groovy">
+plugins {
+  id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+}
+
+dependencyManagement {
+  dependencies {
+    dependency 'org.springframework:spring-core:5.3.20'
+  }
+}
+</pre>
+
+<h3>Maven</h3>
+
+<p>Typically, your Maven POM file inherits from the <code>spring-boot-starter-parent</code> project:</p>
+
+<pre class="brush: xml">
+&lt;parent&gt;
+  &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+  &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+  &lt;version&gt;2.7.0&lt;/version&gt;
+&lt;/parent&gt;
+</pre>
+
+<p>The parent POM brings the Spring Boot plugin, dependency management and other sensible defaults. All default settings can be overwritten in your POM.</p>
+
+<p>Alternatively, only dependency management can be used without the parent POM by using an import scoped dependency:</p>
+
+<pre class="brush: xml">
+&lt;dependencyManagement&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-boot-dependencies&lt;/artifactId&gt;
+      &lt;version&gt;2.7.0&lt;/version&gt;
+      &lt;type&gt;pom&lt;/type&gt;
+      &lt;scope&gt;import&lt;/scope&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+&lt;/dependencyManagement&gt;
+</pre>
+
+<h2>Features Overview</h2>
+
+<p>Spring Boot introduces several features new to the Spring ecosystem.</p>
+
+<h3>Spring Boot Application</h3>
+
+<p class="definition">The <code>SpringApplication</code> class provides a convenient way to bootstrap a Spring application that is started from a <code>main()</code> method.</p>
+
+<p>When the annotation <code>@SpringBootApplication</code> is included on the main class, the application is bootstrapped, auto-configuration enabled and Spring components scan is set to the current package as root.</p>
+
+<p>It is recommended to locate the application class in a root package above other classes. So the package defines the search base for the components scan.</p>
+
+<pre>
+org.example.myshop
++- MyShopApplication
++- catalog
++- delivery
++- order
+...
+</pre>
+
+<h3>Starters</h3>
+
+<p class="definition">Starters are a set of convenient dependency descriptors that you can include in your application.</p>
+
+<p>Starters bring all necessary dependencies and configurations into the application:</p>
+
+<pre class="brush: groovy">
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+}
+</pre>
+
+<p>All starters have the core starter <code>spring-boot-starter</code> a direct dependency, which includes auto-configuration support, logging and YAML.</p>
+
+<p>Starters are part of Spring Boot philosophy, a convenient way to include components into your application.</p>
+
+<h3>Auto-Configuration</h3>
+
+<p class="definition">Spring Boot auto-configuration attempts to automatically configure your Spring application based on the jar dependencies that you have added.</p>
+
+<p>When auto-configuration is enabled, components found on the classpath are automatically loaded and configured.</p>
+
+<p>Most standard Spring auto-configurations are highly <a href="https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html" target="_blank">configurable via properties</a>.</p>
+
+<h3>Application Properties</h3>
+
+<p>Spring Boot automatically finds and loads <code>application[-profile].(properties|yaml|yml)</code> from the classpath and other default <a href="https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config-files" target="_blank">locations</a>.</p>
+
+<p>Properties from the loaded files are added into Spring environment.</p>
+
+<p>Application properties form a configuration structure of a Spring Boot application with default values, which are meant to be overwritten in runtime from the environment or other <a href="https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config" target="_blank">external sources</a>.</p>
+
+<p>Configuration properties are grouped into trees by the context, typically prefixed by the component name and feature:</p>
+
+<pre class="brush: yaml">
+# application.yml
+
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/test
+    username: admin
+    password: secret
+</pre>
+
+<h2>Custom Components</h2>
+
+<p>Features of Spring Boot can serve as a conventional template for custom components. To do things right, a deeper knowledge of Spring Boot concepts and mechanisms is needed.</p>
+
+<p>In the following section, we take a look at techniques for creating a modular application with independent domain-driven components. The components can be assembled into a single monolithic application or separate applications as microservices afterwards.</p>
+
+<p>For each component a Spring Boot starter with auto-configuration will be created.</p>
+
+<p>Assembling of components into an application is achieved simply by adding the component onto the classpath. Practically, by putting the component starter into the application dependencies.</p>
+
+<p>Spring Boot <strong>components are logically defined by auto-configurations</strong>, starters are an additional mechanism to bring components into the application conveniently.</p>
+
+<h3>Code Structure</h3>
+
+<p>We will use Java packages for structuring code by the domain and Maven modules or Gradle sub-projects for technical cuts.</p>
+
+<p>Every component is a <strong>self-contained business capability service</strong>, exposing multiple artifacts for API and implementation, formed by physical modules.</p>
+
+<p>A typical component source code structure looks like:</p>
+
+<pre>
+delivery/	-- comp. root
++- domain/	-- domain API
++- events/	-- events API
++- jdbc/	-- JDBC impl
++- rest/	-- Restful API
++- spring-boot-starter/ -- starter
++- pom.xml
++- build.gradle
+\- settings.gradle
+</pre>
+
+<p>Alternatively, auto-configurations can live in a separate module, which the starter includes as its dependency.</p>
+
+<p>In a single-application scenario a separate module for a Spring Boot application is created on the root level:</p>
+
+<pre>
+myshop/
++- application/
++- catalog/
++- delivery/
++- order/
+...
+</pre>
+
+<p>In a microservices scenario, each component has its own application module:</p>
+
+<pre>
+myshop/
++- catalog/
+|  +- application/
+|  +- domain/
+|  +- jdbc/
+|  +- rest/
+|  \- spring-boot-starter/
++- delivery/
+|  +- application/
+|  +- domain/
+|  +- events/
+|  +- jdbc/
+|  +- rest/
+|  \- spring-boot-starter/
++- order/
+|  +- application/
+|  +- domain/
+|  +- events/
+|  +- jdbc/
+|  +- rest/
+|  \- spring-boot-starter/
+...
+</pre>
+
+<p>For both scenarios, the separation of concerns is the structure driver. Every module has its own unique role in the final application.</p>
+
+<p>Starters bring Spring Boot auto-configuration, applications bring Spring Boot application main classes, but all other modules has no Spring Boot concerns or dependencies.</p>
+
+<p>For example, even if the REST module is built upon Spring Web, only the corresponding Spring framework dependency should be included:</p>
+
+<pre class="brush: groovy">
+// rest/build.gradle
+
+implementation 'org.springframework:spring-web'
+</pre>
+
+<p>The Spring Boot Web starter will be included into the starter module only:</p>
+
+<pre class="brush: groovy">
+// spring-boot-starter/build.gradle
+
+implementation 'org.springframework.boot:spring-boot-starter-web'
+</pre>
+
+<h3>Java Packages</h3>
+
+<p>As we build <strong>domain-oriented</strong> components, packages should be domain-driven as well.</p>
+
+<p>All the modules of a component should share a root package. The modules could be further structured by the domain feature or a technical aspect. Same features should be included in an identical package.</p>
+
+<p>This strategy enables information hiding of implementation classes using Java package accessibility. Consider an example, where <code>○</code> and <code>●</code> mean <em>public</em> and <em>package-protected</em>, respectively:</p>
+
+<pre>
+delivery/
++- domain/
+|  \- src/main/java/
+|     \- org.example.myshop.delivery
+|        \- ○DeliveryService.java
++- events/
+|  \- src/main/java/
+|     \- org.example.myshop.delivery
+|        \- ○DeliveryDispatched.java
++- jdbc/
+|  \- src/main/java/
+|     \- org.example.myshop.delivery.jdbc
+|        \- ●DeliveryServiceJdbc.java
++- rest/
+|  \- src/main/java/
+|     \- org.example.myshop.delivery.rest
+|        \- ●DeliveryRestController.java
+\- spring-boot-starter/
+   \- src/main/java/
+      \- org.example.myshop.delivery
+         \- jdbc
+            \- ●DeliveryJdbcConfig.java
+         \- rest
+            \- ●DeliveryRestConfig.java
+</pre>
+
+<p>Classes <code>DeliveryServiceJdbc</code> and <code>DeliveryRestController</code> are in the same package as <code>DeliveryJdbcConfig</code> and <code>DeliveryRestConfig</code>, respectively. This makes them accessible to the configuration classes, which is the only one place they have to be accessible from, and hidden for the rest of the world.</p>
+
+<p>This kind of protection based on the basic language features is a great asset to the overall modularity, preventing the temptation to access implementation details of a foreign component, and violate its sovereignty so.</p>
+
+<h3>Custom Spring Boot Starter</h3>
+
+<p>A typical Spring Boot starter contains auto-configuration code and declared dependencies, and it&#8217;s extensible via configuration properties in a dedicated namespace (prefix).</p>
+
+<p>By convention, the name of a starter starts with the component name followed by <code>-spring-boot-starter</code> suffix:</p>
+
+<pre>
+org.example.myshop:delivery-spring-boot-starter
+</pre>
+
+<h4>Auto-Configurations</h4>
+<p>The entry point to a Spring Boot starter is the <code>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</code> file. Spring Boot checks for the presence of the file within your published JAR. The file should list component auto-configuration classes:</p>
+
+<pre>
+org.example.myshop.delivery.DeliveryConfiguration
+...
+</pre>
+
+<p class="defintion">Auto-configurations must be loaded that way only. Make sure that they are defined in a specific package space and that they are never the target of component scanning.</p>
+
+<p>Under the hood, auto-configuration is implemented with standard configuration classes annotated with <code>@AutoConfiguration</code> which supports ordering via attributes such as <code>after</code>, <code>before</code> and similar. Multiple configuration classes could be composed via the <code>@Import</code> annotation:</p>
+
+<pre class="brush: java">
+@AutoConfiguration
+@Import(JdbcDeliveryConfiguration.class)
+class DeliveryConfiguration {
+  ...
+}
+</pre>
+
+<p>The auto-configuration creates and registers all necessary Spring beans for the particular component.</p>
+
+<p>A component starter is the only place configurations should exist. Other modules serve different purposes.</p>
+
+<h4>Dependencies</h4>
+
+<p>A Spring Boot starter contains all dependencies required by the component as whole.</p>
+
+<p>If, for example, a component has a module with Spring Web restful controllers, the starter should contain the corresponding Spring Boot Starter for web:</p>
+
+<pre class="brush: groovy">
+implementation 'org.springframework.boot:spring-boot-starter-web'
+</pre>
+
+<p>The minimal dependency every Spring Boot starter must include is Spring Boot core starter:</p>
+
+<pre class="brush: groovy">
+implementation 'org.springframework.boot:spring-boot-starter'
+</pre>
+
+<p>The component starters are then added as dependencies into the application module:</p>
+
+<pre class="brush: groovy">
+implementation 'org.example.myshop:catalog-spring-boot-starter'
+implementation 'org.example.myshop:delivery-spring-boot-starter'
+implementation 'org.example.myshop:order-spring-boot-starter'
+...
+</pre>
+
+<h3>Configuration Properties</h3>
+
+<p class="definition">Spring Boot provides an alternative method of working with properties that lets strongly typed beans govern and validate the configuration of your application.</p>
+
+<pre class="brush: java">
+@ConfigurationProperties(prefix = "myshop.delivery")
+@Setter
+@Getter
+class DeliveryProperties {
+
+  private String cargoName;
+  private String dateFormat;
+}
+</pre>
+
+<p>Configuration properties are meant to be a convenient way for initializing auto-configuration:</p>
+
+<pre class="brush: java">
+@EnableConfigurationProperties(DeliveryProperties.class)
+@AuthConfiguration
+class DeliveryConfiguration {
+
+  @Bean
+  DeliveryService deliveryService(
+      DeliveryProperties properties
+  ) {
+    return new DeliveryServiceImpl(
+      properties.getCargoName(),
+      properties.getDateFormat()
+    );
+  }
+}
+</pre>
+
+<p>The Spring Boot application defines the configuration structure with default values:</p>
+
+<pre class="brush: yaml">
+# application.yml
+
+myshop:
+  delivery:
+    cargo-name: PPL
+    date-format: yyyy-mm-dd
+  order:
+    prefix-id: OrderID
+</pre>
+
+<p>Defaults can be overwritten in runtime, for example via environment variables:</p>
+
+<pre>
+MYSHOP_DELIVERY_CARGO_NAME=DHL
+</pre>
+
+<h2>Conclusion</h2>
+
+<p>Spring Boot is a great tool for developing <strong>modular monolithic</strong> and <strong>microservices</strong> applications.</p>
+
+<p>Auto-configurations provide a convenient mechanism for creating independent components in isolation.</p>
+
+<p>Spring Boot starters contain configurations and dependencies for components and define configuration structure via configuration properties with dedicated namespaces.</p>
+
+<p>A Spring Boot application assemblies the components and provides cross-cutting concerns in addition.</p>
+
+<h2>Example</h2>
+
+<p>An example code of a rich modular Spring Boot application can be found on <a href="https://github.com/ttulka/ddd-example-ecommerce-microservices" target="_blank">my GitHub</a>.</p>
+
+<h2>Links</h2>
+
+<ul>
+  <li><a href="https://docs.spring.io/spring-boot/docs/current/reference/html" target="_blank">Spring Boot Reference Documentation</a></li>
+  <li><a href="https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle" target="_blank">Spring Boot Gradle Plugin Reference Guide</a></li>
+  <li><a href="https://docs.spring.io/spring-boot/docs/current/maven-plugin/reference/htmlsingle" target="_blank">Spring Boot Maven Plugin Documentation</a></li>
+  <li><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/getting-started.html" target="_blank">Getting Started With Spring Boot</a></li>
+  <li><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/using-spring-boot.html" target="_blank">Using Spring Boot</a></li>
+  <li><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html" target="_blank">Spring Boot How-to Guides</a></li>
+  <li><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-developing-auto-configuration" target="_blank">Creating Your Own Auto-configuration</a></li>
+  <li><a href="https://start.spring.io" target="_blank">Spring Initializr</a></li>
+</ul>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Spring Boot" class="tag">Spring Boot</a>
+    
+    <a href="/tag/Spring" class="tag">Spring</a>
+    
+    <a href="/tag/Software Architecture" class="tag">Software Architecture</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/spring-boot-custom-components.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Testing Serverless Systems</title>
+    <meta name="description" content="Testing serverless systems is hard. In this article, we will discuss some practices which work well for my project.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Testing Serverless Systems by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/testing-serverless-systems" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Testing Serverless Systems by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Testing Serverless Systems</h1>
+    <p class="blog-post__meta">2018-09-14 by Tomas Tulka</p>
+    <p>Testing serverless systems is hard. In this article, we will discuss some practices which work well for my project.</p>
+    <hr>
+    <p>Designing a system architecture is always about making tradeoffs. Microservices resp. serverless architecture has a lot of benefits, but some drawbacks as well. One of them is testing.</p>
+
+<h2>Serverless Systems</h2>
+<p>Because the view to serverless microservices can differ, let's start with a bit theory to define the terms we will use.</p>
+<p>A <em>serverless architecture</em> is built upon <strong>managed elastic simple components</strong>. AWS offers for example components like Lambda functions, DynamoDB NoSQL database, SNS message service etc.</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/testing-serverless/master/assets/ServelessMicroservices-BigPicture.png" /></p>
+<p>A <em>microservice</em> is my understanding a <strong>logical unit owning all the components</strong> to carry out its whole functionality. Microservices are built around a boundary context (domain-specific) and contains all the functions and resources to be able to run as an autonomous service. All the components are private for the microservice and the functionality is accessible only via an API. If you are adapting Infrastructure as code (and you should) you build a microservice as one stack (1:1). Typically you have an integration build pipeline per microservice. Microservices can communicate via domain events (preferred way) or API calls.</p>
+<p>A fictitious on-line store can have for example these microservices:</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/testing-serverless/master/assets/ServelessMicroservices-StoreExample.png" /></p>
+<p>Very important role in a serverless architecture have <em>functions</em>. Functions (like AWS Lambda or Google Cloud Functions) are the simplest deployable components, typically representing an action around an aggregate (what has to be processed within a transaction).</p>
+<p>Applications are clients outside the system using the system functionality via API calls.</p>
+
+<h2>What and How to Test</h2>
+<p>The most problematic term in testing theories is a <em>Unit Test</em>, resp. the <em>Unit</em>. Some articles say it's the smallest functional block. Some add that a unit test must run in isolation.</p>
+<p>As the best definition I consider: <strong>Unit is a functionality with well-defined boundaries (via API) which carries out a business requirement</strong>. This definition goes thru all the types of tests and should be always borne in mind by writing tests. Depending on the level of abstraction the unit can be a class, function, microservice, even the entire system.</p>
+<p>This definition is tricky because it doesn't match the general picture we have about what Unit Testing is. Unfortunately, the name is so common that it's impossible to change it. Further in the text we will distinguish <em>test unit</em> (unit under test) from <em>Unit Testing</em> (testing on the lowest level of abstraction).</p>
+
+<p>Another tricky term is <em>isolation</em>. Because in real system there are almost no truly isolated components - components work together as a system to provide a feature - so it makes no sense to try to isolate the components by stubbing or mocking them. Such tests have no big value. Consider following pseudo code:</p>
+<pre class="brush: java">public class GetProductFunction {
+    private static final DbClient db = DbClient.build();
+
+    public Response handle(Request request, Context context) {
+        DbResult result = db.query("ProductTable", "name, description", "id = ?", request.getProductId());
+        return result.found()
+               ? new Response(200, result.getSingleItem())
+               : new Response(400);
+    } }
+</pre>
+<p>Building a database client is an expensive operation so we keep the instance as a static variable while the function container is warm.</p>
+<p>Now we want to test this simple function in isolation. The problem is the variable <code>db</code> is private and final so if we want to stub it we propably end up with a code change like following:</p>
+<pre class="brush: java">public class GetProductFunction {
+    static DbClient db;
+
+    private static DbClient getDbClient() { return db == null ? db = DbClient.build() : db; }
+
+    public Response handle(Request request, Context context) {
+        DbResult result = getDbClient().query("ProductTable", "name, description", "id = ?", request.getProductId());
+        return result.found()
+               ? new Response(200, result.getSingleItem())
+               : new Response(404);
+    } }
+</pre>
+<p>Changing the code for sake of a test sucks. There is a lot of problems with this code, but at least we can mock our resource now:</p>
+<pre class="brush: java">public class GetProductFunctionTest {
+    @Mock
+    private DbClient dbClient;
+    @Mock
+    private Request request;
+    @Mock
+    private Context context;
+
+    @Before
+    public void setup() { GetProductFunction.db = dbClient;  /* mock the expensive resource */ }
+
+    @Test
+    public void testSuccess() {
+        when(request.getProductId()).thenReturn("test-id");
+
+        when(dbClient.found()).thenReturn(true);
+        when(dbClient.getSingleItem()).thenReturn(
+                Result.builder()
+                        .put("name", "test-name")
+                        .put("description", "test-description")
+                        .build());
+
+        Response response = new GetProductFunction().handle(request, context);
+
+        assertEquals("test-name", response.get("name"));
+        assertEquals("test-description", response.get("description"));
+    }
+
+    @Test
+    public void testNotFound() {
+        when(request.getProductId()).thenReturn("test-id");
+
+        when(dbClient.found()).thenReturn(false);
+        when(dbClient.getSingleItem()).thenThrow(RuntimeException.class);
+
+        Response response = new GetProductFunction().handle(request, context);
+
+        assertEquals(404, response.getStatusCode());
+    } }
+</pre>
+<p>When we execute this test it's green - cool, great job! Wait, really? What do we actually test here? Apart from the trivial logic (found ⇒ 200, not found ⇒ 404) we test only the behavior we stubbed with the mocks. What's the value of testing mocks? - not a big one I guess...</p>
+<p>As we saw in the previous example, besides a few exceptions it makes only sense to test components in the system. <b>The unit of test isolation is the test</b>. It means no other test must have any impact on execution or results - tests should run isolated from each other (possibly in parallel). The unit of test isolation is <b>not</b> a class, function or component.</p>
+
+<p>We <strong>always test only the API (black-boxing), never the implementation (white-boxing)!</strong> There can be cases where implementation testing makes sense, or when we have to mock expensive resources in integration tests, but event in such situations coupling tests with the implementation should be used as little as possible.</p>
+
+<h2>Test Categories</h2>
+<p>Bases on the levels of abstraction of components under test we can distinguish several test categories and which APIs should be visible for the test:</p>
+<p>
+<table cellspacing="0" cellpadding="5" border="1">
+  <tr>
+    <th>Test category</th>
+    <th>Component under test</th>
+    <th>API</th>
+  </tr>
+  <tr>
+    <td>Unit Testing</td>
+    <td>Function</td>
+    <td>Public methods / exported functions</td>
+  </tr>
+  <tr>
+    <td>Integration Testing</td>
+    <td>Microservice</td>
+    <td>Events (REST requests / messages)</td>
+  </tr>
+  <tr>
+    <td>End-to-End Testing</td>
+    <td>System</td>
+    <td>API Gateway</td>
+  </tr>
+</table>
+</p>
+<p>What about testing of the (client) applications? Well, an application is actually an individual system so we can apply the entire testing model on it.</p>
+<p>The test category determines how and where in the build pipeline the test is executed in:</p>
+<p><img src="https://raw.githubusercontent.com/ttulka/testing-serverless/master/assets/ServelessMicroservices-Pipeline.png" /></p>
+<p>A software delivery strategy cloud look like following scenario (an example):</p>
+<ul>
+  <li>a commit triggers the pipeline</li>
+  <li>the code source is fetched</li>
+  <li>unit tests are being executed for each function (A, B, ... X)</li>
+  <li>the code is being built for each function (A, B, ... X)</li>
+  <li>the service is staged into a development environment, all resources are created</li>
+  <li>integration tests are being executed for the entire service</li>
+  <li>the component is deployed into a QA environment</li>
+  <li>end-to-end testing pipeline is triggered or scheduled to run tests with a new version of the system</li>
+  <li>application pipeline is triggered to be tested with a new version of the system</li>
+  <li>the system is ready to be released into production</li>
+</ul>
+
+<h2>Unit Testing</h2>
+<p><em>Unit Tests</em> operate on the lowest level. Unit Tests are parts of the codebase, having direct access to code they can test units in different layers without necessarily being deployed. As all the other tests, <strong>Unit Tests verify correct behavior only thru units API - interfaces or public functions -  they never test the implementation</strong>.</p>
+<p>Unit Tests verify business requirements. They are executed in the build phase, because it makes no sense to deploy code which doesn't match business rules.</p>
+<p>Unit Tests should be written by developers in the same programming language as the function and be a part of the function code base.</p>
+<p>As an example we have an AWS Lambda <code>create-product</code>* and the function <code>createProduct()</code> as the test unit; the function implements business rules saying the product price must be greater than zero and the product name must be included in the product description (probably for SEO reasons). Consider this Node.js code:</p>
+<pre class="brush: javascript">// create-product.js
+const uuidv1 = require('uuid/v1')
+
+module.exports = ({name, description, price}) =&gt; {
+    if (price <= 0) throw new Error('Price must be greater than zero.')
+    if (!description.includes(name)) throw new Error('Description must include name.')
+    return { id: uuidv1(), name, description, price}
+}
+
+// handler.js
+const AWS = require('aws-sdk')
+const dynamoDb = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
+
+const createProduct = require('./create-product')
+
+exports.handler = async (event) =&gt; {
+    try {
+        const product = createProduct(event)
+        persistProduct(product)
+        return { statusCode: 201, body: product.id }
+    } catch (err) {
+      return { statusCode: 400, body: err.message }
+    }
+}
+
+async function persistProduct(product) {
+    const params = {
+        TableName: 'ProductTable',
+        Item: product
+    }
+    await dynamoDb.put(params).promise()
+}
+</pre>
+<p>And a test for it:</p>
+<pre class="brush: javascript">describe('Unit test to create a product.', () =&gt; {
+    const testProduct = {
+        name: 'Product 123',
+        description: 'Product 123 Desc',
+        price: 123.4
+    }
+
+    const createProduct = require('../create-product')
+
+    it('Product should be created.', () =&gt; {
+        const product = createProduct(testProduct)
+        expect(product.id).toBeDefined()
+    })
+
+    it('Product must be greater than zero.', () =&gt; {
+        const product = { ...testProduct, price: 0 }
+        expect(() =&gt; createProduct(testProduct)).toThrow()
+    })
+
+    it('Description must include product name.', () =&gt; {
+        const product = { ...testProduct, description: 'junk' }
+        expect(() =&gt; createProduct(testProduct)).toThrow()
+    })
+})
+</pre>
+
+<h2>Integration Testing</h2>
+<p><em>Integration Testing</em> in serverless systems operates on level of <strong>microservices</strong>. We test the whole use-case by verifying communication and interactions between functions and other resources.</p>
+
+<p>Because <strong>Integration Tests are testing already deployed services</strong> there is no more the requirement to use the same programming language as the service is written in (we can all it "polyglot microservices"). But as well as Unit Tests the Integration Tests should be created and maintained by developers.</p>
+<pre class="brush: javascript">const AWS = require('aws-sdk')
+const lambda = new AWS.Lambda({apiVersion: '2015-03-31'})
+
+describe('Integration test to create and persist a new product.', () =&gt; {
+	  const testProduct = {
+        name: 'Product 123',
+        description: 'Product Desc 123',
+        price: 123.4
+    }
+
+    it('Product should be available after created.', async () =&gt; {
+        // create a new product
+        const createParams = {
+            FunctionName: 'create-product',
+            Payload: JSON.stringify({
+                name: testProduct.name,
+                description: testProduct.description,
+                price: testProduct.price
+            })
+        }
+        const createResponse = await lambda.invoke(createParams).promise()
+
+        expect(createResponse).toBeDefined()
+        expect(createResponse.statusCode).toBe(201)
+        expect(createResponse.body).toBeDefined()
+
+        const productId = createResponse.body
+
+        // the product must be available now
+        const getParams = {
+            FunctionName: 'get-product',
+            Payload: JSON.stringify({
+                id: testProduct.id
+            })
+        }
+        const getResponse = await lambda.invoke(getParams).promise()
+
+        expect(getResponse).toBeDefined()
+        expect(getResponse.statusCode).toBe(200)
+        expect(getResponse.body).toBeDefined()
+
+        const foundProduct = JSON.parse(getResponse.body)
+        expect(foundProduct).toEqual(testProduct)
+    })
+
+    function sleep(ms) { /* ... */ }
+})
+</pre>
+
+<h2>End-to-End Testing</h2>
+<p>The <em>end-to-end tests</em> validate behavior of the <strong>entire system or its sub-systems</strong> and run apart from a feature (microservice's) build pipeline.</p>
+<p>They can have a form of <em>acceptance tests</em> where whole paths are tested (1. search a product, 2. order the product, 3. create an invoice, 4. delivery etc.) or <em>automated GUI tests</em> which are testing the system from the client's point of view.</p>
+<p>End-to-end tests could be generally written by someone else than by the developer. Especially GUI tests can be fully in hands of testers.</p>
+<p>Of course, the <em>manual testing</em> belongs to this category as well.</p>
+
+<p>In the previous integration-testing example both functions for saving and searching products were a part of one microservice - it means they lie in one build pipeline. If these functions were parts of different microservices the test would belong to the end-to-end testing category.</p>
+
+<p>As an example let's consider a Catalog microservice - after creating a new product via <code>create-product</code> function a domain event like <code>NEW_PRODUCT_CREATED</code> should be fired. The <strong>event is a part of the internal API</strong> of the service and can be consumed by any other service registered to it. Typically an indexing service reacts to the event by extracting meta-data from the product and provides a full-search upon them. There should be an integration test validating this behavior.</p>
+<p>End-to-end Testing doesn't access components directly but only via an API Gateway (e.g. REST).</p>
+<pre class="brush: java">public class CreateProductServiceTestE2E {
+
+    import ...
+
+    private final String SERVICE_API = System.getenv("SERVICE_API");
+    private final String PRODUCT_CREATE_ENDPOINT = SERVICE_API + "/catalog/product";
+    private final String SEARCH_ENDPOINT = SERVICE_API + "/search";
+
+    private HttpClient httpClient;
+
+    @Before
+    public void setup() { this.httpClient = createHttpClient(); }
+
+    @Test
+    public void testProductMetadataShouldIndexed() throws Exception {
+        Product product = new Product("Product 123", "Product Desc 123", 123.4);
+
+        // create a new product
+        HttpPost createRequest = httpClient.post(PRODUCT_CREATE_ENDPOINT);
+        createRequest.setHeader("Content-type", "application/json");
+        createRequest.setBody(product.toJson());
+
+        HttpResponse createResponse = httpClient.execute(createRequest);
+
+        assertEquals(201, createResponse.getStatusCode());
+        assertNotNull(createResponse.getBody());
+
+        String productId = createResponse.getBody();
+
+        Thread.sleep(1000); // waiting necessary due to eventual consistency
+
+        // the product must be indexed and available for searching
+        HttpPost searchRequest = httpClient.post(SEARCH_ENDPOINT);
+        searchRequest.setHeader("Content-type", "application/json");
+        searchRequest.setBody("{\"keyword\":\"" + product.getName() + "\"}");
+
+        HttpResponse searchResponse = httpClient.execute(searchRequest);
+
+        assertEquals(200, searchResponse.getStatusCode());
+        assertNotNull(createResponse.getBody());
+
+        Collection&#x3C;String&#x3E; foundProductIds = toList(createResponse.getBody());
+        assertTrue(foundProductIds.contains(productId));
+    }
+}
+</pre>
+
+<h2>Summary</h2>
+<p>In this article I wanted to recap my experience with functional testing of serverless systems and simplify the levels of tests. I reviewed terms Unit-, Integration- and End-to-end Testing to show what is under test and where such tests lie in the development process.</p>
+<p>Despite the fact that I focused only on functional testing doesn't mean that testing non-functional requirements like performance, security, scalability, etc. are not important...:-)</p>
+
+<p>Happy testing!</p> <hr />
+
+<p><em>* I use verbs to name functions because it sounds natural to me. A function is in fact an action.</em></p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Testing" class="tag">Testing</a>
+    
+    <a href="/tag/Cloud" class="tag">Cloud</a>
+    
+    <a href="/tag/Serverless" class="tag">Serverless</a>
+    
+    <a href="/tag/AWS" class="tag">AWS</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/testing-serverless-systems.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

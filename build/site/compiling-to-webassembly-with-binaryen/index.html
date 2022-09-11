@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Compiling to WebAssembly with Binaryen</title>
+    <meta name="description" content="Compile your own programming language to WebAssembly binary instruction format (Wasm) using Binaryen’s JavaScript API.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Compiling to WebAssembly with Binaryen by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/compiling-to-webassembly-with-binaryen" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Compiling to WebAssembly with Binaryen by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Compiling to WebAssembly with Binaryen</h1>
+    <p class="blog-post__meta">2021-04-05 by Tomas Tulka</p>
+    <p>Compile your own programming language to WebAssembly binary instruction format (Wasm) using Binaryen’s JavaScript API.</p>
+    <hr>
+    <p>If you (like me) don’t excel in any system language such as C/<a href="https://www-users.cs.york.ac.uk/~susan/joke/cpp.htm">C++</a> or Rust you might never have thought about creating a <em>compiler</em>. You may have created an <em>interpreter</em> or a <em>transpiler</em> though.</p>
+
+<p>For playing around, an interpreter is usually just fine. Moreover, a transpiler can produce a language that could be further compiled into executable binaries.</p>
+
+<p>Both approaches have pros and cons, interpreters tend to be slow in execution and transpilers are usually suboptimal as they translate code into languages that were not meant to be a compilation target.</p>
+
+<p><a href="/learning-webassembly-series">WebAssembly</a>, on the other hand, <i>is</i> designed as a portable compilation target for programming languages. Nowadays, one can see Wasm compilers for almost <a href="https://github.com/appcypher/awesome-wasm-langs">every existing language</a> and there is a good reason for that: it’s super easy!</p>
+
+<p><a href="https://github.com/WebAssembly/binaryen">Binaryen</a> is, like <a href="https://llvm.org">LLVM</a>, a compiler and toolchain infrastructure library. Binaryen is targeting WebAssembly and offers a simple C and JavaScript API. We will focus on the latter.</p>
+
+<h2>Brainfuck</h2>
+
+<p>Because designing a programming language is not the point of this text (compiling is), we will simply use <a href="https://en.wikipedia.org/wiki/Brainfuck">brainfuck</a> as an example.</p>
+
+<p>Brainfuck is a popular Turing-complete <a href="https://esolangs.org">esoteric language</a> that consists of only eight single-character commands:</p>
+
+<ul>
+	<li><code>&gt;</code> Move the pointer to the right.</li>
+	<li><code>&lt;</code> Move the pointer to the left.</li>
+	<li><code>+</code> Increment the memory cell at the pointer.</li>
+	<li><code>-</code> Decrement the memory cell at the pointer.</li>
+	<li><code>.</code> Output the character signified by the cell at the pointer.</li>
+	<li><code>,</code> Input a character and store it in the cell at the pointer.</li>
+	<li><code>[</code> Jump past the matching ] if the cell at the pointer is 0.</li>
+	<li><code>]</code> Jump back to the matching [ if the cell at the pointer is nonzero.</li>
+</ul>
+
+<p>Brainfuck operates on an array of memory cells, each initially set to zero. Values are interpreted as ASCII characters.</p>
+
+<p>Typical brainfuck code looks like follows:</p>
+
+<pre>
+++++++++[&gt;++++[&gt;++&gt;+++&gt;+++&gt;+&lt;&lt;&lt;&lt;-]&gt;+&gt;+&gt;-&gt;&gt;+[&lt;]&lt;-]&gt;&gt;.&gt;---.+++++++..+++.
+</pre>
+
+<p>This program prints <code>Hello</code>.</p>
+
+<p>To play around with brainfuck you can use an <a href="https://ttulka.github.io/brainfuck/">online interpreter</a>.</p>
+
+<h2>Getting Started</h2>
+
+<p>Let’s create a new Node.js project and add Binaryen as a dependency:</p>
+
+<pre>
+cd brainfuck2wasm/
+npm init -y
+npm i binaryen
+</pre>
+
+<p>We need an entry point <code>index.js</code> to load the source file and trigger the compilation:</p>
+
+<pre class="brush: javascript">
+export function main(args) {
+  const sourceFile = args[0];
+  const input = fs.readFileSync(sourceFile, &apos;utf-8&apos;);
+
+  const binary = compile(input);
+
+  fs.writeFileSync(&grave;${sourceFile}.wasm&grave;, binary);
+}
+</pre>
+
+<p>We will create a two-phase compiler: 1. paring the source code and potential optimizations, 2. compiling into Wasm using Binaryen.</p>
+
+<p>The compile method from index.js looks like follows:</p>
+
+<pre class="brush: javascript">
+function compile(input) {
+  const parser = new Parser();
+  const ast = parser.parse(input);
+
+  const compiler = new Compiler();
+  return compiler.compile(ast);
+}
+</pre>
+
+<h2>Parsing Source Code</h2>
+
+<p>We need a map of brainfuck commands and their ASCII representation:</p>
+
+<pre class="brush: javascript">
+cmdMap.set(43, &apos;+&apos;);
+cmdMap.set(45, &apos;-&apos;);
+cmdMap.set(62, &apos;&gt;&apos;);
+cmdMap.set(60, &apos;&lt;&apos;);
+cmdMap.set(46, &apos;.&apos;);
+cmdMap.set(44, &apos;,&apos;);
+cmdMap.set(91, &apos;[&apos;);
+cmdMap.set(93, &apos;]&apos;);
+</pre>
+
+<p>Then, we can parse the source code command by command until EOF:</p>
+
+<pre class="brush: javascript">
+let index = 0;
+while (!eof()) {
+ const code = source[index++].charCodeAt();
+ const kind = cmdMap.get(code);
+ const cmd = { kind, children: [] };
+ ...
+}
+</pre>
+
+<p>When we encounter a beginning of a loop, we push a new branch to the stack:</p>
+
+<pre class="brush: javascript">
+if (cmd.kind === &apos;[&apos;) {
+  // push to the current branch
+  branch.children.push(cmd);
+
+  // push a new branch for loop
+  ast.push(cmd);
+}
+</pre>
+
+<p>Each loop end must be paired with a beginning. We throw an error otherwise:</p>
+
+<pre class="brush: javascript">
+else if (cmd.kind === &apos;]&apos;) {
+  if (ast.pop().kind !== &apos;[&apos;) {
+    throw new SyntaxError(&apos;unmatched ]&apos;);
+  }
+}
+</pre>
+
+<p>Other commands are just pushed into the current branch:</p>
+
+<pre class="brush: javascript">
+else {
+  branch.children.push(cmd);
+}
+</pre>
+
+<p>Further, we can perform some optimization of the source code like grouping commands of the same kind. For example, brainfuck code <code>+++</code> will result in a single <code>+</code> command with an amount of 3 rather than in three <code>+</code> commands, and similar.</p>
+
+<h2>Compiling with Binaryen</h2>
+
+<p>Using Binaryen is not very different from programming in <a href="/learning-webassembly-3-wat-programming-basics">WebAssembly text format (Wat)</a>. You might want to get familiar with the basics of Wat programming before reading the next section.</p>
+
+<h3>Wasm Module</h3>
+
+<p>The root unit of Wasm is a module:</p>
+
+<pre class="brush: javascript">
+const module = new binaryen.Module();
+</pre>
+
+<p>We will use 1 page (64 KiB) of memory:</p>
+
+<pre class="brush: javascript">
+module.setMemory(1, 1);
+</pre>
+
+<p>And a global variable <code>p</code> to represent the pointer to current memory cell:</p>
+
+<h3>Importing Functions</h3>
+
+<p>WebAssembly modules are sandboxed per default, we have to declare functions for input and output to be imported into the module via environment:</p>
+
+<pre class="brush: javascript">
+const t_void = binaryen.none;
+const t_i32 = binaryen.i32;
+
+module.addFunctionImport(&apos;input&apos;, &apos;main&apos;, &apos;input&apos;, t_void, t_i32);
+module.addFunctionImport(&apos;output&apos;, &apos;main&apos;, &apos;output&apos;, t_i32, t_void);
+</pre>
+
+<h3>Exporting The Main Function</h3>
+
+<p>Now, we can recursively compile the AST root branch and close the resulting command into a code block afterward:</p>
+
+<pre class="brush: javascript">
+const body = compileBranch(ast);
+
+const block = module.block(&apos;exec&apos;, body);
+</pre>
+
+<p>The block forms the module’s main function to export:</p>
+
+<pre class="brush: javascript">
+module.addFunction(&apos;main&apos;, binaryen.none, binaryen.none, [], block);
+
+module.addFunctionExport(&apos;main&apos;, &apos;main&apos;);
+</pre>
+
+<h3>Compiling Commands</h3>
+
+<p>Compiling a branch means to interpret each command in Binaryen:</p>
+
+<pre class="brush: javascript">
+compileBranch(branch) {
+  const body = [];
+  branch.children.forEach(cmd =&gt; {
+    let c;
+    switch (cmd.kind) {
+      case &apos;+&apos;:
+        c = increment();
+        body.push(c);
+        break;
+      case &apos;-&apos;:
+        c = decrement();
+        body.push(c);
+        break;
+      case &apos;&gt;&apos;:
+        c = moveRight();
+        body.push(c);
+        break;
+      case &apos;&lt;&apos;:
+        c = moveLeft();
+        body.push(c);
+        break;
+      case &apos;.&apos;:
+        c = output();
+        body.push(c);
+        break;
+      case &apos;,&apos;:
+        c = input();
+        body.push(c);
+        break;
+      case &apos;[&apos;:
+        c = loop(cmd);
+        body.push(c);
+        break;
+      }
+  });
+  return body;
+}
+</pre>
+
+<p>Every command must be compiled into a set of Wasm instructions.</p>
+
+<p>For instance, the increment command + is performed in the following steps:</p>
+
+<ol>
+	<li>get the pointer’s value,</li>
+	<li>load its byte value from the memory,</li>
+	<li>add 1,</li>
+	<li>store the result to the memory.</li>
+</ol>
+
+<pre class="brush: javascript">
+increment() {
+  const p = module.global.get(&apos;p&apos;, binaryen.i32);
+  const val = module.i32.load8_u(0, 1, p);
+  const one = module.i32.const(1);
+  const add = module.i32.add(val, one);
+  const sto = module.i32.store8(0, 1, p, add);
+  return sto;
+}
+</pre>
+
+<p>Analogous for other commands.</p>
+
+<h3>Compiling Loops</h3>
+
+<p>To compile a loop we must compile the closed commands first. We will put them into a block inside the loop together with a conditional break.</p>
+
+<p>The Wasm break will repeat the loop if the condition is met. In our case, if the memory byte under the pointer’s current value is zero:</p>
+
+<pre class="brush: javascript">
+loop(branch) {
+  // 1. compile commands inside the loop
+  const commands = compileBranch(branch);
+
+  const label = getLoopUid();
+
+  // 2. break if the current value is zero
+  const p = module.global.get(&apos;p&apos;, binaryen.i32);
+  const val = module.i32.load8_u(0, 1, p);
+  const br = module.br_if(label, val);
+
+  // 3. wrap the commands and break into a block
+  const block = module.block(null, [...commands, br]);
+  const loop = module.loop(label, block);
+  return loop;
+}
+</pre>
+
+<h2>Emitting Wasm</h2>
+
+<p>Finally, we can validate, optimize, and emit a compiled Wasm module:</p>
+
+<pre class="brush: javascript">
+if (!module.validate()) {
+  throw new Error('Module invalid.');
+}
+
+module.optimize();
+
+const binary = module.emitBinary();
+return binary;
+</pre>
+
+<h2>Running Wasm</h2>
+
+<p>Now, when our Wasm binary is compiled, we can run it in Node.js. All we need is to provide the input and output functions in the import object:</p>
+
+<pre class="brush: javascript">
+WebAssembly
+.instantiate(fs.readFileSync(wasm), {
+  main: {
+    input: () =&gt; readChar(),
+    output: c =&gt; writeChar(String.fromCharCode(c))
+  }
+})
+.then(({ instance }) =&gt; instance.exports.main());
+</pre>
+
+<h2>Source Code</h2>
+
+<p>That’s all, folks. Now, there is nothing to prevent you from creating your own programming language and compiling it to WebAssembly.</p>
+
+<p>You can find the full compiler source code on <a href="https://github.com/ttulka/brainfuck2wasm">my GitHub</a>.</p>
+
+<p>Happy compiling!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/WebAssembly" class="tag">WebAssembly</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    <a href="/tag/Esolang" class="tag">Esolang</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/compiling-to-webassembly-with-binaryen.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

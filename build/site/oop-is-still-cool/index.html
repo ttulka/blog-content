@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>OOP Is Still Cool in 2022</title>
+    <meta name="description" content="Object-oriented programming might not be perfect but it is still the best we have.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="OOP Is Still Cool in 2022 by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/oop-is-still-cool" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="OOP Is Still Cool in 2022 by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">OOP Is Still Cool in 2022</h1>
+    <p class="blog-post__meta">2022-01-06 by Tomas Tulka</p>
+    <p>Object-oriented programming might not be perfect but it is still the best we have.</p>
+    <hr>
+    <p>It is 2022, IT has already eaten almost the whole world and we have developed tools that make paradigms from the 60s such as OOP seriously outdated, right? Well, not really.</p>
+
+<p>At least in the mainstream, object-oriented design offers the most beneficial approach for software development from code to system architecture. However, only when done right.</p>
+
+<p>By merely using the keywords <code>object</code> or <code>class</code> we do not create object-oriented code. One can easily write completely non-object-oriented code even in a pretty much object-oriented programming language like Java or C#, but only by employing the principles of OOP can we make our programs genuinely object-oriented.</p>
+
+<p>Although these principles have been well-known for decades they are poorly understood by most developers even in 2022. More and more I see a constant shift to structural programming, a technique much older than OOP itself.</p>
+
+<p>The result is sub-optimally designed systems that are hard to maintain, extend, and reason about. Error-prone, fragile, distributed <a href="/good-and-bad-monolith">monoliths</a> are just one example familiar to many of us.</p>
+
+<p>Knowledge acquired in school is a good foundation, but it is not sufficient. We have to focus on <strong>understanding rather than just knowing</strong>, we must learn principles over practices.</p>
+
+<h2>Principles of Object-Oriented Design and Programming</h2>
+
+<p>Alright, what are the most fundamental principles then?</p>
+
+<p class="definition">An object is defined by its contract.</p>
+
+<p>The contract of an object defines <i>what</i> the object can do, not <i>how</i> it does it. Looking at the object from the outside should not provide any insight into its implementation. The contract must not be violated; the object’s job is to protect its invariants. Business purpose is a solid base for a stable contract.</p>
+
+<p class="definition">Objects are autonomous.</p>
+
+<p>You should never ask an object to provide the information needed for a particular action. Rather, ask the object to perform the action for you. No object can do things to another object. Objects are active entities, they are not passive puppets.</p>
+
+<p class="definition">All data is private.</p>
+
+<p>Objects must hide all data and other details they need to work out a particular business problem. If data is not private, it becomes part of the contract. This is the difference between objects and data structures: objects are solid, data structures are transparent. More formally, we talk about the concepts of <a href="https://en.wikipedia.org/wiki/Encapsulation_(computer_programming)">encapsulation</a> and <a href="https://en.wikipedia.org/wiki/Information_hiding">information hiding</a>.</p>
+
+<p>These principles may sound simple, but simplicity is often not an easy goal to achieve. Programmers tend toward “smart” solutions rather than simple ones; they, for instance, master OOP practices like encapsulation by using private attributes but violate the principle of information hiding by exposing them via getters and setters.</p>
+
+<p>The list is, of course, not definitive, we can add many others such as composability, all SOLID principles, etc.</p>
+
+<p>However, the three concepts mentioned are paramount, superior to all others, and most difficult to achieve at the same time. Therefore, they are often ignored completely.</p>
+
+<p>Most importantly, they are universally useful on all levels of software development.</p>
+
+<h2>Object-Oriented Microservices</h2>
+
+<p>Nowadays, no technical post would be complete without mentioning <a href="/you-are-not-gonna-need-microservices">microservices</a>, an extremely popular architectural design pattern for building distributed systems.</p>
+
+<p>How does object-oriented design apply in microservices architecture? First of all, let us recall the definition of a (micro)service:</p>
+
+<p class="definition">A service is the technical authority for a specific business capability.</p>
+
+<p>Now, what is a business capability? It is an expression of <i>what</i> business does and can do. Business capabilities are keys to define high-cohesive service boundaries.</p>
+
+<p>It is a particular functionality that carries out a business capability. Functionality defines the system’s behavior.</p>
+
+<p class="definition">A service is autonomous; its ability to function is not controlled or inhibited by other services.</p>
+
+<p>Services are <a href="/monolithic-objects">independent</a>, self-contained, and free from external control and constraint. Services can decide on their own. The more autonomous our services are, the more loosely coupled they are.</p>
+
+<p class="definition">Any piece of data or rule must be owned by only one service.</p>
+
+<p>In other words, a service must encapsulate all data and implementation details it operates upon. We talk about a <a href="https://en.m.wikipedia.org/wiki/Shared-nothing_architecture">shared-nothing architecture</a> in which every request is satisfied by a single node.</p>
+
+<p>To summarize it in a few bullet points, a service:</p>
+
+<ul>
+	<li>is defined by its capabilities,</li>
+	<li>owns its data and rules,</li>
+	<li>is fully in control.</li>
+</ul>
+
+<p>Does this sound familiar? Sure it does! Conceptually, <strong>a service is just an object on the system level</strong>. Technical details differ, but the same ideas apply here.</p>
+
+<p>Understanding principles of object-oriented design will help you build your microservices so that they are easy to maintain, <a href="/how-cohesion-and-coupling-correlate">highly cohesive and loosely coupled</a>.</p>
+
+<h2>Conclusion</h2>
+
+<p>It is 2021 and we still don’t have a lucid understanding of how to develop our software. The IT industry grows rapidly and requirements change too quickly for us to catch up.</p>
+
+<p>Five decades ago, great principles of object-oriented design and programming were defined and they can still teach us a lot today. We just have to learn and adopt them correctly.</p>
+
+<p>Object-oriented design is a holistic approach. It can be successfully applied to the whole span of problems in software development.</p>
+
+<p>All in all, the principles of object-oriented design and programming are the best we have. And this is not going to change any time soon.</p>
+
+<p>Happy programming!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/OOP" class="tag">OOP</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    <a href="/tag/Microservices" class="tag">Microservices</a>
+    
+    <a href="/tag/Design Patterns" class="tag">Design Patterns</a>
+    
+    <a href="/tag/Software Architecture" class="tag">Software Architecture</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/oop-is-still-cool.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Multiple LDAP Servers Integration</title>
+    <meta name="description" content="Let's integrate a few LDAP servers!">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Multiple LDAP Servers Integration by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/multiple-ldap-servers-integration" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Multiple LDAP Servers Integration by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Multiple LDAP Servers Integration</h1>
+    <p class="blog-post__meta">2018-06-12 by Tomas Tulka</p>
+    <p>Let's integrate a few LDAP servers!</p>
+    <hr>
+    <p>When an administative solution (like <a href="https://technet.microsoft.com/pt-pt/library/how-global-catalog-servers-work.aspx" target="_blank">Global Catalog</a>) is not possible or wanted and we have to integrate more LDAP servers under one hood there is a simple way how to do it with <a href="https://github.com/TremoloSecurity/MyVirtualDirectory" taregt="_blank">MyVirtualDirectory</a>.</p>
+
+<p>MyVirtualDirectory (<strong>MyVD</strong>) offers much more than an integration of multiple LDAP servers, actually <em>anything</em> could be exposed as a LDAP service via MyVD. In this tutorial we focus only on LDAP.</p>
+<h2>Simple LDAP Integration</h2>
+<p>We begin with a simple example of two LDAP servers integration.</p>
+<p>We have one LDAP running in <code>server1.com</code> network on the port <code>398</code> and another running in <code>server2.com</code> on the same port.</p>
+<p>We integrate the server in out local network on the port <code>50983</code> as shows the following picture:</p>
+<p align="center"><img src="/storage/myvd-1.png" alt="Simple LDAP Integration" /></p>
+<p>First, let's set up the MyVD server (HTTP in our case).</p>
+<pre>server.listener.port=50983
+</pre>
+<p>That's it. Now the integration of the servers:</p>
+<pre>server.nameSpaces=server1,server2
+
+server.server1.nameSpace=dc=server1,dc=com
+server.server1.weight=100
+server.server1.chain=ldap
+server.server1.ldap.className=net.sourceforge.myvd.inserts.ldap.LDAPInterceptor
+server.server1.ldap.config.host=server1.com
+server.server1.ldap.config.port=389
+server.server1.ldap.config.remoteBase=dc=server1,dc=com
+server.server1.ldap.config.proxyDN=uid=testuser1,ou=people,dc=server1,dc=com
+server.server1.ldap.config.proxyPass=123
+
+server.server2.nameSpace=dc=server2,dc=com
+server.server2.weight=100
+server.server2.chain=ldap
+server.server2.ldap.className=net.sourceforge.myvd.inserts.ldap.LDAPInterceptor
+server.server2.ldap.config.host=server2.com
+server.server2.ldap.config.port=389
+server.server2.ldap.config.remoteBase=dc=server2,dc=com
+server.server2.ldap.config.proxyDN=uid=testuser2,ou=people,dc=server2,dc=com
+server.server2.ldap.config.proxyPass=123
+</pre>
+<h2>LDAP Client</h2>
+<p>As a non-trivial client example let's consider the <a href="https://spring.io/guides/gs/authenticating-ldap" target="_blank">Spring Security LDAP</a>.</p>
+<p>Simple said, the Spring Security LDAP does two search queries to the LDAP server:</p>
+<ul>
+<li>Get a user DN by its username (<code>(uid=&lt;username&gt;)</code>),</li>
+<li>get groups by user's DN (<code>(member=&lt;userDN&gt;)</code>).</li>
+</ul>
+<p>Spring allow the user to redefine the search bases and filters for different LDAP structures and uses placeholders (so the filter looks like <code>(uid={0})</code>). For the MyVD setting above let's set our client as following:</p>
+<p>
+<table border="1" cellpadding="5" cellspacing="0">
+<tbody>
+<tr>
+<td>user search base</td>
+<td><code>dc=com</code></td>
+</tr>
+<tr>
+<td>user search filter</td>
+<td><code>(uid={0})</code></td>
+</tr>
+<tr>
+<td>groups search base</td>
+<td><code>dc=com</code></td>
+</tr>
+<tr>
+<td>groups search filter</td>
+<td><code>(uid={0})</code></td>
+</tr>
+</tbody>
+</table>
+</p>
+
+<h2>Namespaces Integration</h2>
+<p>In our first example we had two server with one base in common <code>dc=com</code>. But what happend when we have to integrate multiple server with different bases? This is what the property <code>server.&lt;server&gt;.nameSpace</code> is meant for.</p>
+<p align="center"><img src="/storage/myvd-2.png" alt="Namespaces Integration" /></p>
+<pre>...
+server.server1.nameSpace=dc=mycom,dc=com
+...
+server.server1.ldap.config.host=server1.org
+server.server1.ldap.config.remoteBase=dc=server1,dc=org
+server.server1.ldap.config.proxyDN=uid=testuser1,ou=people,dc=server1,dc=org
+...
+server.server2.nameSpace=dc=mycom,dc=com
+...
+server.server2.ldap.config.host=server2.net
+server.server2.ldap.config.remoteBase=dc=server2,dc=net
+server.server2.ldap.config.proxyDN=uid=testuser2,ou=people,dc=server2,dc=net
+...
+</pre>
+<p>Now we can change our search base to <code>dc=mycom,dc=com</code>. Unfortunately this doesn't work. The problem is the DN of the result user entity is mapped to the integration namespace. It means for the username <code>testuser1</code> we get instead of <code>uid=testuser1,ou=people,dc=server1,dc=com</code> a DN <code>uid=testuser1,ou=people,dc=mycom,dc=com</code> and that doesn't match the value of the <code>member</code> attribute of group entities.</p>
+<p>MyVD brings a solution in <a href="https://github.com/TremoloSecurity/MyVirtualDirectory/blob/master/doc/myvd.asc#mapping-inserts" target="_blank">Mapping Inserts</a>:</p>
+<pre>...
+server.server1.chain=dnMapper,ldap
+...
+server.server1.dnMapper.className=net.sourceforge.myvd.inserts.mapping.DNAttributeMapper
+server.server1.dnMapper.config.dnAttribs=member
+server.server1.dnMapper.config.remoteBase=dc=server1,dc=org
+server.server1.dnMapper.config.localBase=dc=mycom,dc=com
+...
+server.server2.chain=dnMapper,ldap
+...
+server.server2.dnMapper.className=net.sourceforge.myvd.inserts.mapping.DNAttributeMapper
+server.server2.dnMapper.config.dnAttribs=member
+server.server2.dnMapper.config.remoteBase=dc=server2,dc=net
+server.server2.dnMapper.config.localBase=dc=mycom,dc=com
+...
+</pre>
+<p>The DN Attribute Mapper maps specified attributted back to the original namespace. Now the search works again.</p>
+<h2>Integration of Heterogeneous Services</h2>
+<p>As we mentioned in the beginning MyVD provides the possibility to integrate different services. So what happend when we integrate a standard LDAP server (e.g. <a href="https://www.openldap.org/" target="_blank">OpenLDAP</a>) and Active Directory (<strong>AD</strong>)? We are still on LDAP field but the details are different. For example AD's user entity holds the username in an <code>sAMAccountName</code> attribute. This means we have to integrate those heterogeneous attributes to be searchable with one client search query.
+</p>
+<p align="center"><img src="/storage/myvd-3.png" alt="Integration of Heterogeneous Services" /></p>
+<p>Sure, we can compose the search filter like <code>(|(uid={0})(sAMAccountName={0}))</code>, which will work fine, but it <strong>exposes implementation details</strong> to the client and breaks so the encapsulation principle. The client shouldn't know anything about the backend server, it should treat the service as a <strong>single LDAP server</strong>.</p>
+<p>Fortunately, there is MyVD's Attribute Mapper:</p>
+<pre>...
+server.server2.chain=uidMapper,dnMapper,ldap
+...
+server.server2.uidMapper.className=net.sourceforge.myvd.inserts.mapping.AttributeMapper
+server.server2.uidMapper.config.mapping=sAMAccountName=uid
+...
+</pre>
+<p>Now works everything fine. The whole MyVD configuration file:</p>
+<pre>server.listener.port=50983
+
+server.nameSpaces=server1,server2
+
+server.server1.nameSpace=dc=mycom,dc=com
+server.server1.weight=100
+server.server1.chain=dnMapper,ldap
+server.server1.ldap.className=net.sourceforge.myvd.inserts.ldap.LDAPInterceptor
+server.server1.ldap.config.host=server1.org
+server.server1.ldap.config.port=389
+server.server1.ldap.config.remoteBase=dc=server1,dc=org
+server.server1.ldap.config.proxyDN=uid=testuser1,ou=people,dc=server1,dc=org
+server.server1.ldap.config.proxyPass=123
+
+server.server1.dnMapper.className=net.sourceforge.myvd.inserts.mapping.DNAttributeMapper
+server.server1.dnMapper.config.dnAttribs=member
+server.server1.dnMapper.config.remoteBase=dc=server1,dc=org
+server.server1.dnMapper.config.localBase=dc=mycom,dc=com
+
+server.server2.nameSpace=dc=mycom,dc=com
+server.server2.weight=100
+server.server2.chain=uidMapper,dnMapper,ldap
+server.server2.ldap.className=net.sourceforge.myvd.inserts.ldap.LDAPInterceptor
+server.server2.ldap.config.host=server2.net
+server.server2.ldap.config.port=389
+server.server2.ldap.config.remoteBase=dc=server2,dc=net
+server.server2.ldap.config.proxyDN=uid=testuser2,ou=people,dc=server2,dc=net
+server.server2.ldap.config.proxyPass=123
+
+server.server2.dnMapper.className=net.sourceforge.myvd.inserts.mapping.DNAttributeMapper
+server.server2.dnMapper.config.dnAttribs=member
+server.server2.dnMapper.config.remoteBase=dc=server2,dc=net
+server.server2.dnMapper.config.localBase=dc=mycom,dc=com
+
+server.server2.uidMapper.className=net.sourceforge.myvd.inserts.mapping.AttributeMapper
+server.server2.uidMapper.config.mapping=sAMAccountName=uid
+</pre>
+<p>Happy integrating!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/LDAP" class="tag">LDAP</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/multiple-ldap-servers-integration.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

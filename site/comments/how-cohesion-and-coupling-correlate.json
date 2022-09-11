@@ -1,3 +1,53 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Nikola",
+    "createdAt": "2021-03-02",
+    "body": "Just wanted to thank you for your take on software cohesion. Many articles on this topic throw around concepts like SRP and separation of concerns and remain foggy in their description of the relationship with cohesion. You, on the other hand, systematically approach the subject and try to demystify the semantic aspect of cohesion from various perspectives. Well done!"
+  }, {
+    "author": "Randy Y",
+    "createdAt": "2021-02-16",
+    "body": "Where did the cohesion equation sited in this post come from?",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-02-17",
+      "body": "It's a format summary of what I describe in the text as my practical understanding of what cohesion is."
+    }, {
+      "author": "Randy Y",
+      "createdAt": "2021-02-23",
+      "body": "Thank you. I understand what you noted. However, the equation expresses a value given a universe of software elements, not the cohesion of a software module or component. For example, the cohesion values for the first three examples are 1, 1, and 0.5. However, each software module or component has perfect cohesion given that all of those modules or components only contains elements with perfect cohesion. Assuming perfect cohesion is 1, the three examples should have values of 1, 1, and 1.\n\nThe fourth and sixth example have cohesion values of 0.5 and 0.3. However, each software module or component has exactly the same number of cohesive elements and non-cohesive elements. Therefore, from the software module or component perspective, each of those modules have identical cohesion.\n\nReaders should pay attention to this distinction because defining cohesive software modules or components is more about what is in the module or component rather than what is not included in the module."
+    }, {
+      "author": "ttulka",
+      "createdAt": "2021-02-24",
+      "body": "Well, the whole point I tried to make was about understanding cohesion of a software module or component in a context of a universe of software elements.\n\nAs the second takeaway in the Conclusion chapter states: “[cohesion] is discovered in a context.”\n\nYour view on cohesion is the traditional one. It is not wrong, the question is: how useful is it?\n\nIn an extreme case, you would end up with a system full of tiny components containing one single element each. A single method per class, for instance. This would mean a high number of connections between components (tight coupling).\n\nMy understanding of cohesion tackles coupling on multiple levels of abstraction. Not only within the component (included), but also within the system (not included in the component). Such cohesion results in loose coupling, which is obviously pretty useful.\n\nMany thanks for your comment!"
+    }, {
+      "author": "Randy Y",
+      "createdAt": "2021-02-24",
+      "body": "In another extreme case, taking the software universe model, you would end up with only one software module or component for a key. Extremes tend to be bad. The context for cohesion should be kept within the boundaries of the software module or component. Choosing to have two modules with perfect cohesion given the same key results in both software modules or components having perfect cohesion. Any problems with engaging those two components would then be manifest in the coupling that results.\n\nFor estimating cohesion with a mathematical equation of a software module or component, I think we should use the constitution of elements within the software module. The equation you provided does not do that. Therefore, to me it is an equation that estimates the cohesion of one and only one software module or component for a given key within a software universe. The difference is important to note."
+    }, {
+      "author": "ttulka",
+      "createdAt": "2021-02-25",
+      "body": "*\"In another extreme case [...] you would end up with only one software module or component for a key.\"*\n\nWell, not by my definition. Like in the first example, if you put both elements (with different keys) into the component, the formula gives you 0.5 [1 / (1 + 2 - 1) = 0.5] instead of desired 1.\n\nSure, the equation is a mere approximation - one might add weights etc, but I still believe that it speaks well for my point.\n\nAgain, what you're saying is not wrong, it is what I learned in school, and it works just fine in most cases. However, if you take it too seriously, it could make harm sometimes. That's why I prefer my approach which I find more useful."
+    }
+    ]
+  }, {
+    "author": "Cody",
+    "createdAt": "2020-12-07",
+    "body": "The traditional definitions are IMO much simpler: cohesion - number of connections inside a code component, coupling - number of connections between code components.\nWhy don't you just use those definitions?",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-12-07",
+      "body": "Yes, your definitions are simple, the question is, how beneficial they actually are...?\n\nIn your case, cohesion works against coupling and vice versa. It's similar to the myth I described, just the opposite extreme. For example, a God object would have the highest cohesion. Okay. Does this help us further? Not much.\n\nI don't think that it is enough to just count connections and tune their degrees. It's more complicated than that.\nMy view on cohesion might be a bit unconventional, but it helps build well modular systems. Main takeaways are:\n- Business and client drive cohesion.\n- Cohesion drives coupling.\n\nI believe that good software is more than a sum of its parts. It's as good as well it reflects the business it serves."
+    }
+    ]
+  }, {
+    "author": "Chandler",
+    "createdAt": "2020-11-28",
+    "body": "The traditional definitions are IMO much simpler: cohesion - number of connections inside a code component, coupling - number of connections between code components.\nWhy don't you just use those definitions?",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2020-11-29",
+      "body": "To quote the author, taken directly from Robert Martin's blog (https://bit.ly/3mnmXvW):\n\n*\"The SRP states that each software module should have one and only one reason to change. [...] Those changes can only originate from a single person, or rather, a single tightly coupled group of people representing a single narrowly defined business function.\"*\n\nAnd later on:\n\n*\"This principle is about **people**.\"*\n\nThis means that if a single person has a set of responsibilities those should be brought together.\n\nTo me, it makes a lot of sense to put people into the center, as the client defines the desired behavior of the system.\n- Ideally, every business use-case should be carried out by a single request.\n- Design of services and objects should be behavior-driven."
+    }
+    ]
+  }
+  ]}

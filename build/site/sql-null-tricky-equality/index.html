@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>SQL NULL: tricky equality</title>
+    <meta name="description" content="Don't get confused with NULL in SQL!">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="SQL NULL: tricky equality by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/sql-null-tricky-equality" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="SQL NULL: tricky equality by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">SQL NULL: tricky equality</h1>
+    <p class="blog-post__meta">2015-11-11 by Tomas Tulka</p>
+    <p>Don't get confused with NULL in SQL!</p>
+    <hr>
+    <p>Especially when creating a SQL quary from the code, to make the life easier we are using constructions like this:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE 1=1</pre>
+<p>Then we can easily add a new condition just joined with AND (or OR):</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE 1=1 AND ...</pre>
+<p>and it will be working perfectly fine.</p>
+<p>Working with constans can't bring any problem, but it's getting tricky when we're working with variables (columns) like this:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE num=num</pre>
+<p>The problem is the special <em>value</em> NULL. <br /></p>
+<p>Why do we actually need <code>num = num</code> instead of <code>1 = 1</code>? Well it could be handy when we have a condition inside the query:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE val =&nbsp; IF(num &gt; 2, 3, val)</pre>
+<p>By this query we say: give me all the data in the <code>test</code> table where the value of the <code>val</code> column equals 3, in case that value of the <code>num</code> column is greater then 2, otherwise we don't care of the value of the <code>val</code> at all.</p>
+<p><em>Comment: the control flow function <code>IF</code> is RDBMS-related (<code>IF</code> is available in MySQL).</em></p>
+<p>In case when the val column contains NULL values, we can get unexpected behaviour (unexpected for us, but logic as we will see next).</p>
+<h2>Working with the NULL values</h2>
+<p>Let's consider a simple table:</p>
+<pre class="brush: sql">CREATE TABLE test (num INT, str VARCHAR(100), str2 VARCHAR(100));</pre>
+<p>with different values containg NULL values:</p>
+<pre class="brush: sql">INSERT INTO test VALUES (1, 'abc', 'abc'), (2, NULL, NULL), (NULL, '3', NULL), (NULL, NULL, NULL);</pre>
+<p>The table looks like following:</p>
+<p>
+<table cellspacing="1" cellpadding="1" border="1" style="width: 300px;">
+<tbody>
+<tr>
+<td valign="top"><strong>num<br /></strong></td>
+<td valign="top"><strong>str<br /></strong></td>
+<td valign="top"><strong>str2<br /></strong></td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;1</td>
+<td style="width: 33%;">&nbsp;abc</td>
+<td style="width: 33%;">&nbsp;abc</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;2</td>
+<td style="width: 33%;">  NULL</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;NULL</td>
+<td style="width: 33%;">&nbsp;3</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;NULL <br /></td>
+<td style="width: 33%;">  NULL</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+</tbody>
+</table><br />
+</p>
+<p>Executing this query:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE num = num;</pre>
+<p>will return</p>
+<p>
+<table cellspacing="1" cellpadding="1" border="1" style="width: 300px;">
+<tbody>
+<tr>
+<td valign="top"><strong>num<br /></strong></td>
+<td valign="top"><strong>str<br /></strong></td>
+<td valign="top"><strong>str2<br /></strong></td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;1</td>
+<td style="width: 33%;">abc <br /></td>
+<td style="width: 33%;">&nbsp;abc</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;2</td>
+<td style="width: 33%;">&nbsp;NULL</td>
+<td style="width: 33%;">&nbsp;NULL</td>
+</tr>
+</tbody>
+</table>
+</p>
+<p>But it's very suspicious, because we have added four not two rows.</p>
+<p>NULL values can't be compared by the <code>=</code> equality operator. The same behaviour we can see in this example:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE str = str2;</pre>
+<table cellspacing="1" cellpadding="1" border="1" style="width: 300px;">
+<tbody>
+<tr>
+<td valign="top"><strong>num<br /></strong></td>
+<td valign="top"><strong>str<br /></strong></td>
+<td valign="top"><strong>str2<br /></strong></td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;1</td>
+<td style="width: 33%;">abc <br /></td>
+<td style="width: 33%;">&nbsp;abc</td>
+</tr>
+</tbody>
+</table>
+<p>Instead of <code>=</code> operator we need to use <code>IS</code> operator:</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE num IS num;</pre>
+<p>will return the whole table.</p>
+<pre class="brush: sql">SELECT &#42; FROM test WHERE str IS str2;</pre>
+<table cellspacing="1" cellpadding="1" border="1" style="width: 300px;">
+<tbody>
+<tr>
+<td valign="top"><strong>num<br /></strong></td>
+<td valign="top"><strong>str<br /></strong></td>
+<td valign="top"><strong>str2<br /></strong></td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;1</td>
+<td style="width: 33%;">&nbsp;abc</td>
+<td style="width: 33%;">&nbsp;abc</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;2</td>
+<td style="width: 33%;">  NULL</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+<tr>
+<td style="width: 33%;">&nbsp;NULL <br /></td>
+<td style="width: 33%;">  NULL</td>
+<td style="width: 33%;">  NULL</td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p>
+<p>NULL is an unknown value. As <code>NULL != NULL</code>, we can't do <code>num = NULL</code> nor <code>num != NULL</code> to get the expected results.</p>
+<p><strong>Always use <code>IS</code> (<code>IS NOT</code>) operators while working with NULL values.</strong><br /></p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Database" class="tag">Database</a>
+    
+    <a href="/tag/SQL" class="tag">SQL</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/sql-null-tricky-equality.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

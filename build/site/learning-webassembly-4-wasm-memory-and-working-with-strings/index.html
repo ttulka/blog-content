@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Learning WebAssembly #4: Wasm Memory and Working with Strings</title>
+    <meta name="description" content="Dealing with strings and other complex data types via Wasm memory mechanism.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Learning WebAssembly #4: Wasm Memory and Working with Strings by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/learning-webassembly-4-wasm-memory-and-working-with-strings" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Learning WebAssembly #4: Wasm Memory and Working with Strings by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Learning WebAssembly #4: Wasm Memory and Working with Strings</h1>
+    <p class="blog-post__meta">2021-01-04 by Tomas Tulka</p>
+    <p>Dealing with strings and other complex data types via Wasm memory mechanism.</p>
+    <hr>
+    <p>In the previous parts of this <a href="/learning-webassembly-series" target="_blank">series</a>, we were manipulating scalar numeric data exclusively. More complex data types such as strings do not have their representation in Wasm itself and must be modeled via Wasm <a href="https://developer.mozilla.org/en-US/docs/WebAssembly/Using_the_JavaScript_API#Memory" target="_blank">memory</a> mechanism.</p>
+
+<h2>Wasm Memory</h2>
+
+<p><em>Memory</em> in Wasm is a large array of bytes that can grow over time. One has direct access to the raw bytes of the memory. A memory object can be provided by initialization or created automatically.</p>
+
+<p>The memory object can be shared and parties (like Wasm and JS) can pass values back and forth.</p>
+
+<p>Because Wasm memory is practically just a JavaScript object, it itself is tracked by the garbage collector. This prevents the system from running out of memory.</p>
+
+<p>The memory object is isolated from other memory objects owned by other modules.</p>
+
+<h2>Imported Memory from JavaScript</h2>
+
+<p>We can create a Memory object in JavaScript and have the WebAssembly module import the memory:</p>
+
+<pre class="brush: wat">
+(module
+  (<b>import "js" "mem" (memory 1)</b>)
+  (<b>data (i32.const 0) "Hello"</b>)
+
+  (func (export "memtest")
+        (result i32)
+    i32.const 5  ;; data length
+    return))
+</pre>
+
+<p>The module expects a memory object imported under the name <code>js.mem</code>. Data <code>Hello</code> is stored to the memory object on the position <code>0</code>.</p>
+
+<p>Then, JavaScript code creates a memory object and reads the data of the returned length:</p>
+
+<pre>
+var mem = new <b>WebAssembly.Memory</b>({initial:1});
+
+WebAssembly
+  .instantiateStreaming(fetch('memory.wasm'), {
+    js: { mem }
+  })
+  .then(({instance}) =&gt; {
+    var length = instance.exports.memtest();
+    var bytes = new <b>Uint8Array(mem.buffer, 0, length)</b>;
+    var string = new TextDecoder('utf8').decode(bytes);
+
+    console.log(string);  // "Hello"
+  });
+</pre>
+
+<p>Raw data is read from the memory object in <code>Uint8Array</code> representation and decoded into UTF8 afterward.</p>
+
+<p>The expected result is printed to the dev console:</p>
+
+<pre>
+&raquo; Hello
+</pre>
+
+<h2>Exported Memory from Wasm</h2>
+
+<p>Albeit importing memory from JavaScript is more typical, we can also have the WebAssembly module create the memory and export it to JavaScript:</p>
+
+<pre class="brush: wat">
+(module
+  (<b>memory $m 1</b>)
+  (<b>export "mem" (memory $m)</b>)
+  (data (i32.const 0) "Hello")
+
+  (func (export "dataLength")
+        (result i32)
+    i32.const 5  ;; data length
+    return))
+</pre>
+
+<p>Now, the memory object is exported and accessible in JavaScript by the export name:</p>
+
+<pre>
+WebAssembly
+  .instantiateStreaming(fetch('memory2.wasm'))
+  .then(({instance}) =&gt; {
+    var <b>memory = instance.exports.mem</b>;
+
+    var length = instance.exports.memtest();
+    var bytes = new Uint8Array(memory.buffer, 0, length);
+    var string = new TextDecoder('utf8').decode(bytes);
+
+    console.log(string);  // "Hello"
+  });
+</pre>
+
+<h2>Further Steps</h2>
+
+<p>We have learned how to read a string from the memory object shared between Wasm and JavaScript code.</p>
+
+<p>In the <a href="/learning-webassembly-5-running-wasm-in-the-browser">next part</a> of this <a href="/learning-webassembly-series">series</a>, we will take a deeper look at the execution of Wasm in a browser and interaction with JavaScript.</p>
+
+<p>Stay tuned!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/WebAssembly" class="tag">WebAssembly</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/learning-webassembly-4-wasm-memory-and-working-with-strings.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

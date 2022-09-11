@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>SOLID Principles in Java by Example</title>
+    <meta name="description" content="There are a lot of articles about the SOLID principles. But usually a different example for a particular principle is to be found. Instead, would it be nice to demonstrate all of them on a single code snippet?">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="SOLID Principles in Java by Example by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/solid-principles-in-java-by-example" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="SOLID Principles in Java by Example by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">SOLID Principles in Java by Example</h1>
+    <p class="blog-post__meta">2019-12-08 by Tomas Tulka</p>
+    <p>There are a lot of articles about the SOLID principles. But usually a different example for a particular principle is to be found. Instead, would it be nice to demonstrate all of them on a single code snippet?</p>
+    <hr>
+    <p>We aren’t going to drive deep into the theory, as a lot was already written. We are interested mainly in code!</p>
+
+<p>Consider a simple payroll component, an example very favored by Uncle Bob himself:</p>
+
+<pre class="brush: java">
+abstract class Employee {
+
+  private final static Map&lt;String, Employee&gt;
+      registry = new HashMap&lt;&gt;();
+
+  protected final String personalId;
+  protected final String firstName;
+  protected final String lastName;
+
+  /** constructor */
+
+  public String fullName() {
+    return String.format("%s %s", firstName, lastName);
+  }
+
+  public void register() {
+    registry.put(personalId, this);
+  }
+
+  public boolean isRegistered() {
+    return registry.containsKey(personalId);
+  }
+}
+
+class Paycheck {
+
+  private final Employee employee;
+
+  /** constructor */
+
+  public double amount() {
+    if (employee instanceof Manager) {
+      return 2000.0;
+    }
+    if (employee instanceof Developer) {
+      return 1000.0;
+    }
+    return 0.0;
+  }
+}
+</pre>
+
+
+<h2>Single Responsibility Principle (SRP)</h2>
+<p>The SRP is about cohesion, it says that a component (function, method, class, module) should have only one reason to change.</p>
+
+<p>Our code breaks the SRP as any change in the persistence mechanism would require a change of the <code>Employee</code> code. For instance, a timestamp of the registration is persisted as well, etc.</p>
+<pre class="brush: java">
+abstract class Employee {
+  /** ... */
+
+  private final static Map&lt;String, Employee&gt;
+      registry = new HashMap&lt;&gt;();
+
+  public void register() {
+    registry.put(personalId, this);
+  }
+
+  public boolean isRegistered() {
+    return registry.containsKey(personalId);
+  }
+}
+</pre>
+
+<p>To fix that we introduce a new specialized class <code>EmployeeRegistry</code> and put the persistence functionality into it.</p>
+<pre class="brush: java">
+class EmployeeRegistry {
+
+  private final static Map&lt;String, Employee&gt; map = new HashMap&lt;&gt;();
+
+  public void register(Employee employee) {
+    map.put(employee.personalId, employee);
+  }
+
+  public boolean isRegistered(Employee employee) {
+    return map.containsKey(employee.personalId);
+  }
+}
+</pre>
+
+<p>Now, we just delegate the request:</p>
+<pre class="brush: java">
+abstract class Employee {
+  /** ... */
+
+  private final static EmployeeRegistry
+      registry = new EmployeeRegistry();
+
+  public void register() {
+    registry.register(this);
+  }
+
+  public boolean isRegistered() {
+    return registry.isRegistered(this);
+  }
+}
+</pre>
+
+<p>We can do even better with the Dependency Inversion Principle, stay tuned.</p>
+
+<h2>Open-Closed Principle (OCP)</h2>
+<p>The OCP states that software components should be open for extension, but closed for modification. It means that we should extend the system functionality by adding new components rather than modifying the existing ones.</p>
+
+<p>With a new <code>Employee</code> subtype, calculating of the amout in the <code>Paycheck</code> must be modified:</p>
+<pre class="brush: java">
+public double amount() {
+  if (employee instanceof Manager) {
+    return 2000.0;
+  }
+  if (employee instanceof Developer) {
+    return 1000.0;
+  }
+  return 0.0;
+}
+</pre>
+
+<p>Better would be to create a method inside the <code>Employee</code> to return the salary for the paycheck:</p>
+<pre class="brush: java">
+abstract class Employee {
+  /** ... */
+
+  public abstract double salary();
+}
+
+class Manager extends Employee {
+  /** ... */
+
+  @Override
+  public double salary() {
+    return 2000.0;
+  }
+}
+</pre>
+
+<p>Now, the <code>Paycheck</code> could be simplified and will work with any additional <code>Employee</code> subclass.</p>
+<pre class="brush: java">
+class Paycheck {
+  /** ... */
+
+  public double amount() {
+    return employee.salary();
+  }
+}
+</pre>
+<p>By the way, using <code>instanceof</code> violates the Liskov Substitution Principle, too. Avoid <code>instanceof</code> at any price!</p>
+
+<h2>Liskov Substitution Principle (LSP)</h2>
+<p>The LSP says that an object of type T should be replaceable with its subtypes S without affecting the correctness of the program P.</p>
+
+<p>Although the most of possible violations of LSP are in strongly typed languages caught by the compiler (return types, proper parameter subtypes, etc.), there are still invariants and contracts to take care of.</p>
+
+<p>From the definition, a volunteer has to salary; it actually makes no sense to talk about any salary:</p>
+<pre class="brush: java">
+class Volunteer extends Employee {
+  /** ... */
+
+  @Override
+  public double salary() {
+    throw new RuntimeException("No salary for volunteers!");
+  }
+}
+</pre>
+
+<p>But what happends to the <code>Paycheck</code> (P) when we try to calculate the amount for a volunteer (S)?
+<pre class="brush: java">
+double amount = new Paycheck(
+    new Volunteer("001", "John", "Smith")
+).amount();
+</pre>
+
+<p>Unsurprisingly, an exception occurs. The exception breaks the contract we provided via the <code>Employee</code> to the <code>Paycheck</code> as not declared in the method signature. We have to fix it:</p>
+<pre class="brush: java">
+class Volunteer extends Employee {
+  /** ... */
+
+  @Override
+  public double salary() {
+    return 0.0;
+  }
+}
+</pre>
+
+<h2>Interface Segregation Principle (ISP)</h2>
+<p>The ISP says that no client should be forced to depend on methods it does not use.</p>
+
+<p>A volunteer is actually not a payed employee and implementing it like that violates a business invariant. We can fix it with the ISP:</p>
+<pre class="brush: java">
+interface PayedEmployee {
+
+  double salary();
+}
+
+class Manager extends Employee implements PayedEmployee {
+  /** ... */
+
+  @Override
+  public double salary() {
+    return 2000.0;
+  }
+}
+</pre>
+
+
+<p>After the <code>PayedEmployee</code> was introduced, the method <code>salary()</code> has disappeared from the <code>Volunteer</code> and the <code>Employee</code> itself.</p>
+<p>The <code>Paycheck</code> depends only on what it really needs now:</p>
+<pre class="brush: java">
+class Paycheck {
+
+  private final PayedEmployee employee;
+
+  /** ... */
+}
+</pre>
+
+<h2>Dependency Inversion Principle (DIP)</h2>
+<p>The DIP states that high level modules should not depend on low level modules; both should depend on abstractions and abstractions should not depend on details.</p>
+
+<p>We have introduced the <code>EmployeeRegistry</code> to separate the persistence mechanism from the other code, but the class is still concrete and it's a hard dependency of the <code>Employee</code>.</p>
+<p>What happends if a different implementation is needed? For instance, consider using a database instead of a <code>Map</code>.</p>
+<p>Following the DIP we introduce an abstraction and let <code>Employee</code> depend on it:</p>
+<pre class="brush: java">
+interface EmployeeRegistry {
+
+  void register(Employee employee);
+
+  boolean isRegistered(Employee employee);
+}
+
+abstract class Employee {
+
+  private final EmployeeRegistry registry;
+
+  /** ... */
+}
+</pre>
+
+<p>Notice that abstractions invert dependencies.</p>
+
+<h2>Conclusion</h2>
+<p>(Software) principles should never lead to dogma; they should provide a hint on unclear crossroads.</p>
+<p>SOLID principles can help recognize a problem in your code, but applying them blindly will likely do more harm than good.</p>
+
+<p>The example source code with SOLID commits (<a href="https://github.com/ttulka/blog-code-samples/tree/f0a5961d8e99772f39047f4a8322d12344acd2a7/solid-by-example" target="_blank">original</a>, <a href="https://github.com/ttulka/blog-code-samples/tree/be83c69a5b9a75e6a99efdd969e87967c0e26b65/solid-by-example" target="_blank">SRP</a>, <a href="https://github.com/ttulka/blog-code-samples/tree/65d9799e20f2c695ca534eac9e6fd90f5fa823f6/solid-by-example" target="_blank">OCP</a>, <a href="https://github.com/ttulka/blog-code-samples/tree/4f7f59cff17f006b07a0a0c68703b7b918ec0941/solid-by-example" target="_blank">LSP</a>, <a href="https://github.com/ttulka/blog-code-samples/tree/66db7e330dde660b566e500628b2a069794c4934/solid-by-example" target="_blank">ISP</a>, <a href="https://github.com/ttulka/blog-code-samples/tree/a2397ff2ab7b8902456737eb93eb36cc13159136/solid-by-example" target="_blank">DIP</a>) is on my <a href="https://github.com/ttulka/blog-code-samples/tree/master/solid-by-example" target="_blank">Github</a>.</p>
+
+<p>Happy coding!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Design Patterns" class="tag">Design Patterns</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    <a href="/tag/Java" class="tag">Java</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/solid-principles-in-java-by-example.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

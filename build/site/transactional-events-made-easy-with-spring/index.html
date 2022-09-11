@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Transactional Events Made Easy with Spring</title>
+    <meta name="description" content="How to publish events transactionally with RabbitMQ and Spring’s ApplicationEventPublisher.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Transactional Events Made Easy with Spring by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/transactional-events-made-easy-with-spring" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Transactional Events Made Easy with Spring by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Transactional Events Made Easy with Spring</h1>
+    <p class="blog-post__meta">2022-02-06 by Tomas Tulka</p>
+    <p>How to publish events transactionally with RabbitMQ and Spring’s ApplicationEventPublisher.</p>
+    <hr>
+    <p>It’s a good practice to use events for communication between your domain services.</p>
+<p>Transactions in distributed systems are a hard problem and should be avoided when possible. The rule of thumb says that when you find yourself in need of a distributed transaction, your design of the service boundaries is probably suboptimal.</p>
+<p>Instead of implementing complex and error-prone mechanisms like the two-phase commit protocol, we can use much simpler techniques such as the saga pattern. Sagas are much closer to how real-world business works, easier to maintain and reason about.</p>
+<p>We still need transactions to make service actions atomic. Also, we need the events to respect the atomicity of the operation. An event must not be sent unless the transactional operation is completed successfully.</p>
+<p>Spring provides a simple elegant solution for publishing events transactionally without any distributed transactional management (JTA) such as Atomikos or Bitronix.</p>
+
+<h2>Events</h2>
+<p>Consider the following code that collects payment in a three-step transaction and informs about it by publishing some events to the external RabbitMQ broker:</p>
+<pre class="brush: java">
+@Service
+@RequiredArgsConstructor
+public class PaymentService {
+
+  private final RabbitTemplate rabbitTemplate;
+
+  @Transactional
+  public void collectPayment(Payment payment) {
+    issuePayment(payment);
+    rabbitTemplate.convertAndSend(&quot;paymentQueue&quot;,
+        new PaymentIssued(payment));
+
+    validatePayment(payment);
+    rabbitTemplate.convertAndSend(&quot;paymentQueue&quot;,
+        new PaymentValidated(payment));
+
+    applyPayment(payment);
+    rabbitTemplate.convertAndSend(&quot;paymentQueue&quot;,
+        new PaymentApplied(payment));
+  }
+
+  // ... more methods
+}
+</pre>
+
+<p>There is another code listening for the events and auditing them respectively:</p>
+<pre class="brush: java">
+@Component
+@Slf4j
+class PaymentAudit {
+
+  @RabbitListener(queues = &quot;paymentQueue&quot;)
+  public void listen(Object event) {
+    log.info(&quot;Event received: {}&quot;, event);
+    // update the ledger
+    // ...
+  }
+}
+</pre>
+<p>At first glance, everything works as expected:</p>
+<pre>
+INFO issuing the payment
+INFO validating the payment                                    
+INFO applying the payment                                      
+INFO Event received: PaymentIssued
+INFO Event received: PaymentValidated
+INFO Event received: PaymentApplied
+</pre>
+<p>But what if a failure occurs in the transaction, for instance in the <code>applyPayment</code> method?</p>
+<p>Despite the fact that the transaction is rolled back, the two first events have been published. The system ends up in an inconsistent state:</p>
+<pre>
+INFO issuing the payment
+INFO validating the payment                                  
+INFO applying the payment  
+ERROR Oops!
+INFO Event received: PaymentIssued
+INFO Event received: PaymentValidated
+</pre>
+<p>This is not what we want. What we really want is events to respect the transaction and be published only when the transaction succeeds.</p>
+<p>We need the events to be transactional! </p>
+
+<h2>Transactional Events</h2>
+<p>Spring provides a neat solution for this issue: <code>ApplicationEventPublisher</code> together with <code>@TransactionalEventListener</code>.</p>
+<p>We simply change the service code in order to publish Spring’s application events instead of RabbitMQ messages:</p>
+<pre class="brush: java">
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class PaymentService {
+
+  private final ApplicationEventPublisher eventPublisher;
+
+  @Transactional
+  public void collectPayment(Payment payment) {
+    issuePayment(payment);
+    eventPublisher.publishEvent(new PaymentIssued(payment));
+
+    validatePayment(payment);
+    eventPublisher.publishEvent(new PaymentValidated(payment));
+
+    applyPayment(payment);
+    eventPublisher.publishEvent(new PaymentApplied(payment));
+  }
+
+  // ... more methods
+}
+</pre>
+<p>Then, we create a straightforward integration with the RabbitMQ broker:</p>
+<pre class="brush: java">
+@Component
+@RequiredArgsConstructor
+class RabbitIntegration {
+
+  private final RabbitTemplate rabbitTemplate;
+
+  @TransactionalEventListener
+  public void handleEvent(PaymentEvent event) {
+    rabbitTemplate.convertAndSend(
+        &quot;paymentQueue&quot;, event);
+  }
+}
+</pre>
+<p>Now, the Spring’s transactional event listener resends the events to the broker only when the transaction finishes successfully:</p>
+<pre>
+INFO issuing the payment
+INFO validating the payment                                  
+INFO applying the payment  
+ERROR Oops!
+</pre>
+<p>No successful commit — no events published. Exactly what we wanted.</p>
+
+<h2>Conclusion</h2>
+<p>Dealing with transactions in the context of distributed systems is not a piece of cake.</p>
+<p>Using Spring application events in your business code and integrating them at the boundaries can help you greatly with this tedious task.</p>
+<p>Moreover, this pattern is handy in decoupling the underlying message infrastructure from the service code, too. One can easily switch the broker implementation or use the Spring events alone in a monolithic application where no external messaging is involved.</p>
+<p>You can find the source code on <a href="https://github.com/ttulka/blog-code-samples/tree/master/publishing-transactional-events" target="_blank">GitHub</a>.</p>
+<p>For a more advanced example of this technique please refer to my <a href="https://github.com/ttulka/ddd-example-ecommerce-microservices" target="_blank">domain-driven design microservices</a> project. </p>
+<p>Happy events!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Event-Driven" class="tag">Event-Driven</a>
+    
+    <a href="/tag/Design Patterns" class="tag">Design Patterns</a>
+    
+    <a href="/tag/Spring" class="tag">Spring</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/transactional-events-made-easy-with-spring.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

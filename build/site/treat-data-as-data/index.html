@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Treat Data as Data</title>
+    <meta name="description" content="Object-oriented approach is a mighty concept making software more maintainable, which means cheaper and easier to understand. Problems come at boundaries, where objects have to be passed on into a different layer or another system. There, the objects become just data and should be treated like that.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Treat Data as Data by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/treat-data-as-data" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Treat Data as Data by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Treat Data as Data</h1>
+    <p class="blog-post__meta">2019-12-01 by Tomas Tulka</p>
+    <p>Object-oriented approach is a mighty concept making software more maintainable, which means cheaper and easier to understand. Problems come at boundaries, where objects have to be passed on into a different layer or another system. There, the objects become just data and should be treated like that.</p>
+    <hr>
+    <p>This problem is not new, was already noticed by <a href="https://blog.ploeh.dk/2011/05/31/AttheBoundaries,ApplicationsareNotObject-Oriented/">Mark Seemann</a> and many others. Michael Nygard writes in <i>Release It!</i>:</p>
+<blockquote class="quote">What appears as a class in one layer should be mere data to every other layer.</blockquote>
+
+<p>Objects in the domain layer are <strong>"living" active entities defined by their behavior</strong>. But what happens when an object needs to be persisted, or for example displayed on the screen? What is an object for a database? How is an object represented in a message or in a response of a REST call? It's mere data.</p>
+
+<p>As an example, consider a REST controller returning an object as JSON. With Spring framework we typically do it as follows:</p>
+
+<pre class="brush: java">
+@GetMapping
+public Account login(String username, String password) {
+  return accounts.login(username, password);
+}
+</pre>
+
+<p>Because <code>Account</code> provides a <code>getUsername()</code> method, the response looks like:</p>
+
+<pre class="brush: json">
+{
+  "username": "test"
+}
+</pre>
+
+<p>The problem with this approach is that the domain layer (<code>Account</code>) is highly coupled to the application layer (controller): a change in the domain object can lead to a broken contract. Another problem is leaking of implementation details: adding a new getter to the domain object will change the response as follows:</p>
+
+<pre class="brush: json">
+{
+  "username": "test",
+  "password": "pwd1"
+}
+</pre>
+
+<p>Another obvious problem is, that Spring requires getters to convert the domain object to its serialized representation (e.g. JSON). This breaks encapsulation of the object and leads to a shift from the OOP understanding of objects as a unit of behavior to treating objects as poor data structures with a bunch of attached procedures.</p>
+
+<h2>Data Is Data</h2>
+<p>The solution is to understand this gap and to <strong>treat objects as objects and data as data</strong>. A traditional way of doing this is known as Data Transfer Object (DTO):</p>
+
+<pre class="brush: java">
+@GetMapping
+public LoginDTO login(String username, String password) {
+  Account account = accounts.login(username, password);
+  return new LoginDTO(account.getUsername());
+}
+
+class LoginDTO {
+
+  private final String username;
+
+  public LoginDTO(String username) {
+    this.username = username;
+  }
+
+  public String getUsername() {
+    return this.username;
+  }
+}
+</pre>
+
+<p>Creating a DTO for all use-cases is a lot of hard work. Is it really worth? What are the actual benefits of DTOs? I can think of two:</p>
+<ol>
+    <li>Static typing</li>
+    <li>Explicit structure</li>
+</ol>
+
+<h3>Static Typing</h3>
+<p>Static typing is a big benefit of strongly typed languages that brings a good level of confidence as a lot of bugs are discovered already during compilation. The problem here is, that no input/output is actually strongly typed. Consider the following endpoint:</p>
+
+<pre class="brush: java">
+@PostMapping
+@ResponseStatus(HttpStatus.CREATED)
+public void register(
+    @RequestBody ToRegisterDTO toRegister) {
+  accounts.register(
+      toRegister.getUsername(),
+      toRegister.getPassword(),
+      toRegister.getEmail());
+}
+
+static class ToRegisterDTO {
+
+  private final String username;
+  private final String password;
+  private final String email;
+
+  // constructor and getters...
+}
+</pre>
+
+<p>The method expects the input in the following format:</p>
+<pre class="brush: json">
+{
+  "username": ...,
+  "password": ...,
+  "email": ...
+}
+</pre>
+
+<p>But there is nothing to prevent the client to send anything different:</p>
+<pre class="brush: json">
+{
+  "UserName": ...,
+  "pass": ...,
+  "e-mail": ...
+}
+</pre>
+<p>The typical solution is to validate the input, but <strong>no typing will help us here</strong>. So why should we bother?</p>
+
+<h3>Explicit Structure</h3>
+<p>Explicit is always good, but DTOs create a lot boiler-plate code and are not much different to pure data structures. Compare the following variants:</p>
+
+<pre class="brush: java">
+@PostMapping
+@ResponseStatus(HttpStatus.CREATED)
+public void register(
+    @RequestBody ToRegisterDTO toRegister) {
+  accounts.register(
+      toRegister.getUsername(),
+      toRegister.getPassword(),
+      toRegister.getEmail());
+}
+
+// vs.
+
+@PostMapping
+@ResponseStatus(HttpStatus.CREATED)
+public void register(
+    @RequestBody Map&lt;String, String&gt; toRegister) {
+  accounts.register(
+      toRegister.get("username"),
+      toRegister.get("password"),
+      toRegister.get("email"));
+}
+</pre>
+
+<p>In my opinion there is no big difference, in the second variant a lot of code for DTOs disappeared (the less to maintain the better) and the code tells the reader much more explicitly that data, no objects, are to be found here.</p>
+<p>A Data Transfer Objects are, despite the name, no object at all. There are nothing more than strongly typed data structures. As the strong typing doesn't bring a great value, explicit data structures like Map and List could be used instead.</p>
+
+<h2>Conclusion</h2>
+<p>Whether using DTOs or standard data structures, <strong>dealing with data should be explicit and obvious from the code</strong>. Leaking domain beyond layer boundaries increase coupling and can undesirably affect the API. This risk should be avoided by treating data as data clearly and explicitly. Objects are units of behavior which can't cross layers. This fact should be reflected in the code.</p>
+
+<p>The source code could be found on <a href="https://github.com/ttulka/blog-code-samples/tree/master/objects-at-boundaries" target="_blank">GitHub</a>.
+
+<p>Happy coding!</p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/OOP" class="tag">OOP</a>
+    
+    <a href="/tag/Design Patterns" class="tag">Design Patterns</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/treat-data-as-data.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Managing Non-Java Resources from Gradle</title>
+    <meta name="description" content="There are really complex projects which consist of a lot of heterogeneous parts, modules, batch scripts, binaries...">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Managing Non-Java Resources from Gradle by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/managing-non-java-resources-from-gradle" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Managing Non-Java Resources from Gradle by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Managing Non-Java Resources from Gradle</h1>
+    <p class="blog-post__meta">2015-02-17 by Tomas Tulka</p>
+    <p>There are really complex projects which consist of a lot of heterogeneous parts, modules, batch scripts, binaries...</p>
+    <hr>
+    <p>Let's consider a project containing a module written in C... How to proceed in this case when we want to manage everything by the same way, compile from Gradle and version in a Maven repository?</p>
+<p>This article describes an easy way how to achieve this tough DevOps goal.</p><h2>Building non-java resources with Gradle <br /></h2>
+<p>For building non-java sources there is a package of plugins for dealing with native binaries, this package is currently under incubating but seems to be pretty usable so far.</p>
+<p>Details can be found in the <a target="_blank" href="https://gradle.org/docs/current/userguide/nativeBinaries.html" title="Building native binaries">Building native binaries</a> chapter of the official documentation. <a href="https://gradle.org/docs/current/userguide/nativeBinaries.html" title="Building native binaries"><br /></a></p>
+<p>There is a support for several languages like C, C++, Assembly, Windows resources, ...</p>
+<p>We will focus on C here, as the language differences are not the point of our issue.</p>
+<h3>C builds with Gradle</h3>
+<p>Applying the &quot;c&quot; Gradle plugin with a simple setting of source codes located in <code>src/main/c</code> and <code>src/main/c/headers</code> in the project folder:</p>
+<pre class="brush: groovy">apply plugin: 'c'
+
+executables {
+&nbsp; main { }
+}
+
+sources {
+&nbsp; main {
+&nbsp;&nbsp;&nbsp; c {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; source {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; srcDir "src/main/c"
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; include "**/*.c"
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; exportedHeaders {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; srcDir "src/main/c/headers"
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; include "**/*.h"
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
+&nbsp;&nbsp;&nbsp; }
+&nbsp; }
+}</pre>
+<p> This script will simply compile the sources in the source path and put the result (.exe file) into <code>build/binaries/mainExecutable</code> folder.</p>
+<p>More details can be found in the documentation (mentioned above).</p>
+<h2>Publish non-java resources into a Maven2 repository</h2>
+<p>For publishing we need to have an access to a Maven2 repository, for instance <a href="http://www.sonatype.org/nexus" target="_blank" title="Nexus server">the Nexus server from Sonatype</a>.</p>
+<p>The goal here is to <strong>version the binaries in the repository</strong>, and what's more - we would like to make <strong>different variants of binaries</strong> (for instance each variant for a different platform).</p>
+<p>Using the Gradle <a title="Maven Publishing plugin" target="_blank" href="https://gradle.org/docs/current/userguide/publishing_maven.html">Maven Publishing plugin</a> is a pretty straightforward way to do this:</p>
+<pre class="brush: groovy">apply plugin: 'maven-publish'
+
+group = 'cz.net21.ttulka'
+version = '0.1'
+
+task myZip(type: Zip) {
+&nbsp; destinationDir = file('dist')
+&nbsp; archiveName 'myC.zip'
+&nbsp; from 'build/binaries/mainExecutable'
+}
+
+publishing {
+&nbsp; publications {
+&nbsp;&nbsp;&nbsp; myPublicationName(MavenPublication) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; artifact (myZip) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; classifier = 'win32'
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; }
+&nbsp; }
+}
+
+repositories {
+&nbsp; maven {
+&nbsp;&nbsp;&nbsp; credentials {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; username 'xxx'
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; password 'xyz'
+&nbsp;&nbsp;&nbsp; }
+&nbsp;&nbsp;&nbsp; url 'http://localhost:8081/nexus/content/repositories/MyMavenRep1/'
+&nbsp; }
+}
+</pre>
+<p>Don't forget to set the project name in the <code>settings.gradle</code> configuration file, for instance:</p>
+<pre class="brush: groovy">rootProject.name = 'my-project-with-native-binaries'</pre>
+<p>In the example snippet we have used the <code>Zip </code>Gradle task to archive the binaries into a zip file, then we have used the archive as the input for the Maven publication and finally added the classifier (<code>classifier = 'win32'</code>) to annotate this build variant as a Win32 platform-oriented. </p>
+<h2>Load the binaries as a dependency in an independent project</h2>
+<p>As far as we have compiled the sources and put the binaries into the repository, we want to deal with them from another project (or a different module).</p>
+<p> To distinguish the binary dependencies from the others, we can define a new Gradle configuration:</p>
+<pre class="brush: groovy">configurations {
+&nbsp; binaries {}
+}</pre>
+<p>Dependencies are then marked by this configuration flag, don't forget that we used the zip archive and the classifier:</p>
+<pre class="brush: groovy">dependencies {
+&nbsp; binaries 'cz.net21.ttulka:my-project-with-native-binaries:0.1:win32@zip'
+}</pre>
+<p>That's it, now we can do whatever we want:</p>
+<pre class="brush: groovy">// copy the dependencies into a 'deps' folder
+task getDeps(type: Copy) {
+&nbsp; from configurations.binaries
+&nbsp; into 'deps/'
+}</pre>
+<p> <br /></p>
+<p>Hopefully this article gave you a little insight how to deal with different types of resources in one unified way with Gradle, and help you optimize your DevOps processes!<br /></p>
+<p> <br /></p>
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Gradle" class="tag">Gradle</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/managing-non-java-resources-from-gradle.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Difference between POST, PUT, and PATCH</title>
+    <meta name="description" content="Practical guidelines for meaningful use of the modifying HTTP methods with examples.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Difference between POST, PUT, and PATCH by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/difference-between-post-put-and-patch" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Difference between POST, PUT, and PATCH by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Difference between POST, PUT, and PATCH</h1>
+    <p class="blog-post__meta">2021-06-13 by Tomas Tulka</p>
+    <p>Practical guidelines for meaningful use of the modifying HTTP methods with examples.</p>
+    <hr>
+    <p>Technically, we can use POST for everything in the same sense as we can create the whole web with just a DIV element. However, just because we can doesn’t mean we should.</p>
+
+<p><a href="https://en.wikipedia.org/wiki/Richardson_Maturity_Model">Practitioners</a> of RESTful API design teach us to use the HTTP verbs in a sensible way to achieve a level of semantics for our HTTP endpoints. This semantics helps implementers meet user expectations and gives users insight into the intended use.</p>
+
+<p>While the methods GET, DELETE, and HEAD are easy to understand and usually used correctly, methods POST, PUT, and PATCH are often used interchangeably and insensibly.</p>
+
+<p>Let us define simple guidelines for distinguishing where to use what method when designing an HTTP API.</p>
+
+<h2>POST vs PUT and PATCH</h2>
+
+<p>While PUT is <strong>idempotent</strong>, POST is not. By its <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PATCH">specification</a>, PATCH is not necessarily idempotent, but it is strongly recommended to make it so wherever it is possible.</p>
+
+<p><em>Idempotence</em> means that calling the endpoint repetitively will leave the system in the same state. Let us demonstrate this on an example:</p>
+
+<p>Calling <code>POST /product</code> two times will create two resources:</p>
+
+<pre>
+&gt; POST /product
+{
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+&lt; 201
+
+&gt; POST /product
+{
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+&lt; 201
+
+&gt; GET /product
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;
+}, {
+  &quot;id&quot;: 101,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:51&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+</pre>
+
+<p>While calling <code>PUT /product</code> two times should only create a single one:</p>
+
+<pre>
+&gt; PUT /product
+{
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+&lt; 201
+
+&gt; PUT /product
+{
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+&lt; 204
+
+&gt; GET /product
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;
+}
+</pre>
+
+<p>There could also be valid use-cases when we need to modify the resource in a non-idempotent manner. An example would be incrementing a resource’s attribute. Such use-cases are, however, quite rare. Here we would use PATCH:</p>
+
+<pre>
+&gt; PATCH /product/100
+{
+  &quot;views&quot;: &quot;$increment&quot;
+}
+&lt; 204
+
+&gt; GET /product/100
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;,
+  &quot;views&quot;: 1
+}
+
+&gt; PATCH /product/100
+{
+  &quot;views&quot;: &quot;$increment&quot;
+}
+&lt; 204
+
+&gt; GET /product/100
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;,
+  &quot;views&quot;: 2
+}
+</pre>
+
+<h2>PUT vs PATCH</h2>
+
+<p>Both PUT and PATCH are meant to modify existing resources. The difference is that PUT modifies the <strong>entire</strong> resource while PATCH mutates the resource only <strong>partially</strong>.</p>
+
+<p>To demonstrate this on an example, consider the following Product resource:</p>
+
+<pre>
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;,
+  &quot;price&quot;: 3.5
+}
+</pre>
+
+<p>What if a product administrator wants to change the Price value of the Product?</p>
+
+<p>When using PATCH, only the particular attribute is modified:</p>
+
+<pre>
+&gt; PATCH /product/100
+{
+  &quot;price&quot;: 5.0
+}
+&lt; 204
+
+&gt; GET /product/100
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: &quot;2021-06-12T14:22:49&quot;,
+  &quot;name&quot;: &quot;Tux mug&quot;,
+  &quot;price&quot;: 5.0
+}
+</pre>
+
+<p>On the contrary, PUT will update the entire resource:</p>
+
+<pre>
+&gt; PUT /product/100
+{
+  &quot;price&quot;: 5.0
+}
+&lt; 204
+
+&gt; GET /product/100
+&lt; 200
+{
+  &quot;id&quot;: 100,
+  &quot;createdAt&quot;: null,
+  &quot;name&quot;: null,
+  &quot;price&quot;: 5.0
+}
+</pre>
+
+<p>A real-world implementation would probably reject such a request as invalid; we have just demonstrated the concept.</p>
+
+<h2>Conclusion</h2>
+
+<p>Using HTTP methods consistently will establish a well-defined contract between its users and implementers. APIs with clear semantics are easier to follow and evolve.</p>
+
+<p>Idempotent endpoints ensure better robustness of the system and it is desired to make as many resources as possible be idempotent.</p>
+
+<p>Exceptions and edge cases should be well documented and communicated.</p>
+
+<p>Happy end-pointing!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/API Design" class="tag">API Design</a>
+    
+    <a href="/tag/REST" class="tag">REST</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/difference-between-post-put-and-patch.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Shades of Tests</title>
+    <meta name="description" content="Practical examples of software testing in Java using Spring Boot Test without mocking frameworks.">
+    <meta name="author" content="Tomas Tulka">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@tomas_tulka">
+    <meta name="twitter:creator" content="@tomas_tulka">
+    <meta name="twitter:title" content="Shades of Tests by Tomas Tulka">
+    <meta name="twitter:image:src" content="https://blog.ttulka.com/assets/img/blog.jpg">
+    <meta property="og:url" content="https://blog.ttulka.com/shades-of-tests" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Shades of Tests by Tomas Tulka" />
+    <meta property="og:image" content="https://blog.ttulka.com/assets/img/blog.jpg">
+
+    <link href="/assets/css/syntaxhighlighter.css" rel="stylesheet">
+    <link href="/assets/css/blog.2.7.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <nav class="nav">
+            <a class="active" href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+        <div class="ext-links">
+            <a href="https://twitter.com/tomas_tulka"><img src="/assets/img/twitter.png"></a>
+            <a href="https://github.com/ttulka"><img src="/assets/img/github.png"></a>
+            <a href="#" class="theme"><img src="/assets/img/theme.png"></a>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <article class="blog-post">
+    <h1 class="blog-post__title">Shades of Tests</h1>
+    <p class="blog-post__meta">2020-12-11 by Tomas Tulka</p>
+    <p>Practical examples of software testing in Java using Spring Boot Test without mocking frameworks.</p>
+    <hr>
+    <p class="note"><span class="title">Disclaimer:</span> For purposes of this text, when I’m talking about testing I mean functional testing. Albeit non-functional testing is an important part of software development I will ignore it here entirely.</p>
+
+<p>There are many shades of testing in software development. It’s handy for every developer to know the differences and trade-offs to make the testing as <em>effective</em> as possible.</p>
+
+<p>I use the word “effective” on purpose as I see a lot of effort invested in making testing as <em>efficient</em> as possible, but unfortunately in the wrong kind of testing.</p>
+
+<p>Features-rich tools are nice to write and execute end-to-end tests efficiently, but results will never be as quick, cheap, applicable and stable as simple but numerous unit tests.</p>
+
+<p>It’s like trying to optimize a bubble-sort algorithm: you can make it quite efficient, but it still will never beat the merge-sort.</p>
+
+<p>Understanding different kinds of tests and where to use what is crucial for effectivity.</p>
+
+<h2>The Test Pyramid</h2>
+
+<p>When talking about testing enterprise software, the (in)famous <a href="https://martinfowler.com/bliki/TestPyramid.html">Test Pyramid</a> always comes up.</p>
+
+<p>Developers find the Test Pyramid often annoying for two main reasons:</p>
+
+<ul>
+  <li>it doesn’t fit the product nature, or</li>
+  <li>it’s not completely understood.</li>
+</ul>
+
+<p>The former could be really justified, especially for GUI software or projects that focus particularly on integration. That’s why I have to emphasize I will talk about enterprise software development exclusively for the rest of this text.</p>
+
+<p>The latter reason for the dislike is the problem I’d like to address.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/simple-test-pyramid.png" alt="Simple Test Pyramid" /><br /><i class="caption">Simple Test Pyramid</i></p>
+
+<p>The common understanding of the Test Pyramid is its volume aspect: the bigger the volume the bigger the amount of tests of that kind. Simply put, the test base should contain a lot of unit tests, some integration tests, and just a few UI tests.</p>
+
+<p>However, the Pyramid has more to offer. With the increasing volume increase speed and costs as well. While unit tests are quick and cheap, UI tests tend to be very slow and expensive.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/test-pyramid-speed-cost.png" alt="Test Pyramid with speed and cost axis" /><br /><i class="caption">Test Pyramid with speed and cost axis</i></p>
+
+<p>The reason is in the complexity of the tests. Integration tests are obviously more complicated than unit tests and so on. More components are involved, more communication must be worked out, the computer(s) must execute more instruction. Tests are more difficult (expensive) to develop, set up, execute.</p>
+
+<p>These additional aspects explain the economic reasons behind the different recommended amounts. And what’s more, there is another characteristic we can put to the axis: <em>applicability</em>.</p>
+
+<p>With increasing volume of the Pyramid the applicability of tests declines. It’s obvious that unit tests of the core domain will always apply, but there could be several UIs accessing its functionality. <a href="/spring-boot-custom-components">Components</a> can be integrated into multiple different systems as well.</p>
+
+<p>With the absence of unit tests, integration tests would need to be duplicated for every system and UI tests for every client. This is expensive, slow, and tedious. Besides, the core domain is usually the most stable piece of software while its clients tend to be pretty volatile. This leads us to another aspect: <em>stability</em>.</p>
+
+<p>Tests that frequently require changes and adjustments are often abandoned or ignored. Stability of tests goes down with decreasing volume of the Pyramid.</p>
+
+<p>Last but not least, tests on the top of the Pyramid are often flaky. Flaky tests are especially annoying when the test suite is slow.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/test-pyramid-characteristics.png" alt="Test Pyramid characteristics" /><br /><i class="caption">Test Pyramid characteristics</i></p>
+
+<h2>Kinds of Tests</h2>
+
+<p>The terminology is vague and ambiguous and there are no official definitions of different types of tests. The terms are overloaded and can obtain various meanings among different people.</p>
+
+<p>I’m not aspiring to standardize the terminology, you are free to use any name you like. However, to discuss the concept it is important to unify the name, at least for purposes of this text.</p>
+
+<p>We will refine the Test Pyramid into the following levels:</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/extended-test-pyramid.png" alt="Extended Test Pyramid" /><br /><i class="caption">Extended Test Pyramid</i></p>
+
+<h3>(Atom) Unit Tests</h3>
+
+<p>This definitely the most unfortunate name of all. The problem is, a <em>unit</em> doesn’t necessarily be a small piece of software with a single responsibility and a well-defined API for a business capability, as it should in the context of unit testing. A unit means generally any piece of software, in an extreme case the entire system.</p>
+
+<p>Albeit it’d be really handy to have a more descriptive name for the unit test, unfortunately I’m not aware of any. We can try it with things like element tests or atom tests to emphasize the atomicity of the unit under test, but the term unit tests is strongly adopted and ubiquitous and is here to stay with us forever.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/unit-atom.png" alt="Unit Test" /><br /><i class="caption">Atom has no dependencies</i></p>
+
+<p>How does a unit test look like anyway? We don’t really need any special magic here:</p>
+
+<pre class="brush: java">
+class PromoProductTest {
+
+  @Test
+  void promo_product_is_not_deliverable() {
+    Product product = new PromoProduct(
+        "Test product", 123);
+
+    assertThat(product.deliverable()).isFalse();
+  }
+}
+</pre>
+
+<p>No dependencies, tested business capabilities against the API, this is a nice unit test.</p>
+
+<p>Here is the beauty about unit testing: <strong>unit tests require code to be testable</strong>.</p>
+
+<p>Testable code must be simple, cohesive and loosely coupled. Easy to say, hard to do. That’s usually the reason a codebase has so few unit tests - they are hard to write because the code is not testable.</p>
+
+<p><strong>Tests are the very first client of the code</strong> and help you to understand the API to be easy to use and understand.</p>
+
+<p>Another <strong>benefit of good tests is their documentary function</strong>. Tests show the proper usage of code to serve as an exhaustive user reference.</p>
+
+<p>I often refer to testing as to the “king’s discipline” of software development. Only good developers can do it right.</p>
+
+<p>True (atom) unit tests require the domain model to be pure. This is not always easy or even possible to achieve.</p>
+
+<h3>Component Tests</h3>
+
+<p>When purity is not feasible, test doubles come to help. External dependencies such as databases or filesystems can be stubbed for testing via alternative implementations of resource adapters.</p>
+
+<p>It’s important to focus on the business functionality. With test-doubles you can easily find yourself writing tests that check only stubbed calls or integration with doubles. In this case, it’s time to move on to component testing.</p>
+
+<p>Component tests lie somewhere between unit and integration tests. They are no pure unit tests as more than one “atom” is involved.</p>
+
+<p>However, component tests are no pure integration tests either, as the unit is not completely and correctly integrated - stubbing is often used, only directly needed components are integrated, not the whole system.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/unit-component.png" alt="Component Test" /><br /><i class="caption">Component’s dependencies are stubbed</i></p>
+
+<p>Spring Boot offers so-called "slicing" where only needed pieces of the system are included in the test:</p>
+
+<pre class="brush: java">
+@DataJpaTest
+@Import(JpaProductConfig.class)
+class PromoteTest {
+
+  @Autowired
+  private Promote promote;
+
+  @Test
+  void product_is_promoted() {
+    var product = promote.product(new Promote.ToPromote(
+        "Test product", 123));
+
+    assertAll(() -> assertThat(product.id()).isNotNull(),
+              () -> assertThat(product.deliverable()).isFalse());
+  }
+}
+</pre>
+
+<h3>Integration Tests</h3>
+
+<p>Integration tests check the component fully integrated in the system. The system is seen as a black box accessible only via its public APIs.</p>
+
+<p>The system is usually bootstrapped from within the test, which makes it possible to run the system with special configuration. For example, a test database with a testing dataset could be used.</p>
+
+<p>Also, the component under the test is typically deployed into the core system without any other components.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/unit-integration.png" alt="Integration Test" /><br /><i class="caption">Component is integrated in a system slice</i></p>
+
+<p>Spring Boot brings the <code>@SpringBootTest</code> annotation to support integration testing:</p>
+
+<pre class="brush: java">
+@SpringBootTest(classes = Application.class,
+    webEnvironment = RANDOM_PORT)
+class ProductsTestIT {
+
+  @LocalServerPort
+  private int port;
+
+  @Test
+  void product_is_promoted() {
+    with()
+        .port(port)
+        .basePath("/products/promoted")
+        .contentType(ContentType.JSON)
+        .body("{\"name\":\"Test\","
+             + "\"price\":123}")
+        .post().
+    then()
+        .statusCode(201)
+        .body("id", is(notNullValue()))
+        .body("name", equalTo("Test"))
+        .body("price", equalTo(123));
+  }
+}
+</pre>
+
+<h3>End-to-End Tests</h3>
+
+<p>End-to-end tests, also known as <em>system tests</em>, runs typically in three phases:</p>
+
+<ul>
+  <li>preparation, system startup;</li>
+  <li>testing, tests execution;</li>
+  <li>tear down, system shutdown, cleanup.</li>
+</ul>
+
+<p>As the system is started only once, there is no room for adjustments based on special tests’ needs. The system runs as a separate process, deployed in an environment as similar to production as possible.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/unit-e2e.png" alt="E2E Test" /><br /><i class="caption">Component is integrated in the whole system</i></p>
+
+<p><a href="https://maven.apache.org/surefire/maven-failsafe-plugin/" target="_blank">Maven Failsafe Plugin</a> address this kind of testing, as well as <a href="https://www.testcontainers.org/" target="_blank">Testcontainers</a>:</p>
+
+<pre class="brush: java">
+@Testcontainers
+class ProductsTestE2E {
+
+  @Container
+  public GenericContainer app = new GenericContainer(
+      new ImageFromDockerfile()
+          .withFileFromPath("app.jar",
+              Path.of("build/libs/app.jar"))
+          .withDockerfileFromBuilder(b -> b
+              .from("openjdk:11-jre-slim")
+              .copy("app.jar", "/app.jar")
+              .entryPoint("java", "-jar", "/app.jar")
+              .build()))
+      .withExposedPorts(8080);
+
+  private int port;
+
+  @BeforeEach
+  public void setUp() {
+    port = app.getFirstMappedPort();
+  }
+
+  @Test
+  void product_is_promoted() {
+    with()
+        .port(port)
+        .basePath("/products/promoted")
+        .contentType(ContentType.JSON)
+        .body("{\"name\":\"Test\","
+             + "\"price\":123}")
+        .post().
+    then()
+        .statusCode(201)
+        .body("id", is(notNullValue()))
+        .body("name", equalTo("Test"))
+        .body("price", equalTo(123));
+  }
+}
+</pre>
+
+<h3>UI Tests</h3>
+
+<p>In the context of this text, UI testing is different from testing a UI.</p>
+
+<p>UIs themselves should be unit-tested in isolation against a stubbed backend, but this is no full replacement for UI testing a UI integrated in the system.</p>
+
+<p>UI tests in enterprise software development are end-to-end tests with actions triggered from a GUI (web or desktop) instead of Restful or similar APIs.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/unit-ui.png" alt="UI Test" /><br /><i class="caption">Component is accessed via UI</i></p>
+
+<p>UI tests tend to be very slow, unstable and flaky. Unfortunately, it is still not unusual to have a test base containing UI tests mostly or even only.</p>
+
+<p>The test base should contain UI tests for elementary user interactions with the UI. Especially to check edge conditions of user input, validation and error handling towards the user.</p>
+
+<p>The amount of UI tests should be kept on a small maintainable amount, everything must be automated.</p>
+
+<p>There are plenty of tools for automation of UI testing such as <a href="https://www.selenium.dev/" target="_blank">Selenium</a>:</p>
+
+<pre class="brush: java">
+class ProductsTestUI {
+
+  private WebDriver webDriver;
+
+  @BeforeEach
+  void setUp() {
+    webDriver = new HtmlUnitDriver();
+    webDriver.get("http://localhost:8080/ui");
+  }
+
+  @Test
+  void product_is_promoted() {
+    var form = webDriver.findElement(By.id("form-promote"));
+    form.findElement(By.className("name")).sendKeys("Test");
+    form.findElement(By.className("price")).sendKeys("123");
+    form.findElement(By.className("submit")).click();
+
+    var list = webDriver.findElement(By.id("products-promo"))
+        .findElements(By.className("product"));
+
+    assertAll(
+        () -> assertThat(list).hasSize(1),
+
+        () -> assertThat(list.get(0).findElement(
+            By.className("id")).getText()).isNotNull(),
+
+        () -> assertThat(list.get(0).findElement(
+            By.className("name")).getText()).isEqualTo("Test"),
+
+        () -> assertThat(list.get(0).findElement(
+            By.className("price")).getText()).isEqualTo("123")
+    );
+  }
+}
+</pre>
+
+<h3>UX Tests</h3>
+
+<p>Albeit there is no excuse to have an automatic test for everything, one kind of testing does require manual labor.</p>
+
+<p>Look’n’feel and user experience (UX) in general cannot be evaluated by any machine, a human is required here.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/shades-of-tests/unit-ux.png" alt="UX Test" /><br /><i class="caption">User experience matters</i></p>
+
+<h2>Source Code</h2>
+
+<p>The source code for discussed examples can be found on <a href="https://github.com/ttulka/blog-code-samples/tree/master/ecommerce-example-testing" target="_blank">my GitHub</a>.</p>
+
+<p>Happy testing!</p>
+
+
+</article>
+
+<aside class="blog-tags">
+    
+    <a href="/tag/Testing" class="tag">Testing</a>
+    
+    <a href="/tag/Programming" class="tag">Programming</a>
+    
+    <a href="/tag/Java" class="tag">Java</a>
+    
+    <a href="/tag/Spring Boot" class="tag">Spring Boot</a>
+    
+    <a href="/tag/Spring" class="tag">Spring</a>
+    
+    
+</aside>
+
+<aside class="blog-comments">
+    <h2>Leave a message</h2>
+    <p class="leave-message">You can add a comment to this post by <a href="https://github.com/ttulka/blog-content/edit/main/site/comments/shades-of-tests.json">opening a pull request</a> (see <a href="https://github.com/ttulka/blog-content#add-a-new-comment">HowTo</a>).</p>
+
+    
+    
+    
+</aside>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer__extended">© 2021 Tomas Tulka (ttulka)</div>
+        <div class="footer__menu">
+            <a href="/">Home</a> |
+            <a href="/privacypolicy/">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/assets/js/darktheme.js"></script>
+<script src="/assets/js/syntaxhighlighter.min.js" defer></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZKWY8T55EM"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZKWY8T55EM');
+</script>
+
+</body>
+</html>

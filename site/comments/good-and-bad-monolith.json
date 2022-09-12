@@ -1,3 +1,17 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Dmitriy Neyman",
+    "createdAt": "2022-04-07",
+    "body": "Tomas, I am a very recent visitor to your blog, but I quickly fell in love with clarity of your writing and applicability of your ideas. I am specifically enjoying your Modulith idea and the project that demostrates it. Very cool, and very relevant! Thank you again"
+  }, {
+    "author": "jeremy",
+    "createdAt": "2020-12-07",
+    "body": "Colors in the last picture, what are they supposed to mean?",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2020-12-08",
+      "body": "It's kinda feelings map.\nHow risky systems as such are. How expensive, error-prone, hard to reason about, etc."
+    }
+    ]
+  }
+  ]}

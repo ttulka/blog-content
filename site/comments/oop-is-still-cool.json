@@ -1,3 +1,11 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Najum",
+    "createdAt": "2022-01-11",
+    "body": "Nice conclusion: *\"a service is just an object on the system level\"*"
+  }, {
+    "author": "anon",
+    "createdAt": "2021-10-08",
+    "body": "Good article!\n\nThe misunderstanding of OO historically started with language designers themselves, who came up with implementation instead of interface inheritance in Simula 67.\n\nThe rigid coupling introduced by implementation inheritance got OO started wrong-footed, and turned it into its polar opposite. It is nearly impossible to get this out of people's minds today, although we now know better.\n\nOO is all about the *decoupling* of source code. This is what the SOLID principles and the Gang of Four advice are really about!"
+  }
+  ]}

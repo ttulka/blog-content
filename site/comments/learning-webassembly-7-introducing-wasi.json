@@ -1,3 +1,13 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "sam",
+    "createdAt": "2021-01-12",
+    "body": "I’m not sure, what the value of `iovs_len` means. There is already a length of the data (string) in the vector. Is it always 1?",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-01-12",
+      "body": "`iovs_len` is the length of the list of IO vectors, not the length of the data. We have only one string, which means only one IO vector, therefore the value is `1`.\n\nConsider an example, where you have two strings to print to stdout. There must be also two IO vectors to describe those strings. The value of iovs_len must be then `2`:\n\n```\n(data (i32.const 16) \"hello\")\n(data (i32.const 22) \"world\")\n...\n(i32.store (i32.const 0) (i32.const 16)) ;; iov_base \"hello\"\n(i32.store (i32.const 4) (i32.const 5))  ;;iov_len \"hello\"\n(i32.store (i32.const 8) (i32.const 22)) ;; iov_base \"world\"\n(i32.store (i32.const 12) (i32.const 5)) ;; iov_len \"world\"\n\n(call $fd_write\n    (i32.const 1)\n   (i32.const 0)  ;; list of IO vectors starts on index 0\n    (i32.const 2)  ;; we have two IO vectors (two strings)\n    (i32.const 27) ;; 22 + 5 = 27\n)```\n\nResult:\n\n```$ wasmtime run hello2.wasm\nhelloworld```"
+    }
+    ]
+  }
+  ]}

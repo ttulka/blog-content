@@ -1,3 +1,13 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "skapral",
+    "createdAt": "2020-01-19",
+    "body": "I.... wouldn't be so straight on that. IMO the subject is more complicated.\n\n*> Sharing code among different requirements is a bad idea, because business is volatile and the rules might change independently.*\n\nIt's true that business is volatile. And it's deadly right to avoid reusing volatile things. But there is one part of a typical object (or unit) under test that is (supposed to be) stable --- it's API. And API is stable when it is bound not to software requirements but to the purpose, the mission of software. And the purpose, if correctly defined, is stable.\n\nWhy it matters? Stable API can be a basis of reusable assertions. For example: if we consider that Account interface from your post is stable (as its purpose is to check whether account could be logged in), one can define a reusable assertion, like `assertAccountCanBeLoggedIn(account, password)`. And this assertion would be pretty reusable for tests related to each and every current and future implementations of Account.\n\nMore on this idea: https://www.pragmaticobjects.com/chapters/003reusableassertions.html",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2020-01-19",
+      "body": "*> But there is one part of a typical object (or unit) under test that is (supposed to be) stable --- it's API.*\n\nI fully agree on that. The test `registereduseraccountisintheregistry` is working with the fact, that `Account::register` is stable.\n\nWhat I mean with \"sharing code\" is sharing implementation code, concretely the implementation of the test. Creating a shared object in the test suite and using it among tests, for example.\n\n*> Stable API can be a basis of reusable assertions.*\n\nUsing reusable assertions, as you proposed in your block post, is an interesting idea, but being really practical it requires some kind of framework (like https://github.com/pragmatic-objects/oo-tests) or a lot of boilerplate code. As the one important purpose of a test is to provide a documentation, any unnecessary code serves against this purpose. See the 1. point (It's not obvious how the test is set up) in my post: implementing the test as a composition of assertions requires knowledge of those assertions. And only from the API providers, but especially from the users (clients).\n\nUnfortunately, I see a long way to go. My attempt was about to make the first move in that direction."
+    }
+    ]
+  }
+  ]}

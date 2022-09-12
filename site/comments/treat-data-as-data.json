@@ -1,3 +1,23 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "sleeping_dragon",
+    "createdAt": "2019-09-12",
+    "body": "You're mentioning messages. I see using DTOs much more practical here as the client can derive the structure inside the message from the DTO type declaration without any need to know the data structure in advance from the protocol specification or some kind of documentation.",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2019-09-12",
+      "body": "I would be careful with saying that the client doesn't need to know the data structure it consumes. The structure is a part of the contract which should be well defined, published and understood by each participant. Even with a strongly typed structure the client *must know* which data it consumes, otherwise it can't do anything useful with it.\n\nAs there are several kinds of messages, there is no general answer. Talking about domain events, it could be okay to have a reference to a domain object (better immutable) inside the message. DTOs are fine in a monolithic application where you can have a module with DTO definitions shared across the application (known as "Shared Kernel" in Domain-Driven Design). As far as the message is sent via network, it contains nothing but data. Using shared libraries in the microservice ecosystem is an antipattern called \"Distributed Monolith\" (and it's really an utter nightmare to deal with)."
+    }
+    ]
+  }, {
+    "author": "Pablo",
+    "createdAt": "2019-04-12",
+    "body": "Using Spring MVC itself makes the application non-OO.  You're trying to solve unnecessary problems you actually caused.",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2019-04-12",
+      "body": "I agree with the first part: Spring framework is not very object-oriented indeed. As it can't know your domain, it focuses on solving technical issues. MVC pattern heavily used by Spring is not an OO practice as it conceptually belongs to a higher level. MVC is an architectural pattern. Object-oriented is (should be!) in MVC only its \"M\" layer. In general, MVC works with anemic data rather than objects. On the other hand, MVC is well known and understood, and, when used with caution, brings more benefits than drawbacks.\n\nI do disagree with your conclusion. Even in a perfectly OO application, when crossing the boundaries you don't deal with objects but mere data. Consider an application which communicates with another one via JSON or XML. The same problem emerges. You don't save objects but data into the database, you don't print object but data on the screen, etc."
+    }
+    ]
+  }
+  ]}

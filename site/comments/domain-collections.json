@@ -1,3 +1,13 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Andy",
+    "createdAt": "2020-11-04",
+    "body": "Why not just to have `Products.cheaperThan(..)`? It'd make the interface simpler and more straightforward...",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2020-11-04",
+      "body": "Having the find method on the `Products` object is okay for small projects where is no need for Domain Collections. You can have methods like `cheaperThan`, `byType`, `byCategory` etc. returning list `List<Product>` or similar.\n\n- One can't combine the find methods with Domain Collections methods. The find methods belong to a stateless service and a Domain Collection represents a stateful collection of objects. So this call would be valid but completely nonsense without calling any find method before: `products.sortByPrice()`. Such an object has two meanings, which is never a good idea.\n- Adding a new use-case for removing products, the same interface would have to be used (to be consistent). The object would then have too many responsibilities, which is bad for the maintainability and usability of such an API."
+    }
+    ]
+  }
+  ]}

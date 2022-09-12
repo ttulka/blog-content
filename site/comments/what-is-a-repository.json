@@ -1,3 +1,31 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Sridhar B.",
+    "createdAt": "2020-04-19",
+    "body": "But the CustomerRepository is already partitioned by a domain concern - Customer...",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2020-04-19",
+      "body": "Well, yes, it's better than having a single gigantic repository for all entities...\n\nBut the domain is spread throughout layers. To implement a new use case one has to always touch the repository. Same for changes - a change in any use case requests a change in the repository."
+    }
+    ]
+  }, {
+    "author": "Turanga",
+    "createdAt": "2020-04-15",
+    "body": "Finding a customer by id sounds like a good abstraction to me. What's the issue with this kind of reusable code?",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2020-04-15",
+      "body": "It could be okay if such an abstraction really emerges (you find the exactly same code over and over in code). But you should be aware that it always introduces coupling.\nFor example, consider the use cases NotifyCustomer and InvalidateCustomer. For performance reasons you may decide to load only customer name and email in first case, but you still need more Customer data for the latter. In such a scenario the findById method is reusable no more.\nThis shows how concrete use cases actually are and how brittle reusability is.\n\nI usually try to think about how easy/hard it would be to deploy the use case as a standalone running component (microservice). Even if you probably don't do it for FindCustomer, this kind of thinking will help you to structure the code better in sense of high cohesion and low coupling."
+    }, {
+      "author": "Sridhar B.",
+      "createdAt": "2020-04-19",
+      "body": "Those use cases are coupled anyway, at least through the database."
+    }, {
+      "author": "ttulka",
+      "createdAt": "2020-04-19",
+      "body": "It doesn't have to be so. Think for example about a CQRS solution with a separate database just for queries (`FindCustomer`)."
+    }
+    ]
+  }
+  ]}

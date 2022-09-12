@@ -1,3 +1,7 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "skapral",
+    "createdAt": "2020-01-19",
+    "body": "*> The biggest problem with the blue book I have is that it focuses a lot on tactical design and building blocks like Entities, Services and Repositories. At the end of the day that is the only thing some readers get from the text ignoring the real value: the importance of communication with domain experts and understanding the business being built.*\n\nYes, I had exactly the same feeling about "the blue book" back in the days. Loved the idea behind ubiquitous language and \"talking with business\" a lot. But later... repositories, services, entities... made me sad quickly. These procedural dinosaurs just ruin the idea of orientation on domain. People get concerned more on patterns then the business purpose.\n\nI like the post."
+  }
+  ]}

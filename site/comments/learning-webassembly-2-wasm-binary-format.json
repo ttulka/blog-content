@@ -1,3 +1,17 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "K",
+    "createdAt": "2021-10-25",
+    "body": "Thanks a ton for making this, its perfectly clear.\n\nOne question I am stuck on is Section Size. The Section Size is marked here by two hex values. For example on this line:\n\n00000008: 0105 0160\n\nSection Size is 5 represented by 1 byte.\n\nWhat if the Section Size was longer than two bytes, like 5005? Wouldn't you need more bytes to represent it? How can the bytes be read consistently if the length of bytes needed to show size is variable?\n\nIn the WASM docs it says Section Size is a U32. Should a size of 5 be written as '00000005' instead of as '05'?\n\nMy thinking is a hex value is 4 bits total in binary. The value of the four bits 1111 in binary is 15 decimal and F in hexidecimal which is the max value.\n\nSo to represent a u32 with hex wouldn't you need 8 hex digits? 8 x 4 = 32?",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-11-06",
+      "body": "Integers in WebAssembly are LEB128 encoded, which makes small values concise as you can see.\n\nFor details refer to https://webassembly.github.io/spec/core/binary/values.html#integers"
+    }, {
+      "author": "K",
+      "createdAt": "2021-12-29",
+      "body": "LEB128 totally explains it thank you. I think it means any number that takes less than 7 bits (127 unsigned) can be just a simple single normal number like Section Sizing being written just as a single byte \"0x05\" in your example."
+    }
+    ]
+  }
+  ]}

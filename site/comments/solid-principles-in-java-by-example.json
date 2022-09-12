@@ -1,3 +1,13 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Gerald",
+    "createdAt": "2019-12-14",
+    "body": "Isn't putting the `save(...)` method into Employee actually against the SRP? I would expect it only in the repository: `Registry#save(Employee)`, and being called from the application code.",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2019-12-14",
+      "body": "Partly, you might be right. Many authors really say that. But I always prefer not to follow principles blindly. Doing what you propose follows the SRP strictly, but leads to exposing object's internals (typically via getters) and breaks the principle of encapsulation. The Employee is no employee anymore, just employee's data. Encapsulation is for me a higher principle that the SRP; software design is about tradeoffs.\n\nAnother point is, that the implementation of `save` is actually not in the Employee class. The class provides only a facade for the actual implementation. This means, a change in the persistence mechanism, like using a different database, will not require a change in the Employee class. And that's what the SRP is all about."
+    }
+    ]
+  }
+  ]}

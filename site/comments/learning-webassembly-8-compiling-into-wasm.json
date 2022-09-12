@@ -1,3 +1,13 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Boyan Mihaylov",
+    "createdAt": "2021-01-18",
+    "body": "Great article! I played with these compilations some time ago and created the Wheel of WebAssembly (https://boyan.io/wasm-wheel/), which demonstrates how to compile from plenty of languages into WebAssembly",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-01-18",
+      "body": "Cool stuff :-) Thanks for sharing!"
+    }
+    ]
+  }
+  ]}

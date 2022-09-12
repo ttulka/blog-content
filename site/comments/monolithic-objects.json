@@ -1,3 +1,23 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Eric",
+    "createdAt": "2021-04-15",
+    "body": "Thank you very much for the replay. I have read the article you recommeded about Monolithic system.\n\nThis one and https://blog.ttulka.com/how-cohesion-and-coupling-correlate both are great pieces that clearly explained how to architect a system right from the beginning and how to do monolith correctly.\n\nThank you.",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-04-15",
+      "body": "I would be careful with *\"to architect a system right from the beginning\"* as that is mostly impossible. However, it is important to understand principles of software architecture and bear these in mind when architecting a software system.\n\nI'm glad you like my stuff, hopefully it helped."
+    }
+    ]
+  }, {
+    "author": "Eric",
+    "createdAt": "2021-04-13",
+    "body": "No matter layered architecture or domain driven architecture, in my opinion, we shouldn't go extrem on both direction. The layered architecture could be a good foundation of domain driven design.\n\nIn this example, we'd better not split Entity classes and Repositories into Domain silo because Entities is a Enterprise level information asset (reflect the business knowledge of the whole enterprise), and Repositories is just a facility to let clients can access (Read or Manage) these Enterprise Information asset.\n\nNo matter what domain service is and how you split it, it has access to the whole Enterprise information asset.\n\nWe can think Domain Service running inside the runtime container which provide the service one stop capability to use the facility of Enterprise Information Asset.\n\nAnd based on the Dependency Injections, AOP, Dynamic Proxy etc. techniques we still can easily achieve low coupling and high cohesive target on a Monolithic system which is actually a domain service container from my point of view.\n\nMore importantly, having all enterprise information asset saved in one single database we can fully utilize the ACID capability provided by database so we can obtain high data integrity and system consistence instead of have duplicated information scattered in different domain service realm.",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-04-15",
+      "body": "Thanks for your comment, Eric!\n\nThe problem you describe is to spot almost in all examples - there are no real-world code and are often taken to extremes to illustrate the author's point.\nAs services form a system, zero-knowledge is not the ultimate goal, we strive for separation of concerns to make the codebase more maintainable.\n\n`CustomerPreference` could conceptually live together with Customer service and have a hard dependency on Customer class. Then, only Color crosses the service boundaries when searching for Vehicles with preferred colors.\n\nI completely share your vision of a Monolithic system as an actually service container. Physical monoliths are no evil, the logical monoliths are: https://blog.ttulka.com/good-and-bad-monolith"
+    }
+    ]
+  }
+  ]}

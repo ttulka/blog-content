@@ -1,3 +1,13 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "AzmirH",
+    "createdAt": "2020-05-11",
+    "body": "Wouldn't it be better to put the Controllers into a domain package as well?",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2019-05-20",
+      "body": "That's a very good point! This post doesn't take much care of proper Domain-driven design (it was not the purpose) - I'm sorry for that.\n\nAnyway, first we have to understand what is the `web` module. It could be a composite that is using multiple services, so we can name it `portal`, `catalog` or similar. If the controller is part of the service, we should put it into a service package indeed, like `..order.OrderController`.\n\nOne thing to mention is that the controller is kinda client of the service domain and should probably not be using protected APIs (like Repository) directly. A way to prevent developers from this temptation could be to put the Controller into a sub-package, like `..order.web.OrderController`.\n\nYou can see an example of the idea here: https://github.com/ttulka/ddd-example-ecommerce"
+    }
+    ]
+  }
+  ]}

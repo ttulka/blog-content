@@ -1,3 +1,33 @@
 {
-  "comments": []
-}
+  "comments": [{
+    "author": "Kenly",
+    "createdAt": "2021-12-07",
+    "body": "One thing I notice though that contracts seems to help with scaling of code. Though yes design should be looked at. But dont think you can expect coders to have no cycles in the code. Its a bit too hard to manage and see at scale. Also how can you with our dependency code based modern world. Code should embrace cycles because you need to get used to it.",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-12-08",
+      "body": "I would never expect the world to be perfect, of course. However, it is important to understand the ideal to choose the right way when standing on a code-design crossroads.\n\nI do think that it is possible to get rid of cycles in code, where they don't model the real business. There are cases, where business does have mutual dependencies (such as Sales -> Warehouse, Warehouse -> Sales). Those are natural and okay as they usually happen asynchronously.\n\nMy point was about the fallacy that using interfaces everywhere breaks cycles in code. They do not. They just disguise them."
+    }
+    ]
+  }, {
+    "author": "anon",
+    "createdAt": "2021-08-03",
+    "body": "I agree with your main point that abstractions need a lot of thought to get right, and that interfaces are just a means to implement them.\n\nHowever, I still prefer the second version of your ShoppingCard example as compared to the first (you actually got the interface-based version right; In my earlier comment I missed that you reused the former concrete class name for the new interface.)\n\nWhy do I prefer the second version? Because the first one depends on a concrete class, and is therefore *rigid*. Every time the implementation of the PriceCalculator changes, you would have to check, possibly change, and in any case recompile (and redeploy) the ShoppingCart (assuming it would reside in a different file).\n\nIt is therefore better to have it depend on a PriceCalculator interface, even if one might only have a single (but volatile) PriceCalculator implementation. Interfaces spare your higher-level code from the volatility of lower-level implementations.\n\nSorry, but no one knowledgeable would stop at implementing ShoppingCard as you've indicated:\n\n```class ShoppingCart {\n      // as above ...\n}```\n\nThe whole point of introducing the PriceCalculator interface would be to make ShoppingCard depend upon this *interface* instead of on a concrete PriceCalculator class, and it is this dependence upon an *interface* that would decouple the code in this example!\n\nIf you take code decoupling and the Dependency Inversion Principle seriously then interfaces (if used properly, as I've indicated above) are a good thing. Even if only a single class implements them!",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2021-08-04",
+      "body": "I fully agree that in many cases introducing an interface to decouple the client from concrete implementations of its dependencies makes a lot sense. But...\n\nIn a lot of cases, and in my example particularly, the interface does have a single implementation only. By introducing this interface you gain nothing, you make the code just more complex.\n\nGood abstractions are usually discovered. Until you can't benefit from introducing an interface (like having multiple implementations decoupled according to the DIP), don't do it. All in all, you can always introduce it later, often without any modifications of the client code.\n\nThanks for your comment!"
+    }
+    ]
+  }, {
+    "author": "Perry",
+    "createdAt": "2020-07-09",
+    "body": "*> good abstraction doesn't need interfaces*\nInterfaces are the purest form of abstraction, those two things go naturally together.",
+    "answers": [{
+      "author": "ttulka",
+      "createdAt": "2020-07-10",
+      "body": "Sure, but Interfaces are just a technical construct, they don't guarantee a good abstraction whatsoever. Further, there are languages with no Interfaces such as JavaScript, this, however, doesn't mean that one can't build any abstractions in JavaScript.\n\nSo, yes, Interfaces are a good tool to express abstractions on the language level. However, they are not necessary for building abstractions, and they are not necessarily abstractions. That's what I tried to say in the post."
+    }
+    ]
+  }
+  ]}

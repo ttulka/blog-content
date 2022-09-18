@@ -1,11 +1,11 @@
 {
   "comments": [{
     "author": "daggerson",
-    "createdAt": "2019-20-11",
+    "createdAt": "2019-11-20",
     "body": "An Api will still be changed as the implementation provides a better insight into the problem. Up-front design doesn't work.",
     "answers": [{
       "author": "ttulka",
-      "createdAt": "2019-20-11",
+      "createdAt": "2019-11-20",
       "body": "I agree. API could be improved as more details are explored during implementation, that's why I still see make it right very important. The difference is how much. A well-defined API tends to be pretty stable while implementing right ahead requires a lot of refactoring afterwards. This could be problematic as not everybody enjoys deleting code."
     }
     ]

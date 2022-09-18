@@ -23,7 +23,7 @@ posts:
     createdAt: 2022-06-10
     summary: "Let's build domain-oriented custom components with Spring Boot starters, auto-configuration and configuration properties. Updated to Spring Boot 2.7.0!"
     tags: Spring Boot,Spring,Software Architecture
-    highlight: true
+    highlight: false
   - title: "OOP Is Not For Everyone"
     uri: oop-is-not-for-everyone
     createdAt: 2022-05-24

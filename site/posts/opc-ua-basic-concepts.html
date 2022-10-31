@@ -140,19 +140,17 @@
 <p>Clients can access attribute values using read, write, or query services. Attribute definitions are included as part of the node class definitions and, therefore, are <strong>not included in the address space</strong>.</p>
 
 <p>The attributes of a node depend on its node class. However, there are some attributes common to every node:</p>
-<p>
-    <table>
-        <tr><th>Attribute</th><th>Data type</th><th>Description</th></tr>
-        <tr><code>NodeId</code><td><code>NodeId</code></td><td>Uniquely identifies a node in the server and is used to address the node in the services</td></tr>
-        <tr><code>NodeClass</code><td><code>NodeClass</code></td><td>An enumeration identifying the class of a node</td></tr>
-        <tr><code>BrowseName</code><td><code>QualifiedName</code></td><td>Identifies the node when browsing the server. It is not localized</td></tr>
-        <tr><code>DisplayName</code><td><code>LocalizedText</code></td><td>Contains the name of the node that should be used to display the name in a user interface. Therefore, it is localized</td></tr>
-        <tr><code>Description</code><td><code>LocalizedText</code></td><td>Optionally provides a localized textual server-specific description of the node</td></tr>
-        <tr><code>WriteMask</code><td><code>AttributeWriteMask</code> (subtype of <code>UInt32</code>)</td><td>Optionally specifies which attributes of the node are writable, i.e., can be modified by the client</td></tr>
-        <tr><code>UserWriteMask</code><td><code>AttributeWriteMask</code> (subtype of <code>UInt32</code>)</td><td>The same as <code>WriteMask</code> but of the current session.</td></tr>
-        <tr><code>AccessRestrictions</code><td><code>AccessRestrictionType</code> (subtype of <code>UInt16</code>)</td><td>Optionally specifies server-specific restrictions on the client to access the node</td></tr>
-    </table>
-</p>
+<table>
+    <tr><th>Attribute</th><th>Data type</th><th>Description</th></tr>
+    <tr><td><code>NodeId</code></td><td><code>NodeId</code></td><td>Uniquely identifies a node in the server and is used to address the node in the services</td></tr>
+    <tr><td><code>NodeClass</code></td><td><code>NodeClass</code></td><td>An enumeration identifying the class of a node</td></tr>
+    <tr><td><code>BrowseName</code></td><td><code>QualifiedName</code></td><td>Identifies the node when browsing the server. It is not localized</td></tr>
+    <tr><td><code>DisplayName</code></td><td><code>LocalizedText</code></td><td>Contains the name of the node that should be used to display the name in a user interface. Therefore, it is localized</td></tr>
+    <tr><td><code>Description</code></td><td><code>LocalizedText</code></td><td>Optionally provides a localized textual server-specific description of the node</td></tr>
+    <tr><td><code>WriteMask</code></td><td><code>AttributeWriteMask</code> (subtype of <code>UInt32</code>)</td><td>Optionally specifies which attributes of the node are writable, i.e., can be modified by the client</td></tr>
+    <tr><td><code>UserWriteMask</code></td><td><code>AttributeWriteMask</code> (subtype of <code>UInt32</code>)</td><td>The same as <code>WriteMask</code> but of the current session.</td></tr>
+    <tr><td><code>AccessRestrictions</code></td><td><code>AccessRestrictionType</code> (subtype of <code>UInt16</code>)</td><td>Optionally specifies server-specific restrictions on the client to access the node</td></tr>
+</table>
 
 <p>See the <a href="https://reference.opcfoundation.org/v104/Core/docs/Part3/5.9/" target="_blank">summary of attributes of the node classes</a>.</p>
 
@@ -189,35 +187,31 @@
 <p><em>Data variables</em> represent the data of an object, like the temperature of a temperature sensor, and have sub-variables containing parts of the data and properties describing them.</p>
 
 <p>Variables have some additional common attributes:</p>
-<p>
-    <table>
-        <tr><th>Attribute</th><th>Data type</th><th>Description</th></tr>
-        <tr><td><code>Value</code></td><td>Defined by the <code>DataType</code> attribute</td><td>The actual value of the variable</td></tr>
-        <tr><td><code>DataType</code></td><td><code>NodeId</code></td><td>This attribute contains a node ID of such a node defining the data type of the value</td></tr>
-        <tr><td><code>ValueRank</code></td><td><code>Int32</code></td><td>Identifies if the value is an array</td></tr>
-        <tr><td><code>ArrayDimensions</code></td><td><code>UInt32[]</code></td><td>This optional attribute allows specifying the size of an array</td></tr>
-        <tr><td><code>AccessLevel</code></td><td><code>AccessLevelType</code> (subtype of <code>Byte</code>)</td><td>Indicates whether the current value is readable and writable as well as whether the history of the value is readable and changeable</td></tr>
-        <tr><td><code>UserAccessLevel</code></td><td><code>AccessLevelType</code> (subtype of <code>Byte</code>)</td><td>Same as <code>AccessLevel</code> but takes user access rights into account</td></tr>
-        <tr><td><code>MinimumSamplingInterval</code></td><td><code>Duration</code> (subtype of <code>Double</code>)</td><td>Provides the information how fast the server can detect changes of the value (used for polling)</td></tr>
-        <tr><td><code>Historizing</code></td><td><code>Boolean</code></td><td>Indicates whether the server currently collects history for the value</td></tr>
-        <tr><td><code>AccessLevelEx</code></td><td><code>AccessLevelExType</code> (subtype of <code>UInt32</code>)</td><td>Extended version of <code>AccessLevel</code> for information about its atomicity</td></tr>
-    </table>
-</p>
+<table>
+    <tr><th>Attribute</th><th>Data type</th><th>Description</th></tr>
+    <tr><td><code>Value</code></td><td>Defined by the <code>DataType</code> attribute</td><td>The actual value of the variable</td></tr>
+    <tr><td><code>DataType</code></td><td><code>NodeId</code></td><td>This attribute contains a node ID of such a node defining the data type of the value</td></tr>
+    <tr><td><code>ValueRank</code></td><td><code>Int32</code></td><td>Identifies if the value is an array</td></tr>
+    <tr><td><code>ArrayDimensions</code></td><td><code>UInt32[]</code></td><td>This optional attribute allows specifying the size of an array</td></tr>
+    <tr><td><code>AccessLevel</code></td><td><code>AccessLevelType</code> (subtype of <code>Byte</code>)</td><td>Indicates whether the current value is readable and writable as well as whether the history of the value is readable and changeable</td></tr>
+    <tr><td><code>UserAccessLevel</code></td><td><code>AccessLevelType</code> (subtype of <code>Byte</code>)</td><td>Same as <code>AccessLevel</code> but takes user access rights into account</td></tr>
+    <tr><td><code>MinimumSamplingInterval</code></td><td><code>Duration</code> (subtype of <code>Double</code>)</td><td>Provides the information how fast the server can detect changes of the value (used for polling)</td></tr>
+    <tr><td><code>Historizing</code></td><td><code>Boolean</code></td><td>Indicates whether the server currently collects history for the value</td></tr>
+    <tr><td><code>AccessLevelEx</code></td><td><code>AccessLevelExType</code> (subtype of <code>UInt32</code>)</td><td>Extended version of <code>AccessLevel</code> for information about its atomicity</td></tr>
+</table>
 
 <h3>Methods</h3>
 
 <p>A <em>method</em> represents an executable operation, that is, something that is called by a client and returns a result. Each method specifies the input and output arguments.</p>
 
 <p>There are additional attributes and standard properties for methods:</p>
-<p>
-    <table>
-        <tr><th>Attribute</th><th>Data type</th><th>Description</th></tr>
-        <tr><td><code>Executable</code></td><td><code>Boolean</code></td><td>A flag indicating if the method can be invoked at the moment</td></tr>
-        <tr><td><code>UserExecutable</code></td><td><code>Boolean</code></td><td>Same as <code>Executable</code> taking user access rights into account</td></tr>
-        <tr><td><code>InputArguments</code></td><td><code>Argument[]</code></td><td>This optional property defines an array of input arguments for the method</td></tr>
-        <tr><td><code>OutputArguments</code></td><td><code>Argument[]</code></td><td>Same as <code>InputArguments</code> for the output of a method</td></tr>
-    </table>
-</p>
+<table>
+    <tr><th>Attribute</th><th>Data type</th><th>Description</th></tr>
+    <tr><td><code>Executable</code></td><td><code>Boolean</code></td><td>A flag indicating if the method can be invoked at the moment</td></tr>
+    <tr><td><code>UserExecutable</code></td><td><code>Boolean</code></td><td>Same as <code>Executable</code> taking user access rights into account</td></tr>
+    <tr><td><code>InputArguments</code></td><td><code>Argument[]</code></td><td>This optional property defines an array of input arguments for the method</td></tr>
+    <tr><td><code>OutputArguments</code></td><td><code>Argument[]</code></td><td>Same as <code>InputArguments</code> for the output of a method</td></tr>
+</table>
 
 <h3>Namespaces</h3>
 

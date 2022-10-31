@@ -13,6 +13,11 @@ pages:
   - about
 
 posts:
+  - title: "OPC UA Basic Concepts"
+    uri: opc-ua-basic-concepts
+    createdAt: 2022-10-30
+    summary: "Elemental terms and core concepts of OPC UA with all of the important details crunched for beginners and intermediate practitioners."
+    tags: IoT,OPC UA
   - title: "LoRa Spreading Factor Explained"
     uri: lora-spreading-factor-explained
     createdAt: 2022-07-22

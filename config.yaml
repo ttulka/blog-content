@@ -13,6 +13,11 @@ pages:
   - about
 
 posts:
+  - title: "OPC UA in the Cloud"
+    uri: opc-ua-in-the-cloud
+    createdAt: 2022-11-20
+    summary: "OPC UA is an industry standard for machine-to-machine communication extensible enough to run in enterprise cloud platforms."
+    tags: IoT,Cloud,OPC UA
   - title: "OPC UA Basic Concepts"
     uri: opc-ua-basic-concepts
     createdAt: 2022-10-30

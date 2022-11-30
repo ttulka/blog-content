@@ -1,0 +1,96 @@
+<p>In my recent article, I focused on the <a href="/opc-ua-basic-concepts/" target="_blank">basic concepts of OPC UA</a> with regard to the most typical use-case: OPC UA server running on a device such as a steamer or coffee machine. However, OPC UA is not limited to the use case and could also be successfully implemented as a cloud service.</p>
+
+<h2>Why OPC UA</h2>
+
+<p>Let us briefly summarize what OPC UA is and why we should care:</p>
+
+<p>OPC UA (Open Platform Communications Unified Architecture) is an <strong>open industry standard</strong> defining an <strong>interface and modeling system</strong> for machine-to-machine communication. It is mainly used in industrial <strong>automation</strong> for standardized read-and-write access to current and historical data.</p>
+<p>OPC UA uses the <strong>client-server</strong> approach, where the server typically encapsulates the device data and makes it available to the client via a well-defined interface. An OPC UA <em>application</em> can be both server and client to enable <strong>machine-to-machine</strong> communication.</p>
+<p>Data modeling in OPC UA uses <strong>object-oriented</strong> techniques including type hierarchies and inheritance to describe systems of arbitrary complexity. The data structure of an OPC UA server is <strong>self-descriptive</strong> and enables the client to navigate through instances and types with little or no prior knowledge.</p>
+<p>OPC UA describes platform and <strong>vendor-independent service-oriented</strong> architecture. The complete software stack can be implemented with C/C++, .NET, Java, or JavaScript. OPC UA is not limited to these programming languages and development platforms.</p>
+<p>OPC UA specifies data <strong>encoding</strong>, <strong>security</strong>, and <strong>transportation</strong> with the focus on reliability, robustness, scalability, interoperability and high performance in communication between distributed systems.</p>
+<p>OPC UA is extended by a bunch of <strong>companion specifications</strong> for specific purposes (e.g. commercial kitchen equipment).</p>
+
+<h2>Why OPC UA in the Cloud</h2>
+
+<p>Looking at the OPC UA designers&#39; architectural decisions, we do not see any clash in the concepts of modern cloud platforms.</p>
+<p>Bringing OPC UA to the cloud would make the life of operators easier in many ways while retaining all of its benefits: <strong>Centralization</strong> of a platform-based solution allows the client to manage multiple and potentially heterogeneous devices from a single place in the same manner. As all data are stored in one place, heuristic analysis could be performed on data from multiple sources. <strong>Remote access</strong> would remove the burden of physical presence commonly required for on-premises devices usually via access to the local network that the device is connected to. <strong>Security</strong> Security in a cloud platform is well-defined and globally applied and does not have to be solved individually per device. <strong>Integration</strong> with standard protocol should be worked out by any platform with ease. Even devices that do not implement OPC UA themselves could publish data via OPC UA with a cloud platform in the middle.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/opcua-cloud/cloud-platform-with-an-opc-ua-interface.png" alt="Cloud platform with an OPC UA interface" /><br /><i class="caption">Cloud platform with an OPC UA interface</i></p>
+
+<p>Running OPC UA applications in the cloud would extend its features for convenient functionality which would be welcomed by many users!</p>
+<p>For OPC UA clients, the platform is fully <strong>transparent</strong>, so little or no change will be needed in existing programs. In fact, clients would see no difference in working against a cloud platform or a device directly. Moreover, clients could consume data from multiple devices via a single connection.</p>
+<p>On the other hand, the platform providers would obtain their desired <strong>insights</strong> into the device data and valuable <strong>feedback</strong> which would deliver a definite advantage on the market.</p>
+
+<h2>OPC UA on a Device</h2>
+
+<p>The setup of an OPC UA application can differ significantly from device to device. The most commonly used setup, popular among manufacturers and deployed on various kinds of machines, is as ingenious as follows:</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/opcua-cloud/opc-ua-on-device.png" alt="Traditional on device OPC UA setup" /><br /><i class="caption">Traditional &quot;on device&quot; OPC UA setup</i></p>
+
+<p>The OPC UA server is running on the device and the operator can directly access it via an OPC UA client such as a Python script. This setup is notoriously <strong>simple and easy to implement</strong>. However, it places a huge burden on the operator.</p>
+<p>As devices like coffee machines or combi steamers are usually not exposed to the Internet, the operator needs <strong>access to the local network</strong>. This typically means that she must be <strong>physically present</strong> at the location where the device is placed. This is not very practical if the company has stores in the US as well as in Europe. Global device management and monitoring are also almost impossible for the same reasons.</p>
+<p>Bringing the device data to an OPC UA compliant cloud platform would not only remove the burden and enable a <strong>centralized kind of solution</strong>, but also makes it possible for the operator to leave the <strong>management and maintenance completely to the platform</strong> provider.</p>
+
+<h2>OPC UA in the Cloud</h2>
+
+<p>Shifting to an OPC UA-based cloud platform brings a lot of challenges. Let us analyze the new requirements in comparison to a traditional &quot;on device&quot; solution.</p>
+<p>A cloud platform is by definition a <strong>multi-tenant</strong> system. It contains multiple accounts, users, and devices. The response from the server must be <strong>dynamically</strong> constructed based on the given request. Devices could be dynamically added and removed and the view on them must be restricted based on the user privileges. Client A can never see devices owned by client B and vice-versa. This is very different from the traditional setup where a server running on a device contains a static structure that simply reflects the device itself.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/opcua-cloud/multi-tenant-platform.png" alt="Multi-tenant platform with dynamic nodes" /><br /><i class="caption">Multi-tenant platform with dynamic nodes</i></p>
+
+<p>A good platform must also act <strong>transparently</strong> for its users. This means that once a connection is established, a user will not spot any difference whether the communication is carried out via the platform or directly with a device. Existing programs do not need any changes made.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/opcua-cloud/transparent-communication.png" alt="Platform communication is transparent" /><br /><i class="caption">Platform communication is transparent</i></p>
+
+<p>It is not only functional requirements that need to be taken into account. <strong>Practical and cultural requirements</strong> are no less important.</p>
+<p>A cloud platform usually provides its functionality via stateless HTTP endpoints creating a <strong>conventional structure</strong> known as REST API. Such endpoints are easy to use, understand and design. REST APIs are <strong>dynamic but stable</strong>. For instance, an endpoint <code>/device/{id}/sernum</code> for reading a serial number of a particular device identified by an ID has a stable and solid URI that can be used in client programs as a constant while it will dynamically work for all devices.</p>
+<p>Last but not least, enterprise software such as cloud platforms is typically built using <strong>high-level programming languages</strong> and environments such as Java (JVM) or C# (.NET). An OPC UA server that runs on a device is, on the other hand, likely written with a low-level C/C++ stack.</p>
+
+<h2>Dynamic Node Manager</h2>
+
+<p>To satisfy all of the above mentioned functional and non-functional requirements, we need the sort of node manager that would be able to create <strong>statically-addressable nodes dynamically based on the user context</strong>. The dynamic node manager would intercept every request and handle it in a REST-ish manner. For instance, a node providing a serial number as a property of a device would have a dynamic node definition <code>Device&lt;ID&gt;/Sernum</code> where <code>&lt;ID&gt;</code> is a mandatory placeholder provided by the client and resolved by the node manager on the fly. A client would query a concrete node ID <code>Device123/Sernum</code> where <code>123</code> is a unique identifier of a particular device in the platform. The node manager searches the device with ID 123 and responds with its serial number as to whether it exists and belongs to the client.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/opcua-cloud/opc-ua-dynamic-node-manager.png" alt="Dynamic node manager intercepts the client request" /><br /><i class="caption">Dynamic node manager intercepts the client request</i></p>
+
+<p>Dynamic nodes should be easy to use and develop. Ideally via a simple configuration to assign a backend that holds the device data:</p>
+
+<pre>
+var node = new DynNode("Device&lt;ID&gt;/Sernum", ::getSernum)
+</pre>
+
+<p>The pseudo-code above creates a new dynamic node definition and assigns a function to retrieve data from the backend service. The function has a signature as follows:</p>
+
+<pre>
+String getSernum(Int id, ClientContext ctx)
+</pre>
+
+<p>The dynamic node manager must call the backend with the resolved device ID as well as the context of the current client to allow the backend to decide if the client has permission to access the device:</p>
+
+<pre>
+String getSernum(Int id, ClientContext ctx) {
+  var device = findDeviceById(id)
+  if (!device || !device.ownedBy(ctx.clientId)) {
+    throw new Error("Cannot access device")
+  }
+  return device.sernum
+}      
+</pre>
+
+<p>In addition, it would be handy to construct nodes as hierarchies. For instance, create the device node (<code>Device&lt;ID&gt;</code>) first and assign the serial number node (Sernum) to it afterward:</p>
+
+<pre>
+var sernumNode = 
+  childVariable("SerialNumber", ::getSernum).
+  asProperty(deviceNode) 
+</pre>
+
+<h3>OPC UA Dynamic Node Manager Java Library</h3>
+
+<p>The popular Java OPC UA SDKs <a href="https://prosysopc.com/products/opc-ua-java-sdk/" target="_blank">Prosys</a> and open-source <a href="https://github.com/eclipse/milo">Eclipse Milo</a> provide flexible solutions for OPC UA on the server side with possibilities of intercepting client requests with custom logic, but none offer the functionality of dynamic nodes out of the box.</p>
+<p>Fortunately, there is a small <a href="https://github.com/connectedcooking/opcua-dynamic-node-manager" target="_blank">free open-source library</a> written in Java that aims to work seamlessly with OPC UA Java SDKs Prosys and Eclipse Milo (planned). This library offers all desired functionality of a dynamic node manager.</p>
+<p>It works as a plug-in to the existing OPC UA server to extend its functionally of dynamic node definitions. The dynamic node definitions are independent of the SDK so the very same code could be used with different vendors just by switching to a different vendor-specific adaptor. An adaptor serves as a bridge between a particular SDK and dynamic node definitions. This makes the library very extensible as a new adaptor could be created for any SDK.</p>
+<p>The library is flexible enough to create complex structures of dynamic nodes and is easy to use thanks to a handful of fluent builders.</p>
+<p>Check it out on <a href="https://github.com/connectedcooking/opcua-dynamic-node-manager" target="_blank">GitHub</a>!</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/opcua-cloud/opc-ua-pooh.png" alt="OPC UA dynamic node manager meme" /></p>

@@ -18,7 +18,6 @@ posts:
     createdAt: 2023-01-05
     summary: "Object-oriented programming might not be perfect but it is still the best we have."
     tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
-    highlight: true
   - title: "OPC UA in the Cloud"
     uri: opc-ua-in-the-cloud
     createdAt: 2022-11-20
@@ -217,6 +216,7 @@ posts:
     createdAt: 2020-07-21
     summary: "Do you really need a cluster of pods, service mesh, and stream-processing platform right now?"
     tags: Microservices,Software Architecture,Monolith,Design Patterns,SOA
+    highlight: true
   - title: "Good and Bad Monolith"
     uri: good-and-bad-monolith
     createdAt: 2020-06-09

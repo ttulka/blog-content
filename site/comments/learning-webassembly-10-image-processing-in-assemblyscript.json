@@ -1,3 +1,8 @@
 {
-  "comments": []
+  "comments": [{
+    "author": "Kevin Böing",
+    "createdAt": "2023-01-11",
+    "body": "Hey Thomas first of all great blog you have created here. Instead of reading the bytes in a loop, I would recommend setting the bytes with bytets.set(data,0) and to read the bytes into the data I would recommend data.set(bytes.slice(0, data.length)). This will increase the performance. Have you perhaps evaluated whether there is an even faster way to pass the imageData to the WebAssembly code? ",
+    "answers": []
+  }]
 }

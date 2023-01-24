@@ -1,4 +1,4 @@
-<p>In my recent article, I focused on the <a href="/opc-ua-basic-concepts/" target="_blank">basic concepts of OPC UA</a> with regard to the most typical use-case: OPC UA server running on a device such as a steamer or coffee machine. However, OPC UA is not limited to the use case and could also be successfully implemented as a cloud service.</p>
+<p>In my recent article, I focused on the <a href="/opc-ua-basic-concepts/" target="_blank">basic concepts of OPC UA</a> with regard to the most typical use-case: OPC UA server running on a device such as a steamer or coffee machine. However, OPC UA is not limited to the use case and could also be successfully implemented as a multitenant service.</p>
 
 <h2>Why OPC UA</h2>
 
@@ -32,7 +32,7 @@
 <p>As devices like coffee machines or combi steamers are usually not exposed to the Internet, the operator needs <strong>access to the local network</strong>. This typically means that she must be <strong>physically present</strong> at the location where the device is placed. This is not very practical if the company has stores in the US as well as in Europe. Global device management and monitoring are also almost impossible for the same reasons.</p>
 <p>Bringing the device data to an OPC UA compliant cloud platform would not only remove the burden and enable a <strong>centralized kind of solution</strong>, but also makes it possible for the operator to leave the <strong>management and maintenance completely to the platform</strong> provider.</p>
 
-<h2>OPC UA in the Cloud</h2>
+<h2>OPC UA as a Service</h2>
 
 <p>Shifting to an OPC UA-based cloud platform brings a lot of challenges. Let us analyze the new requirements in comparison to a traditional &quot;on device&quot; solution.</p>
 <p>A cloud platform is by definition a <strong>multi-tenant</strong> system. It contains multiple accounts, users, and devices. The response from the server must be <strong>dynamically</strong> constructed based on the given request. Devices could be dynamically added and removed and the view on them must be restricted based on the user privileges. Client A can never see devices owned by client B and vice-versa. This is very different from the traditional setup where a server running on a device contains a static structure that simply reflects the device itself.</p>

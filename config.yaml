@@ -18,16 +18,16 @@ posts:
     createdAt: 2023-01-05
     summary: "Object-oriented programming might not be perfect but it is still the best we have."
     tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
-  - title: "OPC UA in the Cloud"
-    uri: opc-ua-in-the-cloud
+  - title: "OPC UA for Multitenant Applications"
+    uri: opc-ua-for-multitenant-applications
     createdAt: 2022-11-20
-    summary: "OPC UA is an industry standard for machine-to-machine communication extensible enough to run in enterprise cloud platforms."
-    tags: IoT,Cloud,OPC UA
+    summary: "OPC UA is an industry standard for machine-to-machine communication extensible enough to run in a multitenancy environment such as enterprise cloud platforms."
+    tags: OPC UA,IoT,Cloud,Software Architecture
   - title: "OPC UA Basic Concepts"
     uri: opc-ua-basic-concepts
     createdAt: 2022-10-30
     summary: "Elemental terms and core concepts of OPC UA with all of the important details crunched for beginners and intermediate practitioners."
-    tags: IoT,OPC UA
+    tags: OPC UA,IoT
   - title: "LoRa Spreading Factor Explained"
     uri: lora-spreading-factor-explained
     createdAt: 2022-07-22

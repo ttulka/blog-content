@@ -388,21 +388,11 @@ posts:
     createdAt: 2018-07-01
     summary: "Implementing a SaaS as a multitenant system brings a lot of benefits. As usual, there are some tradeoffs, too. For example security becomes more complex. Let's take a look at possible approaches when implementing security in a multitenant architectrure."
     tags: Cloud,Serverless,Security
-  - title: "Multiple LDAP Servers Integration"
-    uri: multiple-ldap-servers-integration
-    createdAt: 2018-06-12
-    summary: "Let's integrate a few LDAP servers!"
-    tags: LDAP
   - title: "Meaning of Queues and Topics in AWS"
     uri: meaning-of-queues-and-topics-in-aws
     createdAt: 2018-04-11
     summary: "What's the difference between queues and topics in AWS? It's not as obvious as it seems to be..."
     tags: Event-Driven,Cloud,AWS
-  - title: "Debugging jasmine-ts in IntelliJ IDE"
-    uri: debugging-jasmine-ts-in-intellij-ide
-    createdAt: 2018-03-28
-    summary: "TypeScript application wants tests to be written in TypeScript as well, right?"
-    tags: Programming,Debugging,JavaScript
   - title: "Pitfalls of Processing a Stream from an External Program"
     uri: pitfalls-of-processing-a-stream-from-an-external-program
     createdAt: 2017-10-02
@@ -478,18 +468,3 @@ posts:
     createdAt: 2014-03-25
     summary: "...is very bad practice. Nevertheless, it is not so rare to meet it."
     tags: Programming,Java
-  - title: "Principals from JAAS through CAS to Spring Security"
-    uri: principals-from-jaas-through-cas-to-spring-security
-    createdAt: 2014-03-05
-    summary: "This article is about a custom integration of Java Authentication and Authorization Service (JAAS), Central Authentication Service (CAS), and Spring Security."
-    tags: Programming,Java,JAAS,CAS
-  - title: "ActiveMQ, HornetQ and RabbitMQ Performance Comparison"
-    uri: activemq-hornetq-and-rabbitmq-performance-comparison
-    createdAt: 2014-02-24
-    summary: "Messaging could be a great solution for a lot of projects regarding an inter-systems (and components) communication. But which vendor to choose? Which one is the best?"
-    tags: Event-Driven,ActiveMQ,HornetQ,RabbitMQ
-  - title: "ActiveMQ + JAAS Custom Login Module"
-    uri: activemq-jaas-custom-login-module
-    createdAt: 2014-02-21
-    summary: "It is pretty easy to find how to run built-in JAAS plugin, but what shall you do when you want to your own JAAS LoginModule implementation for ActiveMQ broker authentication (for instance when you have the module already written)?"
-    tags: Programming,Java,JAAS,ActiveMQ

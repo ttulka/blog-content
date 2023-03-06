@@ -35,8 +35,8 @@ posts:
     tags: IoT,LoRa,LoRaWAN
   - title: "Spring Boot Custom Components"
     uri: spring-boot-custom-components
-    createdAt: 2022-06-10
-    summary: "Let's build domain-oriented custom components with Spring Boot starters, auto-configuration and configuration properties. Updated to Spring Boot 2.7.0!"
+    createdAt: 2023-03-06
+    summary: "Let's build domain-oriented custom components with Spring Boot starters, auto-configuration and configuration properties. Updated to Spring Boot 3.0!"
     tags: Spring Boot,Spring,Software Architecture
     highlight: false
   - title: "OOP Is Not For Everyone"
@@ -102,7 +102,7 @@ posts:
     tags: API Design,REST
   - title: "How to Test Date and Time in Spring Boot"
     uri: how-to-test-date-and-time-in-spring-boot
-    createdAt: 2021-05-27
+    createdAt: 2023-03-06
     summary: "Testing temporal events in Spring Boot Java applications with JUnit 5 and Spring Boot Test."
     tags: Testing,Spring Boot,Java,Programming
   - title: "My Favorite Esolangs"
@@ -315,7 +315,7 @@ posts:
     tags: Testing,Programming
   - title: "Spring HTTP Message Converters Customizing"
     uri: spring-http-message-converters-customizing
-    createdAt: 2019-05-05
+    createdAt: 2023-03-06
     summary: "A deep look at how Spring's HTTP Message Converters work."
     tags: Programming,Java,Spring,Spring Boot
   - title: "Glass-Box Testing Does Not Need Mocking"

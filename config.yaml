@@ -13,6 +13,11 @@ pages:
   - about
 
 posts:
+  - title: "Services Everywhere"
+    uri: services-everywhere
+    createdAt: 2023-06-05
+    summary: "Software architecture is only as service-oriented as its most monolithic component."
+    tags: Software Architecture,Microservices,SOA,Monolith,Design Patterns,DDD
   - title: "OOP Is Still Cool in 2023"
     uri: oop-is-still-cool
     createdAt: 2023-01-05

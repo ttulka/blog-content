@@ -1,0 +1,61 @@
+<p>It remains pure functions, one of the holy grails of functional programming: As soon as a function interacts with an impure function it becomes impure itself. One may have a system of a million connected pure functions but if just a single one is impure the system will also be impure.</p>
+
+<p>A more familiar example can be found in security. One can have secure communication with the most bullet-proof ciphers and keys but the final security level is always determined by the least secure member of the team. After all, what is the armored door of a safe worth if its walls are made of paper?</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/services-everywhere/services-everywhere-1.png" alt="How strong is this chain?" /><br /><i class="caption">How strong is this chain?</i></p>
+
+<p>The rule of the weakest link is also applicable to a chain of services. A system of fine-grained microservices can show all the drawbacks of a monolith when they connect to a solid component at the end of the day.</p>
+
+<p>Of course, all perfection ends once hits the boundaries of an imperfect world. This definitely applies to functions (remember the IO monad in Haskell), objects (they become naked data at the boundaries of API endpoints), and services.</p>
+
+<p>Services are brought together back to the monolith in a sort of frontend application, or API gateway in the case of headless systems. For example, in an e-commerce application, we usually want to show product details, prices, the status of the shopping cart, and maybe customer recommendations, all typically owned by separate services, together on a single web page.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/services-everywhere/services-everywhere-2.png" alt="Services at the boundaries" /><br /><i class="caption">Services at the boundaries</i></p>
+
+<p>There is nothing wrong with this as long as it happens at the boundaries. Trouble arises when the monolith sits somewhere <em>before</em> them.</p>
+
+<p>It goes like this: the frontend displays a table of products within a selected category. Now, a new requirement says that the customer should see the most recent five-star recommendation in each row. The problem is, the Product service does not hold this information as it is owned by the Recommendation service. As the frontend expects all data to be retrieved from the backend we have no choice but to make an inter-service call from Product to Recommendation or merge both services into a single one.</p>
+
+<p>Both approaches are suboptimal as they make the overall system design more monolithic. In the case of the inter-service call, we have just laid the foundations of the worst of all designs: the infamous distributed monolith has been born.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/services-everywhere/services-everywhere-3.png" alt="To couple or to merge?" /><br /><i class="caption">To couple or to merge?</i></p>
+
+<p>As nothing really works well, we might begin to doubt the whole architecture: Are our services well-defined? Maybe the recommendations genuinely <em>are</em> a part of the product and it was a mistake to take them apart? Merging the services into one would definitely resolve the problem but this kind of thinking will inevitably make us abandon services as a paradigm altogether and sacrifice all of their benefits.</p>
+
+<h2>Services to the end</h2>
+
+<p>The idea of merging everything whenever a connection appears is natural but turns out to be flawed when put under deeper introspection.</p>
+
+<p>Let us analyze the original requirement in a broader context. Services (as well as functions and objects) are components with well-defined responsibilities. To work out the business capabilities offered by the system <strong>they must work together in a cooperative manner</strong>. That is, no service exists in a void. Advanced behavior of the system is carried out by the collaboration of services that are connected at the system boundaries, like frontends.</p>
+
+<p>To see the misconception clearly, we can push the situation to the extreme. Let us think of a new crazy requirement to display the current weather in the country the product was manufactured in for each row in the product table.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/services-everywhere/services-everywhere-4.png" alt="It's sunny in the Mediterranean" /><br /><i class="caption">It's sunny in the Mediterranean</i></p>
+
+<p>Would anyone consider merging the Weather service with the Product service (assuming that we have a Weather service)? Most unlikely. Now, integrating the Product and an external Weather service directly in the frontend seems to be a much better and more obvious solution.</p>
+
+<h2>Service-oriented frontends</h2>
+
+<p>The service design should not stop with the backend. The microfrontend movement states this quite clearly. And, fortunately, we don’t have to run React, Angular, and Vue on a single page simultaneously. We don’t even need to have separate code repositories for individual microfrontends. We just need to do the job right — to <strong>compose the page in a service-oriented way</strong>, that is, to integrate services in the frontend.</p>
+
+<p>Looking at the original requirement once again, we realize that it is all about displaying and can be carried out by the component that is responsible for displaying, namely the frontend. Indeed, the recommendations have nothing to do with the product in the sense of business capabilities. There are no computations in the backend services that would require data from both services. Therefore, the services are genuinely independent in their responsibilities.</p>
+
+<p>After product data is fetched from the Product service another call to the Recommendation service is performed to get the recent recommendation. No changes to the backend services are required. Services are connected where needed: in the frontend which represents the system boundary.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/services-everywhere/services-everywhere-5.png" alt="Service composition in the frontend" /><br /><i class="caption">Service composition in the frontend</i></p>
+
+<h2>What about sorting?</h2>
+
+<p>What if the requirement evolves in order to allow customers to sort the product list by rating (number of stars)? Sorting and filtering could be challenging, especially with paginated lists.</p>
+
+<p>One viable possibility is to store this already aggregated information in the Product service. This could be done by listening to events from the Recommendation service indicating a change in the rating of a product when a customer enters a new one.</p>
+
+<p>Another approach is the Backend for frontend (BFF) pattern where a separate service is responsible for serving frontend requests such as aggregating, sorting, and filtering data from multiple backend services. BFF forms a boundary to the system with a dumb frontend view on the top.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/services-everywhere/services-everywhere-6.png" alt="Backend for frontend (BFF)" /><br /><i class="caption">Backend for frontend (BFF)</i></p>
+
+<h2>Conclusion</h2>
+
+<p>A chain is only as strong as its weakest link. To benefit fully from service-oriented architecture we have to push it through to the end. All parts of the system must follow the same track; otherwise, some unpleasant surprises may soon emerge.</p>
+
+<p>Happy serving!</p>

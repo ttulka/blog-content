@@ -1,3 +1,12 @@
 {
-  "comments": []
+  "comments": [{
+    "author": "Evgeni Dzhelyov",
+    "createdAt": "2024-03-03",
+    "body": "I'm following your tutorial and have problems with creating the cgroups.
+`echo 7340032 > memory.limit_in_bytes`
+`# bash: memory.limit_in_bytes: Permission denied`
+It would seem there is a cgroup v2 that replaces the limit_in_bytes by `memory.max` and instead of adding the busybox under the memory cgroup I need to create it under the /sys/fs/cgroup/busybox.
+I'm running Ubuntu 23.10, in a QEMU VM under aarch64.
+Also, we need the `cgroup.procs` instead of tasks."
+  }]
 }

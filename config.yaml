@@ -13,16 +13,21 @@ pages:
   - about
 
 posts:
+  - title: "The Power of Silly Questions"
+    uri: the-power-of-silly-questions
+    createdAt: 2024-06-11
+    summary: "Nothing is obvious in software development."
+    tags: DevOps,Team,Agile
+  - title: "OOP Is Still Cool in 2024"
+    uri: oop-is-still-cool
+    createdAt: 2024-04-29
+    summary: "Object-oriented programming might not be perfect but it is still the best we have."
+    tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
   - title: "Services Everywhere"
     uri: services-everywhere
     createdAt: 2023-06-05
     summary: "Software architecture is only as service-oriented as its most monolithic component."
     tags: Software Architecture,Microservices,SOA,Monolith,Design Patterns,DDD
-  - title: "OOP Is Still Cool in 2023"
-    uri: oop-is-still-cool
-    createdAt: 2023-01-05
-    summary: "Object-oriented programming might not be perfect but it is still the best we have."
-    tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
   - title: "OPC UA for Multitenant Applications"
     uri: opc-ua-for-multitenant-applications
     createdAt: 2022-11-20

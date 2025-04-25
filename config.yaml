@@ -13,16 +13,16 @@ pages:
   - about
 
 posts:
+  - title: "OOP Is Still Cool in 2025"
+    uri: oop-is-still-cool
+    createdAt: 2025-04-29
+    summary: "Object-oriented programming might not be perfect but it is still the best we have."
+    tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
   - title: "The Power of Silly Questions"
     uri: the-power-of-silly-questions
     createdAt: 2024-06-11
     summary: "Nothing is obvious in software development."
     tags: DevOps,Team,Agile
-  - title: "OOP Is Still Cool in 2024"
-    uri: oop-is-still-cool
-    createdAt: 2024-04-29
-    summary: "Object-oriented programming might not be perfect but it is still the best we have."
-    tags: OOP,Programming,Microservices,Design Patterns,Software Architecture
   - title: "Services Everywhere"
     uri: services-everywhere
     createdAt: 2023-06-05

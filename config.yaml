@@ -9,9 +9,10 @@ blog:
   url: https://blog.ttulka.com/
 
 pages:
-  - privacypolicy
   - about
-
+  - books
+  - privacypolicy
+  
 posts:
   - title: "OOP Is Still Cool in 2025"
     uri: oop-is-still-cool

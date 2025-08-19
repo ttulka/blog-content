@@ -14,6 +14,11 @@ pages:
   - privacypolicy
   
 posts:
+  - title: "Sprint Goals as the Health Check of Delivery"
+    uri: sprint-goals-as-health-check
+    createdAt: 2025-08-17
+    summary: "What Sprint Goals reveal about your Scrum process and why it matters."
+    tags: Team,Agile,Scrum
   - title: "OOP Is Still Cool in 2025"
     uri: oop-is-still-cool
     createdAt: 2025-04-29

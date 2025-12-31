@@ -14,6 +14,11 @@ pages:
   - privacypolicy
   
 posts:
+  - title: "Predictions for 2026"
+    uri: predictions-for-2026
+    createdAt: 2025-12-31
+    summary: "Let us play oracle and try to predict what the next year will bring in the world of technology."
+    tags: AI,AGI,Tech,Predictions
   - title: "Sprint Goals as the Health Check of Delivery"
     uri: sprint-goals-as-health-check
     createdAt: 2025-08-17

@@ -14,6 +14,11 @@ pages:
   - privacypolicy
   
 posts:
+  - title: "Outbox Pattern Without a Database"
+    uri: outbox-pattern-without-database
+    createdAt: 2026-02-15
+    summary: "How to build fault-tolerant event processing and keep your sanity."
+    tags: Event-Driven,Design Patterns,Spring,Outbox
   - title: "Predictions for 2026"
     uri: predictions-for-2026
     createdAt: 2025-12-31

@@ -1,0 +1,73 @@
+<p>In <a href="https://blog.ttulka.com/transactional-events-made-easy-with-spring/" target="_blank">my previous post</a>, I discussed transactional events, a pattern for synchronizing persistent operations and resulting events.</p>
+
+<p>As useful as this pattern is, it is far from perfect. Although the event is triggered and processed only if the triggering transaction succeeds, it provides no guarantee that the event itself is not discarded in one way or another. Consider the following code:</p>
+
+<pre class="brush: java">
+@Transactional
+public void collectPayment(Payment payment) {
+  
+  // persist data
+  // ...
+
+  // event triggered
+  eventPublisher.publishEvent(new PaymentEvent(payment));
+}
+
+@TransactionalEventListener
+public void handleEvent(PaymentEvent event) {
+  
+  // something can go wrong here
+  if (...) throw new RuntimeException("Boom!");
+  
+  // event processing
+  // ...
+}
+</pre>
+
+<p>What happens when something goes wrong in the event listener before the event is fully processed? The event is lost. In event-driven distributed systems, this can lead to inconsistencies in the overall state, subtle errors, and customer-facing issues that impact revenue.</p>
+
+<h2>Outbox to the Rescue</h2>
+
+<p>How can we address such a situation? The outbox pattern is a solution. The implementation, unless a ready-to-use tool is available, is non-trivial. To outline the idea: events are first stored in the database and then sent later by a scheduled relay. The relay also updates the delivery status of the event and handles retries and failures.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/outbox-pattern-without-database/outbox.png"></p>
+
+<p>The outbox procedure has two phases.</p>
+
+<p>In the first phase, the event is stored in a dedicated outbox table within the same transaction as the business data. Due to the enclosing transaction, events are stored only if all changes are committed.</p>
+
+<p>In the second phase, the relay retrieves new events from the outbox and triggers their processing. After processing (successful or failed), the outbox record is updated accordingly. Successfully processed events can be deleted or retained for auditing purposes. Events with failed delivery are picked up again by the relay on the next schedule.</p>
+
+<p>Event processing is wrapped in a try-catch block to capture its status and synchronize it with the outbox record. Outbox updates and event processing are not enclosed in a single transaction to avoid blocking database access during long-running operations. As a result, if the outbox update fails, the same event may be resent. This behavior is acceptable under an at-least-once delivery guarantee, which is common in distributed systems.</p>
+
+<h2>Outbox to Regret</h2>
+
+<p>A lot is happening here. If you implement the outbox pattern yourself, you effectively need to integrate it deeply into the framework. Spring does not provide first-class support for this pattern out of the box (no pun intended).</p>
+
+<p>There are also legitimate performance concerns related to persisting events in the database, both in terms of throughput and storage. The database can easily become a bottleneck, degrading overall system performance.</p>
+
+<p>For these reasons, the pattern is not commonly seen in practice. It is often considered too complex and operationally heavy for many systems.</p>
+
+<h2>Outbox to Relax</h2>
+
+<p>Before discarding the outbox entirely, consider a simpler approximation. This approach does not provide the full transactional guarantees of the original pattern, but it improves upon naive transactional events with minimal implementation effort.</p>
+
+<p>Let me explain...</p>
+
+<p>The primary risk of losing events lies in the processing phase. If processing fails, the event is lost and never completed. This can be improved with simple retry semantics:</p>
+
+<pre class="brush: java">
+@Retryable
+@TransactionalEventListener
+public void handleEvent(PaymentEvent event) {
+  ...
+}
+</pre>
+
+<p>Now, when event processing fails, it is automatically retriggered and retried. Implementation requires only a single Spring annotation on the processing method. That’s it, one line of code!</p>
+
+<p>Of course, this is not a replacement for the full outbox solution. The outbox itself is removed, and only the retry mechanism for failed processing is retained. Because events are not persisted in an external store, state is maintained in memory and is lost on application crash or redeployment. However, this approach improves reliability with minimal complexity and operational overhead.</p>
+
+<p>You can find a working example on my GitHub.</p>
+
+<p>Happy outboxing!</p>

@@ -14,6 +14,11 @@ pages:
   - privacypolicy
   
 posts:
+  - title: "AI? Don't Panic!"
+    uri: ai-dont-panic
+    createdAt: 2026-02-24
+    summary: "An argument for optimism as a software developer in the age of AI."
+    tags: AI,AGI,Tech,Software Development,Coding
   - title: "Outbox Pattern Without a Database"
     uri: outbox-pattern-without-database
     createdAt: 2026-02-15

@@ -1,0 +1,104 @@
+<p>AI has been discussed a lot recently, in meetings, in the workplace, in the coffee kitchen, in a pub, and at home. I have noticed increasing anxiety among software developers, mourning the disappearance of their craft, and fear that their knowledge and abilities may become irrelevant, and ultimately that they may lose their jobs.</p>
+
+<p>These concerns are not entirely irrational if you are listening to CEOs of companies like OpenAI and Anthropic. If what they say were true, we would soon find ourselves in a world where humans are obsolete, following the fate of horses. Redefining the role of humans within a few years would not be easy, as it has been established over the last thousand years. Are we ultimately driving ourselves to extinction? All in all, what is the point of living in a world where all problems are solved?</p>
+
+<p>In this post, I try to clarify some misconceptions about contemporary AI and explain why I think the pessimism and doomsday scenarios are exaggerated. At the same time, I will discuss real issues and challenges that come with AI that you might not have considered yet.</p>
+
+<p>First, let me make one thing straight:</p>
+
+<h2>AI Can’t Think</h2>
+
+<p>I’ve been perplexed by how many smart and sophisticated people I personally respect fall into the trap of anthropomorphizing AI, seriously considering possible reasoning abilities or even consciousness in chatbots and other LLM tools. They are wrong. AI cannot think. AI is not conscious. However, it can trick us into assuming otherwise by mimicking human language very effectively.</p>
+
+<p>Language is supposed to be something inherently human<sup>[1]</sup>. Thus, if something speaks to us in human language, it must be human. If it quacks like a duck, then it is a duck, right? Well, no.</p>
+
+<p>We tend to anthropomorphize things that resemble humans. The ancient sculptor Pygmalion fell in love with an ivory statue he created because of its human appearance, but it takes much less than that. We often speak to our pets as if they were equal peers, and some people even felt genuinely human hatred toward the office assistant Clippy.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/ai-dont-panic/clippy.png" alt="Clippy" /><br /><i class="caption">Do you remember <a href="https://magnus919.com/2025/05/the-rise-and-fall-of-clippy-from-microsofts-bold-vision-to-internet-legend/" target="_blank">Clippy</a>?</i></p>
+
+<p>For me personally, it took some time to reduce politeness when I first spoke to ChatGPT. Saying “please” and “thank you” feels natural, but it is utterly meaningless when talking to a chatbot. Sam Altman has even mentioned millions of dollars in wasted energy caused by such interactions.</p>
+
+<p>But LLMs are not a duck, I mean, human. They are rather a parrot. They do what every other computer program does: they transform inputs into outputs. They map one large numerical vector to another using a network of mathematical functions configured by analyzing existing human-generated transformations. This is not a new idea. Neural networks have existed since the 1970s. What is new is access to powerful computing resources and massive datasets now available on the internet.</p>
+
+<p class="center"><img src="https://raw.githubusercontent.com/ttulka/blog-assets/master/ai-dont-panic/io.png" alt="Clippy" /></p>
+
+<p>So how can a numerical transformation be that successful at imitating human language? The simplest explanation is that language may not be as hard a problem as we assumed. Moreover, language is not inseparably linked to intelligence. A truly intelligent entity does not need to speak at all. It can just think without accepting input or producing output.</p>
+
+<h2>Scaling Won’t Get Us There</h2>
+
+<p>What does it mean to think, precisely? In this post, I use <i>thinking</i> interchangeably with <i>intelligence</i>, because the terms “intelligence” and “intelligent” are heavily overloaded today. We do not have a clear definition of what it means to think, nor is there an exhaustive, universally accepted definition of intelligence.</p>
+
+<p>Generative AI, such as LLM-based chatbots, is a function that approximates relationships and patterns from training data with a grain of randomness. However, AI is not general. In simple terms, AI, <i>artificial intelligence</i>, knows one or many things, whereas AGI, <i>artificial general intelligence</i>, doesn’t know something but it’s able to figure it out. With large amounts of training data, we can build increasingly large models that know more and more things. But as long as they cannot think, they cannot solve genuinely novel problems that were absent from the training data. No matter how large training datasets become, they will always be finite, in contrast to the virtually infinite problem space. Take this example: given all 19th-century physics, AI would never have derived the theory of general relativity.</p>
+
+<p>We don’t know what general intelligence is, and for that reason, we do not have AGI. We cannot expect it to emerge spontaneously from a parrot. First, we need to understand what it means to think and develop a theory of intelligence. Only then can we implement it as a computer program. However, we have made little progress since the early 1900s, when the conceptual framework of biological neurons was established.</p>
+
+<h2>Good News!</h2>
+
+<p>In practice, this means we will have tools that are able to do increasingly more and more things, but will never be able to do everything.</p>
+
+<p>It’s great news that many people completely miss! We get a tool capable of solving 99 percent of the problems humans can solve, while the remaining 1 percent preserves the human role in the process<sup>[2]</sup>. The 99/1 ratio is illustrative; in reality, it may be 50/50, 70/30, or 90/10. In any case, it is asymptotically approaching 99/1 but will never reach 100/0.</p>
+
+<p>The split exists both between units of work and within them. For new categories of tasks, we will need to train new models, which will not be able to complete nontrivial tasks entirely without human oversight. This leads to increased efficiency and reduced workload while maintaining a critical role for a human actor.</p>
+
+<p>At present, AI performs particularly well in coding. However, coding is only one part of software engineering. Producing a piece of code is not the end of the story. It must be integrated, verified, deployed, and operated. These real-world activities distinguish software engineering from mere coding. AI will assist with these tasks, but it will not manage the entire job alone. Furthermore, no AI can fully answer the most important question: <em>what should be built next</em>.</p>
+
+<h2>What Is Still Missing</h2>
+
+<p>In 2026, we got pretty far. AI code generators can solve complex problems, analyze entire codebases, modify multiple files, and produce useful documentation. Chatbots assist with text correction, copywriting, research, and verbal reasoning (aka rubber ducking). Not mentioning spectacular image generators, autonomous robots, and other specialized AI systems.
+
+<p>However, it’s a kind of mess. New models and tools pop up, and new versions of existing tools introduce significant changes regularly. What you learned yesterday may already be outdated today. Currently, I am using ChatGPT for text corrections, Claude for vibe coding, and Gemini for image generation. You might have different preferences, much like I’ll have a week from now. It’s annoying.</p>
+
+<p>The usage is also clumsy. Some people are better at prompting than others, but the exact factors are not well understood. We still lack clear rules and best practices for prompting AI, or some semi-formal language like that used in legal drafting, particularly for specialized use cases such as programming intelligent agents.</p>
+
+<p>Yes, multiple initiatives are attempting to address these gaps, but emerging standards such as A2A, ACP, and MCP are still in their infancy. Integration with existing tools and workflows often feels ad hoc. In 2026, the AI landscape remains the wild wild west.</p>
+
+<p>The situation reminds me of the rise of microservices in the early 2010s, when organizations built custom solutions for all common problems, such as service discovery and orchestration, before Kubernetes came along as a de facto standard. A kubernetes for AI has yet to emerge.</p>
+
+<h2>The Future of Software</h2>
+
+<p>So what does the future of programming look like? Well, I don’t know, but...</p>
+
+<p>2026 will be the year of AI products. Big tech organizations already recognize that current AI capabilities are good enough to build commercially viable products and are actively integrating AI into their offerings. Some initiatives will fail initially, but the economic value is evident and will eventually be realized. It will likely take several more years before AI ceases to be perceived as a novelty and becomes embedded in standard workflows, as earlier technologies did. (We no longer label pre-LLM systems as AI, although search engines, voice assistants, autocomplete, and chess engines clearly are AI systems.)</p>
+
+<p>I believe that after those problems are settled, nobody will really miss exhaustive manual code typing, like we don't miss programming on punched cards. Of course, hackers and enthusiasts will always want to understand how things work under the hood and <a href="https://blog.ttulka.com/books/#universal" target="_blank">build the computer from scratch</a>. But traditional programming as we know it today may soon resemble blacksmithing as demonstrated at summer craft festivals.</p>
+
+<p>This shift will also affect programming languages. Modern language design prioritizes human readability and developer ergonomics over machine-level optimization. We often sacrifice brevity and low-level efficiency to make code easier to write and maintain by human programmers. As direct human code authorship becomes less central, language design priorities will change. Lower-level languages such as Rust may receive increased attention, while mainstream languages such as Java and C# may gradually decline in prominence.</p>
+
+<p>In fact, there have been many previous attempts to eliminate the need for programmers. It began with programming languages themselves. In the early days of computers, programmers created routines by connecting wires, constructing binary instruction sequences, and later writing assembly code, all of which were arcane to mortals. English-like programming languages such as COBOL were designed to allow non-technical business folks to develop software using familiar means, thereby reducing reliance on expensive programmers. Visual programming, in which code was generated from diagrams, No-Code and Low-Code platforms, and outsourcing to lower cost regions were later attempts. None of these approaches eliminated the need for skilled developers; they just shifted focus towards more abstract components and workflows. AI augmented coding is the latest step in this progression, moving software development to a yet higher level of abstraction.</p>
+
+<h2>The Bad Parts</h2>
+
+<p>So far, so good. However, every transition, not to say revolution, has its challenges. The problems will come rather from people and organizational misconceptions about AI than from AI itself. Greed and misuse are the dark sides of every new invention, and AI is no exception.</p>
+
+<p>The first issue is emotional. If you’ve been a programmer for decades, you have likely fallen in love with code. You have spent thousands of hours crafting it. It is a joy of exploration and creativity, the search for perfection, and it is fun. As such, you may not cheer what you have read so far. You might feel frustrated, anxious, lose motivation, or even experience burnout. These feelings are real and should be addressed. In my experience, knowledge helps a lot. Experiment with new tools, test their limits, and explore them. You may enjoy the process and change your mind, or at least warm up to the idea.</p>
+
+<p>Similar disillusionment can affect young people considering career choices. While many are eager to use AI for almost everything, statements like <em>“AI will replace programmers”</em> can twist their preferences for what to study and pursue professionally. This poses serious risks for the industry.</p>
+
+<p>We are already seeing early signs of this claptrap. Some companies have announced policies to hire only senior developers, claiming that junior staff can be fully replaced by AI. They do not explain where the next generation of senior developers will come from when the current ones retire. Fortunately, such announcements remain uncommon so far.</p>
+
+<p>Junior developers contribute far more than performing less qualified and somewhat tedious tasks. They bring new ideas and fresh perspectives, ask seemingly naive but often profound questions, and challenge the default <em>“it’s always been like that”</em> answers. Losing young talent quickly undermines a company’s long-term vitality.</p>
+
+<p>For junior developers, AI also presents challenges. As near-perfect solutions are often just a prompt away, the learning process may lose its exploratory phase. There is a significant difference between learning by observing and learning by doing. Otherwise, I would be a professional boxer by now.</p>
+
+<p>Rushed management decisions are common in any organization, even before AI. Replacing expensive or slow resources with cheaper alternatives may look attractive on paper and can be tempting to implement early. Overreliance on AI and forcing it into every field can cause serious harm. AI is just a tool and should be treated as such.</p>
+
+<p>Finally, there is the problem of AI slop. Flooding the internet with vast amounts of low-value content may force us to rethink the purpose of services such as social media, news, and digital art<sup>[3]</sup>. True artists and writers may quit, and genuine value could disappear, representing a significant loss for journalism, culture, and art—elements so important for civilization and humanity.</p>
+
+<p>All these problems are solvable, but addressing them will take time, and the stakes are high. We face a period of uncertainty and should avoid rushing decisions based on short-term trends. Things will be different tomorrow, and the future remains bright.</p>
+
+<h2>Conclusion</h2>
+
+<p>There is so much software to be built, and this demand is virtually infinite. Eventually, everything will run on a piece of software that needs to be designed, crafted, updated, and maintained. As software becomes cheaper, new ideas will emerge in areas where software is too expensive today. These new challenges will require novel concepts and approaches that require skilled people to work them out, as they are not part of the training data yet.</p>
+
+<p>The ability to create software quickly increases the impact of software and consequently its demand, which leads to a greater need for software developers.</p>
+
+<p>This is my argument for optimism.</p>
+
+<p>Happy vibe coding!</p>
+
+<p class="center">✱ ✱ ✱</p>
+<p><br></p>
+
+<p>[1]: Needless to say, some animals also possess forms of language and abstract reasoning.</p>
+<p>[2]: It also avoids doomsday scenarios in which a conscious (or not) superintelligence takes over the world, wipes out humans, or keeps them as pets in a human zoo. That said, <a href="https://en.wikipedia.org/wiki/If_Anyone_Builds_It,_Everyone_Dies" target="_blank">the alignment problem</a> is real, but it exceeds the scope of this post.</p>
+<p>[3]: A good example is the <a href="https://www.bbc.com/news/articles/cly3ld9wy3eo" target="_blank">case</a> of an individual who generated sloppy music using AI and earned a fortune on Spotify with the help of an AI-generated audience (bots).</p>

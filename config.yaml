@@ -19,6 +19,11 @@ posts:
     createdAt: 2026-06-14
     summary: "You have heard this kind of talk many times."
     tags: Shorts,Tech,Software Development,Agile
+  - title: "A Revival of ADRs"
+    uri: revival-of-adrs
+    createdAt: 2026-04-05
+    summary: "Ironically, AI coding tools have made traditional ADRs popular again."
+    tags: Shorts,Software Architecture,AI
   - title: "AI? Don't Panic!"
     uri: ai-dont-panic
     createdAt: 2026-02-24

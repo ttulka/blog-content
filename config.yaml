@@ -14,6 +14,11 @@ pages:
   - privacypolicy
   
 posts:
+  - title: "“It doesn’t work for us.”"
+    uri: it-does-not-work-for-us
+    createdAt: 2026-06-14
+    summary: "You have heard this kind of talk many times."
+    tags: Shorts,Tech,Software Development,Agile
   - title: "AI? Don't Panic!"
     uri: ai-dont-panic
     createdAt: 2026-02-24

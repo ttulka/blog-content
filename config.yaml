@@ -14,6 +14,16 @@ pages:
   - privacypolicy
   
 posts:
+  - title: "Product Manager vs. Product Owner"
+    uri: product-manager-vs-product-owner
+    createdAt: 2026-08-23
+    summary: "TL;DR: Product manager is a career, product owner is a role on the Scrum team."
+    tags: Shorts,Product,Tech,Software Development,Agile
+  - title: "Product Thinking"
+    uri: product-thinking
+    createdAt: 2026-07-05
+    summary: "With the technology mostly solved, we can finally focus on what’s important: user needs."
+    tags: Product,Tech,Software Development,Agile
   - title: "“It doesn’t work for us.”"
     uri: it-does-not-work-for-us
     createdAt: 2026-06-14
